@@ -20,6 +20,7 @@ export interface Product {
   description: string;
   price: number;
   compareAtPrice?: number;
+  priceCurrency: "USD" | "TRY";
   images: ProductImage[];
   categoryId: string;
   categorySlug: string;
@@ -99,6 +100,7 @@ export interface NavFeaturedProduct {
   name: string;
   basePrice: number;
   compareAtPrice?: number;
+  priceCurrency: "USD" | "TRY";
   imageUrl: string | null;
   categoryName: string;
 }

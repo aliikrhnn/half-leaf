@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/db/prisma";
 import { mapProduct } from "@/lib/db/mappers";
+import { getUsdTryRate } from "@/lib/pricing";
 import { SITE_NAME, SITE_DESCRIPTION } from "@/lib/constants";
 import Hero, { type HeroSlideData } from "@/components/sections/Hero";
 import BestsellersSection from "@/components/sections/BestsellersSection";
@@ -21,7 +22,7 @@ export const metadata: Metadata = {
   openGraph: { url: siteUrl },
 };
 
-async function getNewArrivals(): Promise<Product[]> {
+async function getNewArrivals(rate: number): Promise<Product[]> {
   try {
     const rows = await prisma.product.findMany({
       where: { isActive: true },
@@ -33,13 +34,13 @@ async function getNewArrivals(): Promise<Product[]> {
       take: 8,
       orderBy: { createdAt: "desc" },
     });
-    return rows.map(mapProduct);
+    return rows.map(p => mapProduct(p, rate));
   } catch {
     return [];
   }
 }
 
-async function getFeaturedProducts(): Promise<Product[]> {
+async function getFeaturedProducts(rate: number): Promise<Product[]> {
   try {
     const rows = await prisma.product.findMany({
       where: { isFeatured: true, isActive: true },
@@ -51,13 +52,13 @@ async function getFeaturedProducts(): Promise<Product[]> {
       take: 8,
       orderBy: { updatedAt: "desc" },
     });
-    return rows.map(mapProduct);
+    return rows.map(p => mapProduct(p, rate));
   } catch {
     return [];
   }
 }
 
-async function getFlashProducts(): Promise<Product[]> {
+async function getFlashProducts(rate: number): Promise<Product[]> {
   try {
     const discounted = await prisma.product.findMany({
       where: { isActive: true, compareAtPrice: { not: null } },
@@ -69,7 +70,7 @@ async function getFlashProducts(): Promise<Product[]> {
       take: 12,
       orderBy: { updatedAt: "desc" },
     });
-    if (discounted.length >= 6) return discounted.map(mapProduct);
+    if (discounted.length >= 6) return discounted.map(p => mapProduct(p, rate));
 
     const recent = await prisma.product.findMany({
       where: { isActive: true },
@@ -81,7 +82,7 @@ async function getFlashProducts(): Promise<Product[]> {
       take: 12,
       orderBy: { updatedAt: "asc" },
     });
-    return recent.map(mapProduct);
+    return recent.map(p => mapProduct(p, rate));
   } catch {
     return [];
   }
@@ -122,7 +123,7 @@ async function getHeroSlides(): Promise<HeroSlideData[]> {
   }
 }
 
-async function getBestsellerProducts(): Promise<Product[]> {
+async function getBestsellerProducts(rate: number): Promise<Product[]> {
   try {
     const rows = await prisma.product.findMany({
       where: { isBestseller: true, isActive: true },
@@ -134,7 +135,7 @@ async function getBestsellerProducts(): Promise<Product[]> {
       take: 8,
       orderBy: { updatedAt: "desc" },
     });
-    return rows.map(mapProduct);
+    return rows.map(p => mapProduct(p, rate));
   } catch {
     return [];
   }
@@ -142,13 +143,14 @@ async function getBestsellerProducts(): Promise<Product[]> {
 
 
 export default async function HomePage() {
+  const usdTryRate = await getUsdTryRate();
   const [heroSlides, newArrivals, featuredProducts, flashProducts, bestsellerProducts] =
     await Promise.all([
       getHeroSlides(),
-      getNewArrivals(),
-      getFeaturedProducts(),
-      getFlashProducts(),
-      getBestsellerProducts(),
+      getNewArrivals(usdTryRate),
+      getFeaturedProducts(usdTryRate),
+      getFlashProducts(usdTryRate),
+      getBestsellerProducts(usdTryRate),
     ]);
 
   const websiteJsonLd = {

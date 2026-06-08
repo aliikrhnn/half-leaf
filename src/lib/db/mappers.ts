@@ -1,4 +1,5 @@
 import type { Product, Category } from "@/lib/types";
+import { toTRY, DEFAULT_USD_TRY_RATE, type PriceCurrency } from "@/lib/pricing";
 
 export interface DbProductImage {
   url: string;
@@ -14,6 +15,7 @@ export interface DbProduct {
   description: string;
   basePrice: unknown;
   compareAtPrice: unknown | null;
+  priceCurrency: string;
   categoryId: string;
   sku: string;
   isFeatured: boolean;
@@ -33,15 +35,17 @@ export interface DbCategory {
   _count: { Product: number };
 }
 
-export function mapProduct(p: DbProduct): Product {
+export function mapProduct(p: DbProduct, usdTryRate = DEFAULT_USD_TRY_RATE): Product {
+  const currency = (p.priceCurrency ?? "TRY") as PriceCurrency;
   return {
     id: p.id,
     slug: p.slug,
     name: p.name,
     shortDescription: p.shortDescription,
     description: p.description,
-    price: Number(p.basePrice),
-    compareAtPrice: p.compareAtPrice != null ? Number(p.compareAtPrice) : undefined,
+    price: toTRY(Number(p.basePrice), currency, usdTryRate),
+    compareAtPrice: p.compareAtPrice != null ? toTRY(Number(p.compareAtPrice), currency, usdTryRate) : undefined,
+    priceCurrency: currency,
     images:
       p.ProductImage.length > 0
         ? p.ProductImage.map((img) => ({ url: img.url, alt: img.altText }))

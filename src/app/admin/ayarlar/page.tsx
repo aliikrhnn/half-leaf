@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Save, Plus, Trash2, AlertCircle, Check, Settings, Truck, Building2, Phone, Share2 } from "lucide-react";
+import { Save, Plus, Trash2, AlertCircle, Check, Settings, Truck, Building2, Phone, Share2, DollarSign, RefreshCw, Lock, Unlock } from "lucide-react";
 import AdminHeader from "@/components/admin/layout/AdminHeader";
 
 /* ── Types ── */
@@ -40,15 +40,22 @@ type BankAccount = {
   sortOrder: number;
 };
 
-type Tab = "genel" | "kargo" | "odeme" | "iletisim" | "sosyal";
+type Tab = "genel" | "kargo" | "odeme" | "iletisim" | "sosyal" | "kur";
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-  { id: "genel",    label: "Genel",          icon: Settings   },
-  { id: "kargo",    label: "Kargo",          icon: Truck      },
-  { id: "odeme",    label: "Ödeme",          icon: Building2  },
-  { id: "iletisim", label: "İletişim",       icon: Phone      },
-  { id: "sosyal",   label: "Sosyal Medya",   icon: Share2     },
+  { id: "genel",    label: "Genel",          icon: Settings     },
+  { id: "kargo",    label: "Kargo",          icon: Truck        },
+  { id: "odeme",    label: "Ödeme",          icon: Building2    },
+  { id: "iletisim", label: "İletişim",       icon: Phone        },
+  { id: "sosyal",   label: "Sosyal Medya",   icon: Share2       },
+  { id: "kur",      label: "Kur Yönetimi",   icon: DollarSign   },
 ];
+
+type KurData = {
+  usdTryRate: number | null;
+  usdTryRateUpdatedAt: string | null;
+  usdTryRateLocked: boolean;
+};
 
 /* ── Toggle ── */
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
@@ -129,6 +136,14 @@ export default function AdminAyarlarPage() {
   const [showAddB,   setShowAddB]   = useState(false);
   const [addingB,    setAddingB]    = useState(false);
 
+  /* Kur */
+  const [kurData,      setKurData]      = useState<KurData | null>(null);
+  const [kurErr,       setKurErr]       = useState("");
+  const [kurSaving,    setKurSaving]    = useState(false);
+  const [kurSaved,     setKurSaved]     = useState(false);
+  const [kurFetching,  setKurFetching]  = useState(false);
+  const [manualRate,   setManualRate]   = useState("");
+
   const fetchSettings = useCallback(async () => {
     try {
       const res  = await fetch("/api/admin/ayarlar");
@@ -156,8 +171,73 @@ export default function AdminAyarlarPage() {
     } catch { /* ignore */ }
   }, []);
 
+  const fetchKur = useCallback(async () => {
+    try {
+      const res  = await fetch("/api/admin/kur");
+      const json = await res.json() as { success: boolean; data?: KurData; error?: string };
+      if (json.success && json.data) {
+        setKurData(json.data);
+        setManualRate(json.data.usdTryRate != null ? String(json.data.usdTryRate) : "");
+      } else {
+        setKurErr(json.error ?? "Kur verisi alınamadı.");
+      }
+    } catch { setKurErr("Kur verisi alınamadı."); }
+  }, []);
+
+  const handleRefreshKur = async () => {
+    setKurFetching(true); setKurErr(""); setKurSaved(false);
+    try {
+      const res  = await fetch("/api/admin/kur", { method: "POST" });
+      const json = await res.json() as { success?: boolean; rate?: number; error?: string };
+      if (json.success && json.rate != null) {
+        setKurData(prev => prev ? { ...prev, usdTryRate: json.rate!, usdTryRateUpdatedAt: new Date().toISOString() } : prev);
+        setManualRate(String(json.rate));
+        setKurSaved(true);
+      } else {
+        setKurErr(json.error ?? "Güncellenemedi.");
+      }
+    } catch { setKurErr("Bir hata oluştu."); }
+    finally { setKurFetching(false); }
+  };
+
+  const handleSaveKur = async () => {
+    const rate = parseFloat(manualRate);
+    if (isNaN(rate) || rate <= 0) { setKurErr("Geçerli bir kur girin."); return; }
+    setKurSaving(true); setKurErr(""); setKurSaved(false);
+    try {
+      const res  = await fetch("/api/admin/kur", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ usdTryRate: rate }),
+      });
+      const json = await res.json() as { success: boolean; error?: string };
+      if (json.success) {
+        setKurData(prev => prev ? { ...prev, usdTryRate: rate, usdTryRateUpdatedAt: new Date().toISOString() } : prev);
+        setKurSaved(true);
+      } else {
+        setKurErr(json.error ?? "Kaydedilemedi.");
+      }
+    } catch { setKurErr("Bir hata oluştu."); }
+    finally { setKurSaving(false); }
+  };
+
+  const handleToggleLock = async (locked: boolean) => {
+    setKurErr("");
+    try {
+      const res  = await fetch("/api/admin/kur", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ usdTryRateLocked: locked }),
+      });
+      const json = await res.json() as { success: boolean; error?: string };
+      if (json.success) {
+        setKurData(prev => prev ? { ...prev, usdTryRateLocked: locked } : prev);
+      } else {
+        setKurErr(json.error ?? "Güncellenemedi.");
+      }
+    } catch { setKurErr("Bir hata oluştu."); }
+  };
+
   // eslint-disable-next-line react-hooks/set-state-in-effect -- data-fetching pattern
-  useEffect(() => { fetchSettings(); fetchKargo(); fetchBanka(); }, [fetchSettings, fetchKargo, fetchBanka]);
+  useEffect(() => { fetchSettings(); fetchKargo(); fetchBanka(); fetchKur(); }, [fetchSettings, fetchKargo, fetchBanka, fetchKur]);
 
   const update = (key: keyof SiteSettings, value: unknown) => {
     setSettings(prev => prev ? { ...prev, [key]: value } : prev);
@@ -600,6 +680,108 @@ export default function AdminAyarlarPage() {
                 <Field label="WhatsApp Numarası" value={settings.whatsappNumber ?? ""} onChange={v => update("whatsappNumber", v || null)} placeholder="+905000000000" />
               </div>
               <SaveBar saving={saving} saved={saved} error={saveErr} onSave={handleSave} />
+            </div>
+          )}
+
+          {/* ── KUR YÖNETİMİ ── */}
+          {tab === "kur" && (
+            <div className="max-w-xl space-y-6">
+              {/* Status card */}
+              <div className="bg-bg-surface border border-border-default rounded-xl p-5 space-y-4">
+                <h2 className="text-sm font-semibold text-ink">USD / TRY Kur Durumu</h2>
+
+                {kurData ? (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-2xl font-semibold text-ink">
+                          {kurData.usdTryRate != null ? `₺ ${kurData.usdTryRate.toFixed(4)}` : "—"}
+                        </p>
+                        <p className="text-xs text-ink-dim mt-1">
+                          {kurData.usdTryRateUpdatedAt
+                            ? `Son güncelleme: ${new Date(kurData.usdTryRateUpdatedAt).toLocaleString("tr-TR")}`
+                            : "Henüz güncellenmedi"}
+                        </p>
+                      </div>
+                      <button
+                        onClick={handleRefreshKur}
+                        disabled={kurFetching || kurData.usdTryRateLocked}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-accent/15 text-accent-light text-xs font-medium hover:bg-accent/25 disabled:opacity-40 transition-colors"
+                      >
+                        <RefreshCw size={13} className={kurFetching ? "animate-spin" : ""} />
+                        {kurFetching ? "Güncelleniyor…" : "API'den Güncelle"}
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-border-default">
+                      <div>
+                        <p className="text-sm text-ink">Otomatik Güncellemeyi Kilitle</p>
+                        <p className="text-xs text-ink-dim mt-0.5">
+                          Kilitlendiğinde haftalık cron kuru güncellemez.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {kurData.usdTryRateLocked
+                          ? <Lock size={13} className="text-yellow-400" />
+                          : <Unlock size={13} className="text-ink-dim" />
+                        }
+                        <Toggle
+                          checked={kurData.usdTryRateLocked}
+                          onChange={handleToggleLock}
+                        />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="h-16 bg-bg-elevated rounded-lg animate-pulse" />
+                )}
+              </div>
+
+              {/* Manual rate input */}
+              <div className="bg-bg-surface border border-border-default rounded-xl p-5 space-y-4">
+                <h2 className="text-sm font-semibold text-ink">Manuel Kur Gir</h2>
+                <p className="text-xs text-ink-dim">Otomatik güncelleme yerine istediğiniz kuru elle girebilirsiniz.</p>
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <label className="block text-xs text-ink-dim mb-1.5">1 USD = ? TRY</label>
+                    <input
+                      type="number" min="0.01" step="0.0001"
+                      value={manualRate}
+                      onChange={e => { setManualRate(e.target.value); setKurSaved(false); }}
+                      placeholder="34.5000"
+                      className="w-full bg-bg-elevated border border-border-default text-ink rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-accent transition-colors"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      onClick={handleSaveKur}
+                      disabled={kurSaving}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-accent text-bg text-sm font-semibold disabled:opacity-50 transition-opacity"
+                    >
+                      <Save size={13} />
+                      {kurSaving ? "Kaydediliyor…" : "Kaydet"}
+                    </button>
+                  </div>
+                </div>
+
+                {kurErr && (
+                  <div className="flex items-center gap-2 p-2.5 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs">
+                    <AlertCircle size={13} />{kurErr}
+                  </div>
+                )}
+                {kurSaved && (
+                  <div className="flex items-center gap-2 p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-emerald-400 text-xs">
+                    <Check size={13} />Kur güncellendi.
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-bg-surface border border-border-default rounded-xl p-4">
+                <p className="text-xs text-ink-dim">
+                  <strong className="text-ink-muted">Cron:</strong> Her Pazartesi 06:00 UTC&apos;de otomatik güncellenir
+                  (kilitli değilse). Kaynak: fawazahmed0/currency-api (CDN).
+                </p>
+              </div>
             </div>
           )}
 

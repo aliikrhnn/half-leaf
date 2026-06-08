@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { prisma } from "@/lib/db/prisma";
 import { mapProduct, mapCategory } from "@/lib/db/mappers";
+import { getUsdTryRate } from "@/lib/pricing";
 import ProductsClient from "./ProductsClient";
 import type { Product } from "@/lib/types";
 import type { MaterialOption } from "./FilterPanel";
@@ -68,6 +69,7 @@ function getDescendantIds(
 }
 
 async function fetchAll(sp: SearchParams) {
+  const usdTryRate = await getUsdTryRate();
   const kategori = sp.kategori ?? "";
   const materyals = sp.materyal ? sp.materyal.split(",").filter(Boolean) : [];
   const boy = sp.boy ?? "";
@@ -237,7 +239,7 @@ async function fetchAll(sp: SearchParams) {
 
   // Map products
   const products: Product[] = dbProducts.map((p) => {
-    const base = mapProduct(p as Parameters<typeof mapProduct>[0]);
+    const base = mapProduct(p as Parameters<typeof mapProduct>[0], usdTryRate);
     const variantColors: string[] = [];
     for (const v of p.ProductVariant) {
       const attrs = v.attributes as Record<string, string> | null;
@@ -282,7 +284,7 @@ async function fetchAll(sp: SearchParams) {
 
   const featuredProduct = featuredDb
     ? {
-        ...mapProduct(featuredDb as Parameters<typeof mapProduct>[0]),
+        ...mapProduct(featuredDb as Parameters<typeof mapProduct>[0], usdTryRate),
         categoryName: featuredDb.Category.name,
       }
     : null;

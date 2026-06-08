@@ -32,6 +32,7 @@ interface FormState {
   description: string;
   price: string;
   compareAtPrice: string;
+  priceCurrency: "TRY" | "USD";
   stock: string;
   categoryId: string;
   isActive: boolean;
@@ -52,6 +53,7 @@ interface ExistingProduct {
   description?: string;
   price: number;
   compareAtPrice?: number;
+  priceCurrency?: "TRY" | "USD";
   stock: number;
   categoryId: string;
   isActive?: boolean;
@@ -84,6 +86,7 @@ const EMPTY_FORM: FormState = {
   description: "",
   price: "",
   compareAtPrice: "",
+  priceCurrency: "TRY",
   stock: "0",
   categoryId: "",
   isActive: true,
@@ -110,11 +113,15 @@ export default function ProductForm({ product }: ProductFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [usdTryRate, setUsdTryRate] = useState<number | null>(null);
 
   useEffect(() => {
     fetch("/api/categories").then((r) => r.json()).then((j) => {
       if (j.success) setCategories(j.data);
     });
+    fetch("/api/admin/kur").then((r) => r.json()).then((j: { success: boolean; data?: { usdTryRate: number | null } }) => {
+      if (j.success && j.data?.usdTryRate != null) setUsdTryRate(j.data.usdTryRate);
+    }).catch(() => { /* ignore — rate preview is optional */ });
   }, []);
 
   useEffect(() => {
@@ -140,6 +147,7 @@ export default function ProductForm({ product }: ProductFormProps) {
         description: product.description ?? "",
         price: String(product.price),
         compareAtPrice: product.compareAtPrice ? String(product.compareAtPrice) : "",
+        priceCurrency: product.priceCurrency ?? "TRY",
         stock: String(product.stock),
         categoryId: product.categoryId,
         isActive: product.isActive ?? true,
@@ -258,6 +266,7 @@ export default function ProductForm({ product }: ProductFormProps) {
       description: form.description || undefined,
       price: parseFloat(form.price),
       compareAtPrice: form.compareAtPrice ? parseFloat(form.compareAtPrice) : undefined,
+      priceCurrency: form.priceCurrency,
       stock: parseInt(form.stock),
       categoryId: form.categoryId,
       isActive: form.isActive,
@@ -374,9 +383,37 @@ export default function ProductForm({ product }: ProductFormProps) {
         <h2 className="text-sm font-semibold text-ink-muted uppercase tracking-wider border-b border-border-default pb-2">
           Fiyat ve Stok
         </h2>
+
+        {/* Currency selector */}
+        <div>
+          <label className="block text-xs text-ink-muted mb-2">Para Birimi</label>
+          <div className="flex gap-3">
+            {(["TRY", "USD"] as const).map(cur => (
+              <label key={cur} className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="priceCurrency"
+                  value={cur}
+                  checked={form.priceCurrency === cur}
+                  onChange={() => set("priceCurrency", cur)}
+                  className="accent-accent"
+                />
+                <span className="text-sm text-ink">{cur === "TRY" ? "₺ TRY (Türk Lirası)" : "$ USD (Dolar)"}</span>
+              </label>
+            ))}
+          </div>
+          {form.priceCurrency === "USD" && (
+            <p className="text-xs text-yellow-400 mt-1.5">
+              USD seçildi — storefront&apos;ta fiyat otomatik olarak TRY&apos;ye çevrilir.
+            </p>
+          )}
+        </div>
+
         <div className="grid sm:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs text-ink-muted mb-1">Fiyat (₺) *</label>
+            <label className="block text-xs text-ink-muted mb-1">
+              Fiyat ({form.priceCurrency === "USD" ? "$" : "₺"}) *
+            </label>
             <input
               type="number"
               required
@@ -387,9 +424,16 @@ export default function ProductForm({ product }: ProductFormProps) {
               className={inputClass}
               placeholder="0.00"
             />
+            {form.priceCurrency === "USD" && usdTryRate != null && form.price && !isNaN(parseFloat(form.price)) && (
+              <p className="text-xs text-ink-dim mt-1">
+                ≈ ₺{(parseFloat(form.price) * usdTryRate).toFixed(2)} (güncel kur: {usdTryRate.toFixed(4)})
+              </p>
+            )}
           </div>
           <div>
-            <label className="block text-xs text-ink-muted mb-1">Karşılaştırma Fiyatı (₺)</label>
+            <label className="block text-xs text-ink-muted mb-1">
+              Karşılaştırma Fiyatı ({form.priceCurrency === "USD" ? "$" : "₺"})
+            </label>
             <input
               type="number"
               min="0"
@@ -399,6 +443,11 @@ export default function ProductForm({ product }: ProductFormProps) {
               className={inputClass}
               placeholder="0.00"
             />
+            {form.priceCurrency === "USD" && usdTryRate != null && form.compareAtPrice && !isNaN(parseFloat(form.compareAtPrice)) && (
+              <p className="text-xs text-ink-dim mt-1">
+                ≈ ₺{(parseFloat(form.compareAtPrice) * usdTryRate).toFixed(2)}
+              </p>
+            )}
           </div>
           <div>
             <label className="block text-xs text-ink-muted mb-1">Stok *</label>

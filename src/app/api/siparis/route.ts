@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
+import { toTRY, DEFAULT_USD_TRY_RATE, type PriceCurrency } from "@/lib/pricing";
 import { rateLimiter, getClientIp } from "@/lib/rate-limit/limiter";
 
 const bodySchema = z.object({
@@ -139,13 +140,24 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      /* ── 4. Compute prices from DB ── */
+      /* ── 4. Fetch siteSettings (rate + shipping config) ── */
+      const siteSettings = await tx.siteSettings.findUnique({
+        where:  { id: "site" },
+        select: { freeShippingThreshold: true, shippingCost: true, usdTryRate: true },
+      });
+      const usdTryRate = siteSettings?.usdTryRate != null
+        ? Number(siteSettings.usdTryRate)
+        : DEFAULT_USD_TRY_RATE;
+
+      /* ── 5. Compute prices from DB (convert USD → TRY if needed) ── */
       const subtotal = dbProducts.reduce((sum, product) => {
         const qty = items.find(i => i.productId === product.id)!.quantity;
-        return sum + Number(product.basePrice) * qty;
+        const currency = (product.priceCurrency ?? "TRY") as PriceCurrency;
+        const priceInTRY = toTRY(Number(product.basePrice), currency, usdTryRate);
+        return sum + priceInTRY * qty;
       }, 0);
 
-      /* ── 5. Coupon validation ── */
+      /* ── 6. Coupon validation ── */
       let discountTotal = 0;
       let coupon = null;
 
@@ -173,11 +185,7 @@ export async function POST(req: NextRequest) {
 
       const afterDiscount = Math.max(0, subtotal - discountTotal);
 
-      /* ── 6. Shipping cost ── */
-      const siteSettings = await tx.siteSettings.findUnique({
-        where:  { id: "site" },
-        select: { freeShippingThreshold: true, shippingCost: true },
-      });
+      /* ── 7. Shipping cost ── */
       const freeThreshold = Number(siteSettings?.freeShippingThreshold ?? 2500);
       const stdShipping   = Number(siteSettings?.shippingCost ?? 150);
 
@@ -194,7 +202,7 @@ export async function POST(req: NextRequest) {
 
       const grandTotal = afterDiscount + shippingTotal;
 
-      /* ── 7. Build address JSON ── */
+      /* ── 8. Build address JSON ── */
       const addrJson = {
         fullName: `${address.ad} ${address.soyad}`,
         phone: contact.phone,
@@ -204,7 +212,7 @@ export async function POST(req: NextRequest) {
         postaKodu: address.postaKodu ?? "",
       };
 
-      /* ── 8. Create Order ── */
+      /* ── 9. Create Order ── */
       const orderNumber = `HL${Date.now()}`;
       const order = await tx.order.create({
         data: {
@@ -221,23 +229,25 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      /* ── 9. Create OrderItems ── */
+      /* ── 10. Create OrderItems ── */
       for (const item of items) {
         const product = dbProducts.find(p => p.id === item.productId)!;
+        const currency = (product.priceCurrency ?? "TRY") as PriceCurrency;
+        const unitPriceTRY = toTRY(Number(product.basePrice), currency, usdTryRate);
         await tx.orderItem.create({
           data: {
             orderId: order.id,
             productId: product.id,
             productName: product.name,
             sku: product.sku,
-            unitPrice: product.basePrice,
+            unitPrice: unitPriceTRY,
             quantity: item.quantity,
-            lineTotal: Number(product.basePrice) * item.quantity,
+            lineTotal: unitPriceTRY * item.quantity,
           },
         });
       }
 
-      /* ── 10. Create Payment ── */
+      /* ── 11. Create Payment ── */
       const providerMap: Record<string, string> = {
         KREDI_KARTI: "iyzico",
         HAVALE_EFT: "HAVALE_EFT",
@@ -252,7 +262,7 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      /* ── 11. Create Shipment ── */
+      /* ── 12. Create Shipment ── */
       const shippingLabel = shippingOpt?.label ?? shippingMethod;
       await tx.shipment.create({
         data: {
@@ -262,7 +272,7 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      /* ── 12. Stock movements + inventory update ── */
+      /* ── 13. Stock movements + inventory update ── */
       for (const item of items) {
         const product = dbProducts.find(p => p.id === item.productId)!;
         if (product.Inventory) {
@@ -283,7 +293,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      /* ── 13. Consent logs ── */
+      /* ── 14. Consent logs ── */
       const consentTypes = ["MESAFELI_SATIS", "ON_BILGILENDIRME", "KVKK_AYDINLATMA"] as const;
       for (const consentType of consentTypes) {
         await tx.consentLog.create({
@@ -300,7 +310,7 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      /* ── 14. Increment coupon usedCount ── */
+      /* ── 15. Increment coupon usedCount ── */
       if (coupon) {
         await tx.coupon.update({
           where: { id: coupon.id },

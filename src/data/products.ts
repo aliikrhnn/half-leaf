@@ -31,6 +31,7 @@ export const products: Product[] = [
     stock: 15,
     isNew: false,
     isFeatured: true,
+    priceCurrency: "TRY" as const,
     rating: 4.8,
     reviewCount: 24,
     specs: {
@@ -69,6 +70,7 @@ export const products: Product[] = [
     stock: 8,
     isNew: true,
     isFeatured: true,
+    priceCurrency: "TRY" as const,
     rating: 4.9,
     reviewCount: 12,
     specs: {
@@ -106,6 +108,7 @@ export const products: Product[] = [
     stock: 20,
     isNew: true,
     isFeatured: false,
+    priceCurrency: "TRY" as const,
     rating: 4.6,
     reviewCount: 8,
     specs: {
@@ -145,6 +148,7 @@ export const products: Product[] = [
     stock: 30,
     isNew: false,
     isFeatured: true,
+    priceCurrency: "TRY" as const,
     rating: 4.7,
     reviewCount: 41,
     specs: {
@@ -181,6 +185,7 @@ export const products: Product[] = [
     stock: 18,
     isNew: true,
     isFeatured: false,
+    priceCurrency: "TRY" as const,
     rating: 4.8,
     reviewCount: 17,
     specs: {
@@ -217,6 +222,7 @@ export const products: Product[] = [
     stock: 25,
     isNew: false,
     isFeatured: false,
+    priceCurrency: "TRY" as const,
     rating: 4.5,
     reviewCount: 9,
     specs: {
@@ -256,6 +262,7 @@ export const products: Product[] = [
     stock: 50,
     isNew: false,
     isFeatured: true,
+    priceCurrency: "TRY" as const,
     rating: 4.9,
     reviewCount: 63,
     specs: {
@@ -292,6 +299,7 @@ export const products: Product[] = [
     stock: 80,
     isNew: false,
     isFeatured: false,
+    priceCurrency: "TRY" as const,
     rating: 4.4,
     reviewCount: 38,
     specs: {
@@ -328,6 +336,7 @@ export const products: Product[] = [
     stock: 35,
     isNew: true,
     isFeatured: false,
+    priceCurrency: "TRY" as const,
     rating: 4.7,
     reviewCount: 19,
     specs: {
@@ -367,6 +376,7 @@ export const products: Product[] = [
     stock: 22,
     isNew: false,
     isFeatured: true,
+    priceCurrency: "TRY" as const,
     rating: 4.8,
     reviewCount: 31,
     specs: {
@@ -404,6 +414,7 @@ export const products: Product[] = [
     stock: 10,
     isNew: true,
     isFeatured: true,
+    priceCurrency: "TRY" as const,
     rating: 4.9,
     reviewCount: 7,
     specs: {
@@ -443,6 +454,7 @@ export const products: Product[] = [
     stock: 45,
     isNew: false,
     isFeatured: false,
+    priceCurrency: "TRY" as const,
     rating: 4.6,
     reviewCount: 52,
     specs: {
@@ -480,6 +492,7 @@ export const products: Product[] = [
     stock: 16,
     isNew: false,
     isFeatured: true,
+    priceCurrency: "TRY" as const,
     rating: 4.8,
     reviewCount: 23,
     specs: {
@@ -518,6 +531,7 @@ export const products: Product[] = [
     stock: 60,
     isNew: false,
     isFeatured: false,
+    priceCurrency: "TRY" as const,
     rating: 4.7,
     reviewCount: 88,
     specs: {
@@ -553,6 +567,7 @@ export const products: Product[] = [
     stock: 100,
     isNew: false,
     isFeatured: false,
+    priceCurrency: "TRY" as const,
     rating: 4.5,
     reviewCount: 72,
     specs: {
@@ -588,6 +603,7 @@ export const products: Product[] = [
     stock: 200,
     isNew: false,
     isFeatured: false,
+    priceCurrency: "TRY" as const,
     rating: 4.6,
     reviewCount: 45,
     specs: {
@@ -623,6 +639,7 @@ export const products: Product[] = [
     stock: 40,
     isNew: false,
     isFeatured: false,
+    priceCurrency: "TRY" as const,
     rating: 4.7,
     reviewCount: 34,
     specs: {
@@ -658,6 +675,7 @@ export const products: Product[] = [
     stock: 75,
     isNew: false,
     isFeatured: false,
+    priceCurrency: "TRY" as const,
     rating: 4.8,
     reviewCount: 56,
     specs: {

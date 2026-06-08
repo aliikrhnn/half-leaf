@@ -318,6 +318,7 @@ model Product {
   materialId       String?
   careInfo         String?
   weightGrams      Int?
+  priceCurrency    String           @default("TRY")
   isActive         Boolean          @default(true)
   isFeatured       Boolean          @default(false)
   isBestseller     Boolean          @default(false)
@@ -515,7 +516,10 @@ model SiteSettings {
   facebookUrl           String?
   twitterUrl            String?
   whatsappNumber        String?
-  updatedAt             DateTime @updatedAt
+  usdTryRate            Decimal?  @db.Decimal(10, 4)
+  usdTryRateUpdatedAt   DateTime?
+  usdTryRateLocked      Boolean   @default(false)
+  updatedAt             DateTime  @updatedAt
 }
 
 model ShippingOption {

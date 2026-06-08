@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/db/prisma";
 import { mapProduct } from "@/lib/db/mappers";
+import { getUsdTryRate } from "@/lib/pricing";
 import { SITE_NAME } from "@/lib/constants";
 import ProductCard from "@/components/product/ProductCard";
 import ProductGallery from "./ProductGallery";
@@ -74,10 +75,12 @@ export default async function ProductDetailPage({ params }: Props) {
 
   if (!dbProduct) notFound();
 
+  const usdTryRate = await getUsdTryRate();
+
   // eslint-disable-next-line react-hooks/purity -- intentional: request-time freshness check, Server Component renders per-request
   const now = Date.now();
   const product = {
-    ...mapProduct(dbProduct),
+    ...mapProduct(dbProduct, usdTryRate),
     isNew: dbProduct.createdAt.getTime() > now - SIXTY_DAYS_MS,
   };
 
@@ -106,7 +109,7 @@ export default async function ProductDetailPage({ params }: Props) {
     orderBy: { isFeatured: "desc" },
   });
 
-  const related = relatedRows.map(mapProduct);
+  const related = relatedRows.map(p => mapProduct(p, usdTryRate));
 
   const productJsonLd = {
     "@context": "https://schema.org",

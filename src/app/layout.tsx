@@ -6,6 +6,7 @@ import AgeGate from "@/components/layout/AgeGate";
 import { SITE_NAME, SITE_DESCRIPTION, CONTACT_EMAIL, SOCIAL_LINKS } from "@/lib/constants";
 import { prisma } from "@/lib/db/prisma";
 import type { NavCategory, NavFeaturedProduct } from "@/lib/types";
+import { getUsdTryRate, toTRY, type PriceCurrency } from "@/lib/pricing";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -86,36 +87,41 @@ async function getNavCategories(): Promise<NavCategory[]> {
       if (cur) catIdToRoot.set(cat.id, cur.id);
     }
 
-    // Single query ordered by isFeatured desc then newest — pick first per root category
-    const productRows = await prisma.product.findMany({
-      where: { isActive: true },
-      select: {
-        id: true,
-        slug: true,
-        name: true,
-        basePrice: true,
-        compareAtPrice: true,
-        categoryId: true,
-        Category: { select: { name: true } },
-        ProductImage: {
-          orderBy: { sortOrder: "asc" as const },
-          take: 1,
-          select: { url: true },
+    const [productRows, usdTryRate] = await Promise.all([
+      prisma.product.findMany({
+        where: { isActive: true },
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          basePrice: true,
+          compareAtPrice: true,
+          priceCurrency: true,
+          categoryId: true,
+          Category: { select: { name: true } },
+          ProductImage: {
+            orderBy: { sortOrder: "asc" as const },
+            take: 1,
+            select: { url: true },
+          },
         },
-      },
-      orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
-    });
+        orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+      }),
+      getUsdTryRate(),
+    ]);
 
     const featuredByRoot = new Map<string, NavFeaturedProduct>();
     for (const p of productRows) {
       const rootId = catIdToRoot.get(p.categoryId);
       if (rootId && rootIds.has(rootId) && !featuredByRoot.has(rootId)) {
+        const cur = (p.priceCurrency ?? "TRY") as PriceCurrency;
         featuredByRoot.set(rootId, {
           id: p.id,
           slug: p.slug,
           name: p.name,
-          basePrice: Number(p.basePrice),
-          compareAtPrice: p.compareAtPrice != null ? Number(p.compareAtPrice) : undefined,
+          basePrice: toTRY(Number(p.basePrice), cur, usdTryRate),
+          compareAtPrice: p.compareAtPrice != null ? toTRY(Number(p.compareAtPrice), cur, usdTryRate) : undefined,
+          priceCurrency: cur,
           imageUrl: p.ProductImage[0]?.url ?? null,
           categoryName: p.Category.name,
         });

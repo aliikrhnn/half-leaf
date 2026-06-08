@@ -107,7 +107,8 @@
       "Bash(Remove-Item \"C:\\\\Users\\\\aliik\\\\OneDrive\\\\Desktop\\\\half-leaf\\\\src\\\\middleware.ts\")",
       "PowerShell(Remove-Item *)",
       "Bash(New-Item -ItemType Directory -Path \"C:\\\\Users\\\\aliik\\\\OneDrive\\\\Desktop\\\\half-leaf\\\\src\\\\lib\\\\storage\" -Force)",
-      "Bash(Write-Output \"dir created\")"
+      "Bash(Write-Output \"dir created\")",
+      "Bash(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\aliik\\\\OneDrive\\\\Desktop\\\\half-leaf\\\\src\\\\app\\\\api\\\\cron\\\\update-exchange-rate\")"
     ]
   }
 }
