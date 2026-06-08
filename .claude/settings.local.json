@@ -102,7 +102,10 @@
       "Bash(mkdir -p \"C:\\\\Users\\\\aliik\\\\OneDrive\\\\Desktop\\\\half-leaf\\\\src\\\\app\\\\api\\\\admin\\\\image-processing\\\\revert\\\\[productImageId]\")",
       "Bash(mkdir -p \"C:\\\\Users\\\\aliik\\\\OneDrive\\\\Desktop\\\\half-leaf\\\\src\\\\app\\\\api\\\\admin\\\\image-processing\\\\processed\\\\[productImageId]\")",
       "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "Bash(Select-Object -First 100)",
+      "Bash(Remove-Item \"C:\\\\Users\\\\aliik\\\\OneDrive\\\\Desktop\\\\half-leaf\\\\src\\\\middleware.ts\")",
+      "PowerShell(Remove-Item *)"
     ]
   }
 }

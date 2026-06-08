@@ -7,42 +7,10 @@ function passThrough(req: NextRequest): NextResponse {
   return res;
 }
 
-/* ── Maintenance cache (5 dakikada bir yenile) ── */
-const MAINTENANCE_TTL_MS = 300_000; // 5 dakika
-
-let _maintenanceCache: { value: boolean; ts: number } | null = null;
-let _maintenanceFetch: Promise<boolean> | null = null;
-
-async function checkMaintenanceMode(origin: string): Promise<boolean> {
-  const now = Date.now();
-  if (_maintenanceCache && now - _maintenanceCache.ts < MAINTENANCE_TTL_MS) {
-    return _maintenanceCache.value;
-  }
-  // Eş zamanlı istekleri tek bir fetch'e indir
-  if (!_maintenanceFetch) {
-    _maintenanceFetch = (async () => {
-      try {
-        const res = await fetch(`${origin}/api/public/site-status`);
-        if (res.ok) {
-          const data = await res.json() as { maintenanceMode: boolean };
-          _maintenanceCache = { value: data.maintenanceMode, ts: Date.now() };
-          return data.maintenanceMode;
-        }
-      } catch {
-        /* fail open */
-      }
-      return _maintenanceCache?.value ?? false;
-    })().finally(() => {
-      _maintenanceFetch = null;
-    });
-  }
-  return _maintenanceFetch;
-}
-
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  /* ── Skip middleware for static assets ── */
+  /* ── Skip for static assets ── */
   if (
     pathname.startsWith("/_next") ||
     pathname === "/favicon.ico" ||
@@ -52,22 +20,8 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  /* ── Maintenance mode (not for admin, api/admin, api/auth, api/public, /bakim) ── */
-  const isAdminPath    = pathname.startsWith("/admin");
-  const isAdminApi     = pathname.startsWith("/api/admin");
-  const isAuthApi      = pathname.startsWith("/api/auth");
-  const isPublicApi    = pathname.startsWith("/api/public");
-  const isBakim        = pathname === "/bakim";
-
-  if (!isAdminPath && !isAdminApi && !isAuthApi && !isPublicApi && !isBakim) {
-    const inMaintenance = await checkMaintenanceMode(req.nextUrl.origin);
-    if (inMaintenance) {
-      return NextResponse.redirect(new URL("/bakim", req.url));
-    }
-  }
-
   /* ── Admin protection ── */
-  if (isAdminPath) {
+  if (pathname.startsWith("/admin")) {
     if (pathname === "/admin/login") return passThrough(req);
 
     const token = req.cookies.get("hl-token")?.value;
