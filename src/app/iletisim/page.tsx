@@ -2,6 +2,8 @@ import { prisma } from "@/lib/db/prisma";
 import { CONTACT_EMAIL, CONTACT_PHONE, CONTACT_ADDRESS } from "@/lib/constants";
 import IletisimClient from "./IletisimClient";
 
+export const revalidate = 60;
+
 async function getContactInfo() {
   try {
     return await prisma.siteSettings.findUnique({
