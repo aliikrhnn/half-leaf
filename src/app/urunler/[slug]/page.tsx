@@ -1,0 +1,249 @@
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
+import { prisma } from "@/lib/db/prisma";
+import { mapProduct } from "@/lib/db/mappers";
+import { SITE_NAME } from "@/lib/constants";
+import ProductCard from "@/components/product/ProductCard";
+import ProductGallery from "./ProductGallery";
+import ProductInfo from "./ProductInfo";
+import ProductTabs from "./ProductTabs";
+import type { VariantData } from "@/lib/types";
+
+interface Props {
+  params: Promise<{ slug: string }>;
+}
+
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://halfleaf.com";
+const SIXTY_DAYS_MS = 60 * 24 * 60 * 60 * 1000;
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const p = await prisma.product.findUnique({
+    where: { slug, isActive: true },
+    select: {
+      name: true, description: true, basePrice: true,
+      Category: { select: { name: true } },
+      ProductImage: { orderBy: { sortOrder: "asc" }, take: 1, select: { url: true, altText: true } },
+    },
+  });
+  if (!p) return {};
+
+  const description = p.description?.slice(0, 155) ?? `${p.name} — ${SITE_NAME}'da satışta.`;
+  const image = p.ProductImage[0];
+  const url = `${siteUrl}/urunler/${slug}`;
+
+  return {
+    title: p.name,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "website",
+      url,
+      title: `${p.name} | ${SITE_NAME}`,
+      description,
+      images: image ? [{ url: image.url, alt: image.altText ?? p.name }] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${p.name} | ${SITE_NAME}`,
+      description,
+      images: image ? [image.url] : undefined,
+    },
+  };
+}
+
+export default async function ProductDetailPage({ params }: Props) {
+  const { slug } = await params;
+
+  const dbProduct = await prisma.product.findUnique({
+    where: { slug, isActive: true },
+    include: {
+      Category: { select: { id: true, slug: true, name: true } },
+      ProductImage: { orderBy: { sortOrder: "asc" } },
+      Inventory: { select: { quantity: true, lowStockThreshold: true } },
+      ProductVariant: {
+        where: { isActive: true },
+        include: { Inventory: { select: { quantity: true } } },
+        orderBy: { createdAt: "asc" },
+      },
+      Material: { select: { name: true } },
+    },
+  });
+
+  if (!dbProduct) notFound();
+
+  // eslint-disable-next-line react-hooks/purity -- intentional: request-time freshness check, Server Component renders per-request
+  const now = Date.now();
+  const product = {
+    ...mapProduct(dbProduct),
+    isNew: dbProduct.createdAt.getTime() > now - SIXTY_DAYS_MS,
+  };
+
+  const variants: VariantData[] = dbProduct.ProductVariant.map(v => ({
+    id: v.id,
+    name: v.name,
+    price: Number(v.price),
+    attributes: v.attributes as Record<string, string> | null,
+    stock: v.Inventory?.quantity ?? 0,
+  }));
+
+  const lowStockThreshold = dbProduct.Inventory?.lowStockThreshold ?? 5;
+
+  const relatedRows = await prisma.product.findMany({
+    where: {
+      categoryId: dbProduct.categoryId,
+      isActive: true,
+      NOT: { id: dbProduct.id },
+    },
+    include: {
+      Category: { select: { id: true, slug: true, name: true } },
+      ProductImage: { orderBy: { sortOrder: "asc" }, take: 1 },
+      Inventory: { select: { quantity: true } },
+    },
+    take: 4,
+    orderBy: { isFeatured: "desc" },
+  });
+
+  const related = relatedRows.map(mapProduct);
+
+  const productJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    description: dbProduct.description ?? undefined,
+    sku: dbProduct.sku,
+    url: `${siteUrl}/urunler/${slug}`,
+    image: product.images.map(img => img.url),
+    brand: { "@type": "Brand", name: "Half Leaf" },
+    offers: {
+      "@type": "Offer",
+      priceCurrency: "TRY",
+      price: product.price.toFixed(2),
+      availability: product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      url: `${siteUrl}/urunler/${slug}`,
+      seller: { "@type": "Organization", name: "Half Leaf" },
+    },
+  };
+
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Ana Sayfa", item: siteUrl },
+      { "@type": "ListItem", position: 2, name: "Ürünler", item: `${siteUrl}/urunler` },
+      { "@type": "ListItem", position: 3, name: dbProduct.Category.name, item: `${siteUrl}/urunler?kategori=${dbProduct.Category.slug}` },
+      { "@type": "ListItem", position: 4, name: product.name, item: `${siteUrl}/urunler/${slug}` },
+    ],
+  };
+
+  return (
+    <div
+      style={{
+        maxWidth: 1280,
+        margin: "0 auto",
+        padding: "calc(var(--hl-bar-h) + var(--hl-header-h) + 32px) 24px 80px",
+      }}
+    >
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      {/* Breadcrumb */}
+      <nav
+        style={{
+          display: "flex", alignItems: "center", gap: 4,
+          fontFamily: "var(--hl-font-ui)", fontSize: 11,
+          color: "var(--hl-text-mute)", marginBottom: 32,
+        }}
+        aria-label="Breadcrumb"
+      >
+        <Link href="/" style={{ color: "inherit", textDecoration: "none" }}>Ana Sayfa</Link>
+        <ChevronRight size={11} />
+        <Link href="/urunler" style={{ color: "inherit", textDecoration: "none" }}>Ürünler</Link>
+        <ChevronRight size={11} />
+        <Link
+          href={`/urunler?kategori=${dbProduct.Category.slug}`}
+          style={{ color: "inherit", textDecoration: "none" }}
+        >
+          {dbProduct.Category.name}
+        </Link>
+        <ChevronRight size={11} />
+        <span style={{ color: "var(--hl-text-soft)" }}>{product.name}</span>
+      </nav>
+
+      {/* Main two-column layout */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "clamp(32px, 5vw, 64px)",
+          marginBottom: 72,
+          alignItems: "start",
+        }}
+        className="product-detail-grid"
+      >
+        <ProductGallery
+          images={product.images}
+          name={product.name}
+          isNew={!!product.isNew}
+        />
+        <ProductInfo
+          product={product}
+          categoryName={dbProduct.Category.name}
+          categorySlug={dbProduct.Category.slug}
+          variants={variants}
+          lowStockThreshold={lowStockThreshold}
+        />
+      </div>
+
+      {/* Tabs section */}
+      <div style={{ marginBottom: 72 }}>
+        <ProductTabs
+          product={product}
+          materialName={dbProduct.Material?.name}
+          careInfo={dbProduct.careInfo ?? undefined}
+          weightGrams={dbProduct.weightGrams ?? undefined}
+        />
+      </div>
+
+      {/* Related products */}
+      {related.length > 0 && (
+        <div>
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            marginBottom: 24,
+          }}>
+            <h2 style={{
+              fontFamily: "var(--hl-font-display)", fontSize: "clamp(20px, 2vw, 26px)",
+              fontWeight: 400, fontStyle: "italic", color: "var(--hl-text-main)", margin: 0,
+            }}>
+              Benzer parçalar
+            </h2>
+            <Link
+              href={`/urunler?kategori=${product.categorySlug}`}
+              style={{
+                fontFamily: "var(--hl-font-ui)", fontSize: 11, fontWeight: 600,
+                color: "var(--hl-text-mute)", textDecoration: "none",
+                display: "flex", alignItems: "center", gap: 4,
+                transition: "color 150ms ease",
+              }}
+            >
+              Tümünü gör →
+            </Link>
+          </div>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, 1fr)",
+            gap: 16,
+          }}
+            className="related-grid"
+          >
+            {related.map(p => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

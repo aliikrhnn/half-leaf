@@ -1,0 +1,25 @@
+# env
+.env
+.env.local
+.env.*.local
+
+# Next.js
+.next/
+out/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Prisma
+prisma/generated/
+
+# Uploaded files (local dev only — use Vercel Blob in production)
+/public/uploads/**
+!/public/uploads/.gitkeep
+!/public/uploads/hero/
+!/public/uploads/hero/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
