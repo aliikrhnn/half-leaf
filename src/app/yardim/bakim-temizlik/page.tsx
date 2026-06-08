@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Bakım & Temizlik Rehberi",
@@ -82,9 +83,9 @@ export default function BakimTemizlikPage() {
         <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-2">Temizlik Ekipmanları</p>
         <p className="text-sm text-ink-muted leading-relaxed">
           Fırça setleri, conta kitleri ve aksesuarlar için{" "}
-          <a href="/urunler?kategori=aksesuarlar" className="text-gold underline hover:text-gold/80 transition-colors">
+          <Link href="/urunler?kategori=aksesuarlar" className="text-gold underline hover:text-gold/80 transition-colors">
             aksesuar koleksiyonumuzu
-          </a>{" "}
+          </Link>{" "}
           inceleyebilirsiniz.
         </p>
       </div>

@@ -22,13 +22,15 @@ export default function Hero({ slides }: Props) {
   const [idx,          setIdx]    = useState(0);
   const [enterCount,   setEnter]  = useState(0);
   const [paused,       setPaused] = useState(false);
-  const [reducedMotion, setRM]    = useState(false);
+  const [reducedMotion, setRM]    = useState(() =>
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchX   = useRef<number | null>(null);
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setRM(mq.matches);
     const cb = (e: MediaQueryListEvent) => setRM(e.matches);
     mq.addEventListener("change", cb);
     return () => mq.removeEventListener("change", cb);

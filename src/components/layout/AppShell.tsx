@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Header from "./Header";
 import Footer from "./Footer";
@@ -16,7 +16,7 @@ interface Props {
 
 export default function AppShell({ children, navCategories = [] }: Props) {
   const pathname = usePathname();
-  const initialPathname = useRef(pathname);
+  const [initialPathname] = useState(pathname);
   const isAdmin = pathname.startsWith("/admin");
   const isCheckout =
     pathname.startsWith("/odeme") || pathname.startsWith("/siparis-tamamlandi");
@@ -29,7 +29,7 @@ export default function AppShell({ children, navCategories = [] }: Props) {
     return <>{children}</>;
   }
 
-  const showCurtain = pathname !== initialPathname.current;
+  const showCurtain = pathname !== initialPathname;
 
   return (
     <>

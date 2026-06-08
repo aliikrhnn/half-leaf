@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle } from "lucide-react";
 import Button from "@/components/ui/Button";
@@ -31,28 +31,15 @@ function slugify(text: string): string {
 export default function CategoryForm({ category }: CategoryFormProps) {
   const router = useRouter();
   const [form, setForm] = useState({
-    name: "",
-    slug: "",
-    description: "",
-    image: "",
-    isActive: true,
-    sortOrder: "0",
+    name: category?.name ?? "",
+    slug: category?.slug ?? "",
+    description: category?.description ?? "",
+    image: category?.image ?? "",
+    isActive: category?.isActive ?? true,
+    sortOrder: String(category?.sortOrder ?? 0),
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (category) {
-      setForm({
-        name: category.name,
-        slug: category.slug,
-        description: category.description ?? "",
-        image: category.image ?? "",
-        isActive: category.isActive,
-        sortOrder: String(category.sortOrder),
-      });
-    }
-  }, [category]);
 
   const set = <K extends keyof typeof form>(key: K, value: typeof form[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));

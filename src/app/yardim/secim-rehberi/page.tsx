@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Nargile Seçim Rehberi",
@@ -76,9 +77,9 @@ export default function SecimRehberiPage() {
         <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-2">Koleksiyonu İnceleyin</p>
         <p className="text-sm text-ink-muted leading-relaxed">
           Rehberde bahsedilen ürün kategorilerini keşfetmek için{" "}
-          <a href="/urunler" className="text-gold underline hover:text-gold/80 transition-colors">
+          <Link href="/urunler" className="text-gold underline hover:text-gold/80 transition-colors">
             ürünler sayfasını
-          </a>{" "}
+          </Link>{" "}
           ziyaret edebilirsiniz.
         </p>
       </div>
