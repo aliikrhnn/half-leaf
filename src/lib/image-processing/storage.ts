@@ -1,45 +1,44 @@
 /**
- * Processed image storage — local filesystem.
+ * İşlenmiş ürün görseli depolama — Supabase Storage backend.
  *
- * DEPLOY NOTE: public/ is read-only on Vercel/serverless.
- * Replace this file with a Vercel Blob / Supabase Storage implementation
- * that exports the same `saveProcessedImage` and `deleteProcessedImage`
- * signatures. No other file needs to change.
+ * Dışa açılan imzalar değişmedi:
+ *   saveProcessedImage(buffer, productImageId) → Promise<string>
+ *   deleteProcessedImage(url)                  → Promise<void>
+ * Çağıran route'lar ve worker bu modüle bağlıdır, onlara dokunmak gerekmez.
  */
 
-import fs from "fs/promises";
-import path from "path";
-
-const UPLOAD_DIR = path.join(
-  process.cwd(),
-  "public",
-  "uploads",
-  "products",
-  "processed"
-);
+import {
+  getStorageClient,
+  BUCKET,
+  storagePublicUrl,
+  storagePathFromUrl,
+} from "@/lib/storage/supabase";
 
 export async function saveProcessedImage(
   buffer: Buffer,
   productImageId: string
 ): Promise<string> {
-  await fs.mkdir(UPLOAD_DIR, { recursive: true });
+  const timestamp   = Date.now();
+  const filename    = `pi_${productImageId}_${timestamp}.png`;
+  const storagePath = `products/processed/${filename}`;
 
-  const timestamp = Date.now();
-  const filename = `pi_${productImageId}_${timestamp}.png`;
-  const filePath = path.join(UPLOAD_DIR, filename);
+  const supabase = getStorageClient();
+  const { error } = await supabase.storage
+    .from(BUCKET)
+    .upload(storagePath, buffer, {
+      contentType: "image/png",
+      upsert: true,
+    });
 
-  await fs.writeFile(filePath, buffer);
-
-  return `/uploads/products/processed/${filename}`;
+  if (error) throw new Error(`İşlenmiş görsel yüklenemedi: ${error.message}`);
+  return storagePublicUrl(storagePath);
 }
 
 export async function deleteProcessedImage(url: string): Promise<void> {
-  if (!url.startsWith("/uploads/products/processed/")) return;
-  const filename = path.basename(url);
-  const filePath = path.join(UPLOAD_DIR, filename);
-  try {
-    await fs.unlink(filePath);
-  } catch {
-    // File may already be gone; not fatal
-  }
+  const storagePath = storagePathFromUrl(url);
+  if (!storagePath) return;
+
+  const supabase = getStorageClient();
+  await supabase.storage.from(BUCKET).remove([storagePath]);
+  // Silme hatası kritik değil; çağıran temizliği yönetir.
 }

@@ -105,7 +105,9 @@
       "Bash(python3 -c ' *)",
       "Bash(Select-Object -First 100)",
       "Bash(Remove-Item \"C:\\\\Users\\\\aliik\\\\OneDrive\\\\Desktop\\\\half-leaf\\\\src\\\\middleware.ts\")",
-      "PowerShell(Remove-Item *)"
+      "PowerShell(Remove-Item *)",
+      "Bash(New-Item -ItemType Directory -Path \"C:\\\\Users\\\\aliik\\\\OneDrive\\\\Desktop\\\\half-leaf\\\\src\\\\lib\\\\storage\" -Force)",
+      "Bash(Write-Output \"dir created\")"
     ]
   }
 }

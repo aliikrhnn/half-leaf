@@ -1,20 +1,12 @@
 /**
- * Local-filesystem image storage (hero + product images).
+ * Hero ve ürün görseli yükleme — Supabase Storage backend.
  *
- * PRODUCTION NOTE: public/ is not writable on Vercel/serverless runtimes.
- * To migrate to Vercel Blob, replace this entire file with a Blob-backed
- * implementation that exports the same `saveHeroImage` signature.
- * No other file needs to change.
- *
- * NOT (deploy turunda yapılacak): Bu modül public/uploads dizinine dosya yazar.
- * Vercel/serverless ortamında public klasörü salt okunurdur; production'a
- * geçişten önce saveHeroImage fonksiyonu Vercel Blob veya Supabase Storage'a
- * göçecek. İmza (buffer, originalName) → Promise<string> aynı kalmalı ki
- * çağıran yerler etkilenmesin.
+ * Dışa açılan imzalar (buffer, originalName) → Promise<string> değişmedi;
+ * çağıran route'lar ve testler bu modüle bağlıdır, onlara dokunmak gerekmez.
  */
 
-import fs   from "fs/promises";
 import path from "path";
+import { getStorageClient, BUCKET, storagePublicUrl } from "@/lib/storage/supabase";
 
 function slugify(name: string): string {
   return name
@@ -26,49 +18,70 @@ function slugify(name: string): string {
     .slice(0, 60);
 }
 
+function contentTypeFromExt(ext: string): string {
+  const map: Record<string, string> = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+    ".avif": "image/avif",
+  };
+  return map[ext] ?? "application/octet-stream";
+}
+
 /**
- * Saves an uploaded hero image to public/uploads/hero/ and returns the public URL.
- * @param buffer  - Raw file bytes
- * @param originalName - Original filename from the client (used for extension + slug)
- * @returns  "/uploads/hero/<filename>" — served as a static asset by Next.js
+ * Hero görselini Supabase Storage'a yükler ve public URL döndürür.
+ * @param buffer       - Ham görsel baytları
+ * @param originalName - İstemciden gelen dosya adı (uzantı + slug için)
+ * @returns Supabase CDN public URL
  */
 export async function saveHeroImage(
   buffer: ArrayBuffer,
   originalName: string,
 ): Promise<string> {
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "hero");
-  await fs.mkdir(uploadDir, { recursive: true });
-
   const ext  = path.extname(originalName).toLowerCase() || ".webp";
   const base = path.basename(originalName, ext);
   const slug = slugify(base);
   const tag  = Date.now().toString(36);
-  const filename = `${slug}-${tag}${ext}`;
+  const filename    = `${slug}-${tag}${ext}`;
+  const storagePath = `hero/${filename}`;
 
-  await fs.writeFile(path.join(uploadDir, filename), Buffer.from(buffer));
+  const supabase = getStorageClient();
+  const { error } = await supabase.storage
+    .from(BUCKET)
+    .upload(storagePath, Buffer.from(buffer), {
+      contentType: contentTypeFromExt(ext),
+      upsert: true,
+    });
 
-  return `/uploads/hero/${filename}`;
+  if (error) throw new Error(`Görsel yüklenemedi: ${error.message}`);
+  return storagePublicUrl(storagePath);
 }
 
 /**
- * Saves an uploaded product image to public/uploads/products/originals/ and returns the public URL.
- * @param buffer  - Raw file bytes
- * @param originalName - Original filename from the client
- * @returns  "/uploads/products/originals/<filename>"
+ * Ürün görselini Supabase Storage'a yükler ve public URL döndürür.
+ * @param buffer       - Ham görsel baytları
+ * @param originalName - İstemciden gelen dosya adı
+ * @returns Supabase CDN public URL
  */
 export async function saveProductImage(
   buffer: ArrayBuffer,
   originalName: string,
 ): Promise<string> {
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "products", "originals");
-  await fs.mkdir(uploadDir, { recursive: true });
-
   const ext  = path.extname(originalName).toLowerCase() || ".jpg";
   const tag  = Date.now().toString(36);
   const rand = Math.random().toString(36).slice(2, 7);
-  const filename = `prod_${rand}_${tag}${ext}`;
+  const filename    = `prod_${rand}_${tag}${ext}`;
+  const storagePath = `products/originals/${filename}`;
 
-  await fs.writeFile(path.join(uploadDir, filename), Buffer.from(buffer));
+  const supabase = getStorageClient();
+  const { error } = await supabase.storage
+    .from(BUCKET)
+    .upload(storagePath, Buffer.from(buffer), {
+      contentType: contentTypeFromExt(ext),
+      upsert: true,
+    });
 
-  return `/uploads/products/originals/${filename}`;
+  if (error) throw new Error(`Görsel yüklenemedi: ${error.message}`);
+  return storagePublicUrl(storagePath);
 }
