@@ -25,6 +25,7 @@ interface Product {
   slug: string;
   sku: string;
   price: number;
+  priceCurrency: "USD" | "TRY";
   stock: number;
   isActive: boolean;
   isFeatured: boolean;
@@ -43,6 +44,7 @@ interface RawProduct {
   slug: string;
   sku: string;
   basePrice: number;
+  priceCurrency?: string;
   isActive: boolean;
   isFeatured: boolean;
   isBestseller: boolean;
@@ -60,6 +62,7 @@ function normalize(raw: RawProduct): Product {
     slug: raw.slug,
     sku: raw.sku,
     price: Number(raw.basePrice),
+    priceCurrency: (raw.priceCurrency === "USD" ? "USD" : "TRY"),
     stock: raw.Inventory?.quantity ?? 0,
     isActive: raw.isActive,
     isFeatured: raw.isFeatured,
@@ -118,6 +121,7 @@ export default function AdminUrunlerPage() {
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [usdTryRate, setUsdTryRate] = useState<number | null>(null);
 
   // Bulk selection
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -139,6 +143,12 @@ export default function AdminUrunlerPage() {
             )
           );
         }
+      })
+      .catch(() => {});
+    fetch("/api/admin/kur")
+      .then((r) => r.json())
+      .then((j: { success: boolean; data?: { usdTryRate: number | null } }) => {
+        if (j.success && j.data?.usdTryRate != null) setUsdTryRate(j.data.usdTryRate);
       })
       .catch(() => {});
   }, []);
@@ -599,7 +609,18 @@ export default function AdminUrunlerPage() {
                         {product.categoryName}
                       </td>
                       <td className="px-4 py-3 text-gold font-medium">
-                        {formatPrice(product.price)}
+                        {product.priceCurrency === "USD" ? (
+                          <span>
+                            ${product.price.toFixed(2)}
+                            {usdTryRate != null && (
+                              <span className="text-ink-dim font-normal text-xs ml-1">
+                                (≈{formatPrice(product.price * usdTryRate)})
+                              </span>
+                            )}
+                          </span>
+                        ) : (
+                          formatPrice(product.price)
+                        )}
                       </td>
                       <td className="px-4 py-3 hidden sm:table-cell">
                         <span className={product.stock <= 5 ? "text-yellow-400 font-medium" : "text-ink-muted"}>
