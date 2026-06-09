@@ -80,6 +80,7 @@ export const useCartStore = create<CartState>()(
     {
       name: "half-leaf-cart",
       skipHydration: true,
+      partialize: (state) => ({ items: state.items }),
     }
   )
 );
