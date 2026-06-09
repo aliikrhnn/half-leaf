@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -67,6 +67,7 @@ export default function ProductsClient({
   urlState,
 }: Props) {
   const router = useRouter();
+  const [, startTransition] = useTransition();
   const [filterOpen, setFilterOpen] = useState(false);
 
   const { kategori, materyal, marka, boy, renk, fiyat, indirim, cokSatanlar, siralama, sayfa: sayfaStr, grid: gridStr, arama } = urlState;
@@ -100,9 +101,11 @@ export default function ProductsClient({
         }
       }
 
-      router.push(`/urunler?${params.toString()}`);
+      startTransition(() => {
+        router.push(`/urunler?${params.toString()}`);
+      });
     },
-    [urlState, router]
+    [urlState, router, startTransition]
   );
 
   const handleFilterChange = (key: string, value: string | null) => {
@@ -126,7 +129,9 @@ export default function ProductsClient({
   const clearAll = () => {
     const params = new URLSearchParams();
     if (kategori) params.set("kategori", kategori);
-    router.push(`/urunler?${params.toString()}`);
+    startTransition(() => {
+      router.push(`/urunler?${params.toString()}`);
+    });
   };
 
   const hasFilters = !!(materyal || marka || boy || renk || fiyat || indirim || cokSatanlar);

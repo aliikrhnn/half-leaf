@@ -48,6 +48,7 @@ function Section({ title, children, defaultOpen = true }: {
   return (
     <div style={{ borderBottom: "1px solid var(--hl-line)", paddingBottom: open ? 18 : 0, marginBottom: 18 }}>
       <button
+        type="button"
         onClick={() => setOpen(v => !v)}
         style={{
           width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -177,6 +178,7 @@ export default function FilterPanel({
             {sizeOptions.map(boy => (
               <button
                 key={boy}
+                type="button"
                 onClick={() => onChange("boy", activeBoy === boy ? null : boy)}
                 style={{
                   padding: "4px 13px", borderRadius: "var(--hl-r-pill)", cursor: "pointer",
@@ -201,6 +203,7 @@ export default function FilterPanel({
             {colorOptions.map(({ name, hex }) => (
               <button
                 key={name}
+                type="button"
                 onClick={() => onChange("renk", activeRenk === name ? null : name)}
                 title={name}
                 aria-label={name}
