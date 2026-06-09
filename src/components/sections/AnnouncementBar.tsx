@@ -1,6 +1,6 @@
 "use client";
 
-const MESSAGES = [
+const DEFAULT_MESSAGES = [
   "2.500 ₺ ve üzeri siparişlerde ücretsiz kargo",
   "El yapımı pirinç koleksiyon stoklarda",
   "Aynı gün kargo · 14:00 öncesi siparişler",
@@ -8,9 +8,12 @@ const MESSAGES = [
   "Hediye ambalajı · Ücretsiz ahşap kutu",
 ];
 
-const ALL = [...MESSAGES, ...MESSAGES];
+interface Props { messages?: string[]; }
 
-export default function AnnouncementBar() {
+export default function AnnouncementBar({ messages }: Props) {
+  const MESSAGES = messages && messages.length > 0 ? messages : DEFAULT_MESSAGES;
+  const ALL = [...MESSAGES, ...MESSAGES];
+
   return (
     <div
       role="marquee"

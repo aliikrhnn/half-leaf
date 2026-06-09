@@ -1216,10 +1216,10 @@ async function main() {
     12
   );
   const admin = await prisma.user.upsert({
-    where:  { email: process.env.ADMIN_EMAIL ?? "admin@halfleaf.com.tr" },
+    where:  { email: process.env.ADMIN_EMAIL ?? "admin@halfleafstore.com" },
     update: { passwordHash: adminPasswordHash, role: "ADMIN", fullName: "Half Leaf Admin" },
     create: {
-      email:        process.env.ADMIN_EMAIL ?? "admin@halfleaf.com.tr",
+      email:        process.env.ADMIN_EMAIL ?? "admin@halfleafstore.com",
       fullName:     "Half Leaf Admin",
       passwordHash: adminPasswordHash,
       role:         "ADMIN",

@@ -509,7 +509,7 @@ model SiteSettings {
   freeShippingThreshold Decimal  @default(2500) @db.Decimal(10, 2)
   shippingCost          Decimal  @default(150) @db.Decimal(10, 2)
   bankTransferEnabled   Boolean  @default(true)
-  contactEmail          String   @default("info@halfleaf.com.tr")
+  contactEmail          String   @default("info@halfleafstore.com")
   contactPhone          String   @default("+90 212 000 00 00")
   contactAddress        String   @default("")
   instagramUrl          String?
@@ -519,6 +519,7 @@ model SiteSettings {
   usdTryRate            Decimal?  @db.Decimal(10, 4)
   usdTryRateUpdatedAt   DateTime?
   usdTryRateLocked      Boolean   @default(false)
+  announcementMessages  String[]  @default([])
   updatedAt             DateTime  @updatedAt
 }
 

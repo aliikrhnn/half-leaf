@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { prisma } from "@/lib/db/prisma";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://halfleaf.com";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://halfleafstore.com";
 
 const STATIC_ROUTES: MetadataRoute.Sitemap = [
   { url: siteUrl, lastModified: new Date(), changeFrequency: "daily",   priority: 1.0 },

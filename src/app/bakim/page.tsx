@@ -68,7 +68,7 @@ export default function BakimPage() {
         color: "var(--hl-text-faint)",
         letterSpacing: "0.06em",
       }}>
-        half-leaf.com.tr
+        halfleafstore.com
       </div>
     </div>
   );

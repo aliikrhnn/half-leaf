@@ -37,7 +37,7 @@ export default function KVKKPage() {
         </section>
         <section>
           <h2 className="text-base font-semibold text-ink mb-2">4. Haklarınız</h2>
-          <p>KVKK&apos;nın 11. maddesi kapsamında kişisel verilerinize ilişkin; bilgi talep etme, düzeltme, silme, işlemenin kısıtlanması ve itiraz haklarına sahipsiniz. Talepleriniz için <a href="mailto:kvkk@halfleaf.com.tr" className="text-gold hover:underline">kvkk@halfleaf.com.tr</a> adresine başvurabilirsiniz.</p>
+          <p>KVKK&apos;nın 11. maddesi kapsamında kişisel verilerinize ilişkin; bilgi talep etme, düzeltme, silme, işlemenin kısıtlanması ve itiraz haklarına sahipsiniz. Talepleriniz için <a href="mailto:kvkk@halfleafstore.com" className="text-gold hover:underline">kvkk@halfleafstore.com</a> adresine başvurabilirsiniz.</p>
         </section>
       </div>
     </div>

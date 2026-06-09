@@ -17,6 +17,7 @@ const UpdateSchema = z.object({
   facebookUrl:           z.string().url().nullable().optional(),
   twitterUrl:            z.string().url().nullable().optional(),
   whatsappNumber:        z.string().nullable().optional(),
+  announcementMessages:  z.array(z.string().max(200)).max(20).optional(),
 });
 
 async function getOrCreate() {

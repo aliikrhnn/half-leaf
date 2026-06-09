@@ -7,7 +7,7 @@ import ProductsClient from "./ProductsClient";
 import type { Product } from "@/lib/types";
 import type { MaterialOption } from "./FilterPanel";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://halfleaf.com";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://halfleafstore.com";
 
 export const metadata: Metadata = {
   title: "Tüm Ürünler",

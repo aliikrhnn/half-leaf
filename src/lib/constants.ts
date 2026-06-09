@@ -6,13 +6,13 @@ export const SITE_DESCRIPTION =
 export const FREE_SHIPPING_THRESHOLD = 2500;
 export const SHIPPING_COST = 150;
 
-export const CONTACT_EMAIL = "info@halfleaf.com.tr";
+export const CONTACT_EMAIL = "info@halfleafstore.com";
 export const CONTACT_PHONE = "+90 212 000 00 00";
 export const CONTACT_ADDRESS = "İstanbul, Türkiye";
 
 export const SOCIAL_LINKS = {
-  instagram: "https://instagram.com/halfleaf",
-  facebook: "https://facebook.com/halfleaf",
+  instagram: "https://instagram.com/halfleafstore",
+  facebook: "https://facebook.com/halfleafstore",
 };
 
 export const NAV_LINKS: Array<{ label: string; href: string; megaKey?: string; accent?: boolean }> = [

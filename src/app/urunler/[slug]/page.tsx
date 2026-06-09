@@ -16,7 +16,7 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://halfleaf.com";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://halfleafstore.com";
 const SIXTY_DAYS_MS = 60 * 24 * 60 * 60 * 1000;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

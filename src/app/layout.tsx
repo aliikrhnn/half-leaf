@@ -29,7 +29,9 @@ const manrope = Manrope({
   display: "swap",
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://halfleaf.com";
+export const revalidate = 10;
+
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://halfleafstore.com";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -143,12 +145,27 @@ async function getNavCategories(): Promise<NavCategory[]> {
   }
 }
 
+async function getAnnouncementMessages(): Promise<string[]> {
+  try {
+    const s = await prisma.siteSettings.findUnique({
+      where:  { id: "site" },
+      select: { announcementMessages: true },
+    });
+    return s?.announcementMessages ?? [];
+  } catch {
+    return [];
+  }
+}
+
 export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const navCategories = await getNavCategories();
+  const [navCategories, announcementMessages] = await Promise.all([
+    getNavCategories(),
+    getAnnouncementMessages(),
+  ]);
 
   return (
     <html lang="tr" className={`scroll-smooth ${inter.variable} ${cormorant.variable} ${manrope.variable}`}>
@@ -168,7 +185,7 @@ export default async function RootLayout({
           }}
         />
         <AgeGate />
-        <AppShell navCategories={navCategories}>{children}</AppShell>
+        <AppShell navCategories={navCategories} announcementMessages={announcementMessages}>{children}</AppShell>
       </body>
     </html>
   );

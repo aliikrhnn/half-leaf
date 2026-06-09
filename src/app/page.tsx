@@ -15,7 +15,7 @@ import type { Product } from "@/lib/types";
 
 export const revalidate = 60;
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://halfleaf.com";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://halfleafstore.com";
 
 export const metadata: Metadata = {
   alternates: { canonical: siteUrl },

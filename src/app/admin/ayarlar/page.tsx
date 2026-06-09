@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Save, Plus, Trash2, AlertCircle, Check, Settings, Truck, Building2, Phone, Share2, DollarSign, RefreshCw, Lock, Unlock } from "lucide-react";
+import { Save, Plus, Trash2, AlertCircle, Check, Settings, Truck, Building2, Phone, Share2, DollarSign, RefreshCw, Lock, Unlock, Bell } from "lucide-react";
 import AdminHeader from "@/components/admin/layout/AdminHeader";
 
 /* ── Types ── */
@@ -18,6 +18,7 @@ type SiteSettings = {
   facebookUrl: string | null;
   twitterUrl: string | null;
   whatsappNumber: string | null;
+  announcementMessages: string[];
 };
 
 type ShippingOption = {
@@ -40,15 +41,16 @@ type BankAccount = {
   sortOrder: number;
 };
 
-type Tab = "genel" | "kargo" | "odeme" | "iletisim" | "sosyal" | "kur";
+type Tab = "genel" | "kargo" | "odeme" | "iletisim" | "sosyal" | "kur" | "duyurular";
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-  { id: "genel",    label: "Genel",          icon: Settings     },
-  { id: "kargo",    label: "Kargo",          icon: Truck        },
-  { id: "odeme",    label: "Ödeme",          icon: Building2    },
-  { id: "iletisim", label: "İletişim",       icon: Phone        },
-  { id: "sosyal",   label: "Sosyal Medya",   icon: Share2       },
-  { id: "kur",      label: "Kur Yönetimi",   icon: DollarSign   },
+  { id: "genel",     label: "Genel",          icon: Settings     },
+  { id: "kargo",     label: "Kargo",          icon: Truck        },
+  { id: "odeme",     label: "Ödeme",          icon: Building2    },
+  { id: "iletisim",  label: "İletişim",       icon: Phone        },
+  { id: "sosyal",    label: "Sosyal Medya",   icon: Share2       },
+  { id: "kur",       label: "Kur Yönetimi",   icon: DollarSign   },
+  { id: "duyurular", label: "Duyuru Şeridi",  icon: Bell         },
 ];
 
 type KurData = {
@@ -135,6 +137,9 @@ export default function AdminAyarlarPage() {
   const [newBanka,   setNewBanka]   = useState<Partial<BankAccount>>({});
   const [showAddB,   setShowAddB]   = useState(false);
   const [addingB,    setAddingB]    = useState(false);
+
+  /* Duyuru şeridi */
+  const [newMsg,       setNewMsg]       = useState("");
 
   /* Kur */
   const [kurData,      setKurData]      = useState<KurData | null>(null);
@@ -679,6 +684,68 @@ export default function AdminAyarlarPage() {
                 <Field label="Twitter / X" value={settings.twitterUrl ?? ""} onChange={v => update("twitterUrl", v || null)} placeholder="https://twitter.com/kullanici" />
                 <Field label="WhatsApp Numarası" value={settings.whatsappNumber ?? ""} onChange={v => update("whatsappNumber", v || null)} placeholder="+905000000000" />
               </div>
+              <SaveBar saving={saving} saved={saved} error={saveErr} onSave={handleSave} />
+            </div>
+          )}
+
+          {/* ── DUYURU ŞERİDİ ── */}
+          {tab === "duyurular" && (
+            <div className="max-w-xl space-y-6">
+              <div className="bg-bg-surface border border-border-default rounded-xl p-5 space-y-4">
+                <div>
+                  <h2 className="text-sm font-semibold text-ink">Duyuru Şeridi Mesajları</h2>
+                  <p className="text-xs text-ink-dim mt-1">Sitenin üstündeki kayan şeritte gösterilecek mesajlar. Boş bırakılırsa varsayılan mesajlar kullanılır.</p>
+                </div>
+
+                <div className="space-y-2">
+                  {(settings.announcementMessages ?? []).length === 0 ? (
+                    <p className="text-xs text-ink-dim py-2">Henüz mesaj eklenmedi — varsayılan mesajlar gösterilecek.</p>
+                  ) : (
+                    (settings.announcementMessages ?? []).map((msg, i) => (
+                      <div key={i} className="flex items-center gap-2 bg-bg-elevated rounded-lg px-3 py-2">
+                        <span className="flex-1 text-sm text-ink">{msg}</span>
+                        <button
+                          type="button"
+                          onClick={() => update("announcementMessages", (settings.announcementMessages ?? []).filter((_, j) => j !== i))}
+                          className="p-1 text-ink-dim hover:text-red-400 transition-colors flex-shrink-0"
+                          aria-label="Mesajı sil"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <input
+                    type="text"
+                    value={newMsg}
+                    onChange={e => setNewMsg(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === "Enter" && newMsg.trim()) {
+                        update("announcementMessages", [...(settings.announcementMessages ?? []), newMsg.trim()]);
+                        setNewMsg("");
+                      }
+                    }}
+                    placeholder="Yeni mesaj ekle…"
+                    maxLength={200}
+                    className="flex-1 bg-bg-elevated border border-border-default text-ink rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-accent transition-colors placeholder:text-ink-dim"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!newMsg.trim()) return;
+                      update("announcementMessages", [...(settings.announcementMessages ?? []), newMsg.trim()]);
+                      setNewMsg("");
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-accent/15 text-accent-light text-xs font-medium hover:bg-accent/25 transition-colors flex-shrink-0"
+                  >
+                    <Plus size={13} /> Ekle
+                  </button>
+                </div>
+              </div>
+
               <SaveBar saving={saving} saved={saved} error={saveErr} onSave={handleSave} />
             </div>
           )}

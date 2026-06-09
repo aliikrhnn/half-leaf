@@ -12,9 +12,10 @@ import type { NavCategory } from "@/lib/types";
 interface Props {
   children: React.ReactNode;
   navCategories?: NavCategory[];
+  announcementMessages?: string[];
 }
 
-export default function AppShell({ children, navCategories = [] }: Props) {
+export default function AppShell({ children, navCategories = [], announcementMessages }: Props) {
   const pathname = usePathname();
   const [initialPathname] = useState(pathname);
   const isAdmin = pathname.startsWith("/admin");
@@ -33,7 +34,7 @@ export default function AppShell({ children, navCategories = [] }: Props) {
 
   return (
     <>
-      <AnnouncementBar />
+      <AnnouncementBar messages={announcementMessages} />
       <SplashScreen />
       <Header navCategories={navCategories} />
       {showCurtain && (
