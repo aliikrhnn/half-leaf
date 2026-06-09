@@ -1051,11 +1051,17 @@
   .hl-cart-grid > div:first-child .hl-cart-row {
     grid-template-columns: 1fr !important;
   }
+  .hl-cart-table-header { display: none !important; }
+  .hl-cart-sub-actions { padding-left: 0 !important; }
 }
 
 /* Checkout page */
 @media (max-width: 900px) {
   .hl-checkout-grid { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 768px) {
+  .hl-checkout-grid { padding: 20px 16px 72px !important; }
+  .hl-form-grid-2 { grid-template-columns: 1fr !important; }
 }
 
 /* Account page */

@@ -96,7 +96,7 @@ export default function AdminIadeTaleplerisPage() {
     <div className="flex flex-col h-full">
       <AdminHeader title="İade Talepleri" subtitle={subtitle} />
 
-      <div className="p-6 space-y-5 flex-1 overflow-auto">
+      <div className="p-3 sm:p-6 space-y-5 flex-1 overflow-auto">
 
         {/* Özet */}
         {!loading && pendingCount > 0 && (

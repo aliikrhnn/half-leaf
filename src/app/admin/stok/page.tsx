@@ -50,7 +50,7 @@ export default function AdminStokPage() {
         subtitle={!loading ? `${items.length} kayıt${lowCount > 0 ? ` · ${lowCount} düşük stok` : ""}` : undefined}
       />
 
-      <div className="p-6 space-y-5 flex-1 overflow-auto">
+      <div className="p-3 sm:p-6 space-y-5 flex-1 overflow-auto">
         <form onSubmit={(e) => { e.preventDefault(); fetchStock(); }} className="relative max-w-sm">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-dim pointer-events-none" />
           <input

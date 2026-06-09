@@ -317,7 +317,7 @@ export default function AdminUrunlerPage() {
         }
       />
 
-      <div className="p-6 space-y-5 flex-1 overflow-auto">
+      <div className="p-3 sm:p-6 space-y-5 flex-1 overflow-auto">
         {/* Bulk Image Processing */}
         <BulkProcessingBar />
 

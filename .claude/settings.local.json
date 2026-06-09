@@ -113,7 +113,8 @@
       "Bash(dir \"C:\\\\Users\\\\aliik\\\\OneDrive\\\\Desktop\\\\half-leaf\\\\src\\\\app\\\\favicon*\")",
       "Bash(dir \"C:\\\\Users\\\\aliik\\\\OneDrive\\\\Desktop\\\\half-leaf\\\\src\\\\app\\\\icon*\")",
       "Bash(Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue)",
-      "Bash(Write-Host \"Done\")"
+      "Bash(Write-Host \"Done\")",
+      "Bash(Get-ChildItem *)"
     ]
   }
 }

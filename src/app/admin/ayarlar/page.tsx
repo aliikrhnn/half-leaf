@@ -364,7 +364,7 @@ export default function AdminAyarlarPage() {
     return (
       <div className="flex flex-col h-full">
         <AdminHeader title="Ayarlar" />
-        <div className="p-6">
+        <div className="p-3 sm:p-6">
           <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
             <AlertCircle size={16} />{loadErr}
           </div>
@@ -377,7 +377,7 @@ export default function AdminAyarlarPage() {
     return (
       <div className="flex flex-col h-full">
         <AdminHeader title="Ayarlar" />
-        <div className="p-6 space-y-3">
+        <div className="p-3 sm:p-6 space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="h-10 bg-bg-elevated rounded-lg animate-pulse" />
           ))}
@@ -390,14 +390,14 @@ export default function AdminAyarlarPage() {
     <div className="flex flex-col h-full">
       <AdminHeader title="Ayarlar" />
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Tab sidebar */}
-        <nav className="w-44 border-r border-border-default p-3 space-y-0.5 flex-shrink-0">
+      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
+        {/* Tab nav */}
+        <nav className="flex lg:flex-col lg:w-44 lg:border-r lg:border-b-0 border-b border-border-default p-2 lg:p-3 gap-0.5 overflow-x-auto lg:overflow-visible flex-shrink-0">
           {TABS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
               onClick={() => setTab(id)}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left ${tab === id ? "bg-accent/20 text-accent-light font-medium" : "text-ink-muted hover:text-ink hover:bg-bg-elevated"}`}
+              className={`flex-shrink-0 lg:w-full flex items-center gap-2 lg:gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left whitespace-nowrap ${tab === id ? "bg-accent/20 text-accent-light font-medium" : "text-ink-muted hover:text-ink hover:bg-bg-elevated"}`}
             >
               <Icon size={15} />
               {label}
@@ -406,7 +406,7 @@ export default function AdminAyarlarPage() {
         </nav>
 
         {/* Tab content */}
-        <div className="flex-1 overflow-auto p-6">
+        <div className="flex-1 overflow-auto p-3 sm:p-6">
 
           {/* ── GENEL ── */}
           {tab === "genel" && (

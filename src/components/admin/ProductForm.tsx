@@ -303,7 +303,7 @@ export default function ProductForm({ product }: ProductFormProps) {
     "w-full px-3 py-2 text-sm bg-bg-surface border border-border-default rounded-lg text-ink placeholder-ink-dim focus:outline-none focus:border-accent";
 
   return (
-    <form onSubmit={handleSubmit} className="p-6 max-w-3xl space-y-8">
+    <form onSubmit={handleSubmit} className="p-3 sm:p-6 max-w-3xl space-y-8">
       {error && (
         <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
           <AlertCircle size={16} />

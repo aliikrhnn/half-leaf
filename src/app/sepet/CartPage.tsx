@@ -273,7 +273,7 @@ export default function CartPage() {
         {/* ────── LEFT: Product list ────── */}
         <div style={cardStyle}>
           {/* Table header */}
-          <div style={{
+          <div className="hl-cart-table-header" style={{
             display: "grid", gridTemplateColumns: "1fr 120px 100px",
             padding: "14px 20px", borderBottom: "1px solid var(--hl-line)",
           }}>
@@ -294,7 +294,7 @@ export default function CartPage() {
                   borderBottom: idx < items.length - 1 ? "1px solid var(--hl-line)" : "none",
                 }}>
                   {/* Row: image + info / qty / price + remove */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 100px", alignItems: "center", gap: 12 }}>
+                  <div className="hl-cart-row" style={{ display: "grid", gridTemplateColumns: "1fr 120px 100px", alignItems: "center", gap: 12 }}>
 
                     {/* Image + name */}
                     <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
@@ -366,7 +366,7 @@ export default function CartPage() {
                   </div>
 
                   {/* Sub-actions */}
-                  <div style={{ marginTop: 10, paddingLeft: 86, display: "flex", gap: 16 }}>
+                  <div className="hl-cart-sub-actions" style={{ marginTop: 10, paddingLeft: 86, display: "flex", gap: 16 }}>
                     <button style={{
                       fontFamily: "var(--hl-font-ui)", fontSize: 10, fontWeight: 600,
                       color: "var(--hl-bronze-400)", background: "none", border: "none",

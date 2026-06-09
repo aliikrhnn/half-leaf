@@ -97,7 +97,7 @@ export default function AdminSiparislerPage() {
         subtitle={meta ? `${meta.total} sipariş` : undefined}
       />
 
-      <div className="p-6 space-y-5 flex-1 overflow-auto">
+      <div className="p-3 sm:p-6 space-y-5 flex-1 overflow-auto">
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3">
           <form onSubmit={handleSearchSubmit} className="flex-1 relative">

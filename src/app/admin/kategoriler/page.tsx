@@ -74,7 +74,7 @@ export default function AdminKategorilerPage() {
         }
       />
 
-      <div className="p-6 space-y-5 flex-1 overflow-auto">
+      <div className="p-3 sm:p-6 space-y-5 flex-1 overflow-auto">
         {error && (
           <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
             <AlertCircle size={16} />

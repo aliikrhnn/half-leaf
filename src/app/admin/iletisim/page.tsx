@@ -74,7 +74,7 @@ export default function AdminIletisimPage() {
         subtitle={meta ? `${meta.total} mesaj${unreadCount > 0 ? ` · ${unreadCount} okunmamış` : ""}` : undefined}
       />
 
-      <div className="p-6 space-y-5 flex-1 overflow-auto">
+      <div className="p-3 sm:p-6 space-y-5 flex-1 overflow-auto">
         <div className="flex flex-col sm:flex-row gap-3">
           <form onSubmit={(e) => { e.preventDefault(); setPage(1); fetchMessages(); }} className="flex-1 relative">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-dim pointer-events-none" />

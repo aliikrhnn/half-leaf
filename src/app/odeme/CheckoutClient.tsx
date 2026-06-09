@@ -474,7 +474,7 @@ export default function CheckoutClient({
               <>
                 {/* 01 · İletişim */}
                 <Panel title="01 · İletişim">
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                  <div className="hl-form-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
                     <Field label="E-posta" value={email} onChange={setEmail} error={fieldErrors.email} type="email" placeholder="ornek@eposta.com" />
                     <Field label="Telefon" value={phoneSuffix} onChange={setPhoneSuffix} error={fieldErrors.phone} placeholder="532 000 00 00" prefix="+90" />
                   </div>
@@ -486,7 +486,7 @@ export default function CheckoutClient({
 
                 {/* 02 · Teslimat Adresi */}
                 <Panel title="02 · Teslimat Adresi">
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                  <div className="hl-form-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
                     <Field label="Ad" value={ad} onChange={setAd} error={fieldErrors.ad} />
                     <Field label="Soyad" value={soyad} onChange={setSoyad} error={fieldErrors.soyad} />
                   </div>
@@ -555,7 +555,7 @@ export default function CheckoutClient({
                           <div style={{ marginTop: 14 }}>
                             <Field label="Adres" value={adres} onChange={setAdres} error={fieldErrors.adres} placeholder="Mahalle, cadde, sokak, kapı no" />
                           </div>
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
+                          <div className="hl-form-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
                             <SelectField label="İl" value={selectedIl} onChange={handleIlChange} options={IL_NAMES} error={fieldErrors.il} placeholder="İl seçin…" />
                             <SelectField label="İlçe" value={selectedIlce} onChange={setSelectedIlce} options={ilceOptions} error={fieldErrors.ilce} placeholder={selectedIl ? "İlçe seçin…" : "Önce il seçin"} />
                           </div>
