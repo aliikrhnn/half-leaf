@@ -62,10 +62,9 @@ export default function Hero({ slides }: Props) {
     <section
       aria-label="Ana sayfa slayt gösterisi"
       aria-roledescription="carousel"
+      className="hl-hero-section"
       style={{
         position: "relative",
-        height: "clamp(70vh, 88vh, 100vh)",
-        minHeight: 560,
         overflow: "hidden",
       }}
       onMouseEnter={() => setPaused(true)}
@@ -100,8 +99,8 @@ export default function Hero({ slides }: Props) {
                     alt=""
                     fill
                     priority={i === 0}
-                    style={{ objectFit: "cover", objectPosition: "center 30%" }}
-                    className={!reducedMotion && active ? "hero-ken-burns" : ""}
+                    style={{ objectFit: "cover" }}
+                    className={`hl-hero-img${!reducedMotion && active ? " hero-ken-burns" : ""}`}
                     sizes="100vw"
                   />
                 ) : (
@@ -133,6 +132,7 @@ export default function Hero({ slides }: Props) {
 
               {/* Text block */}
               <div
+                className="hl-hero-text-block"
                 style={{
                   position: "absolute",
                   bottom: "clamp(80px, 12vh, 130px)",
@@ -199,9 +199,9 @@ export default function Hero({ slides }: Props) {
         })}
       </div>
 
-      {/* Arrows */}
+      {/* Arrows — desktop only (mobile uses touch swipe) */}
       {count > 1 && (
-        <>
+        <div className="hidden lg:contents">
           <button
             onClick={() => { setPaused(true); goPrev(); }}
             aria-label="Önceki slayt"
@@ -220,7 +220,7 @@ export default function Hero({ slides }: Props) {
           >
             <ChevronRight />
           </button>
-        </>
+        </div>
       )}
 
       {/* Bottom controls */}

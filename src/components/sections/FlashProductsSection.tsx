@@ -14,11 +14,19 @@ function getCountdownTarget(): Date {
 }
 
 function useCountdown(target: Date) {
-  const [rem, setRem] = useState(() => Math.max(0, target.getTime() - Date.now()));
+  // rem starts at 0 on both server and client — no Date.now() in initial state
+  const [mounted, setMounted] = useState(false);
+  const [rem, setRem] = useState(0);
+
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydration guard: timer is client-only
+    setMounted(true);
+    setRem(Math.max(0, target.getTime() - Date.now()));
     const id = setInterval(() => setRem(Math.max(0, target.getTime() - Date.now())), 1000);
     return () => clearInterval(id);
   }, [target]);
+
+  if (!mounted) return { h: "--", m: "--", s: "--" };
   const h = String(Math.floor(rem / 3600000)).padStart(2, "0");
   const m = String(Math.floor((rem % 3600000) / 60000)).padStart(2, "0");
   const s = String(Math.floor((rem % 60000) / 1000)).padStart(2, "0");

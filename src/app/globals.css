@@ -1088,3 +1088,30 @@
 @media (max-width: 860px) {
   .hl-account-grid { grid-template-columns: 1fr !important; }
 }
+
+/* ── Hero slider ── */
+.hl-hero-section {
+  height: clamp(70vh, 88vh, 100vh);
+  min-height: 560px;
+}
+.hl-hero-img {
+  object-position: center 30%;
+}
+
+@media (max-width: 767px) {
+  .hl-hero-section {
+    height: min(92svh, 640px);
+    min-height: 480px;
+  }
+  /* Portrait crop — keep subject in frame */
+  .hl-hero-img {
+    object-position: center 40%;
+  }
+  /* Text block: stay within viewport width, allow wrapping */
+  .hl-hero-text-block {
+    left: 20px !important;
+    right: 20px !important;
+    max-width: calc(100% - 40px) !important;
+    bottom: clamp(72px, 13vh, 110px) !important;
+  }
+}
