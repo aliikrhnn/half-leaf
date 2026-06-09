@@ -39,6 +39,7 @@ interface FormState {
   isFeatured: boolean;
   isBestseller: boolean;
   isNew: boolean;
+  brand: string;
   images: ImageInput[];
   tags: string[];
   specs: SpecInput[];
@@ -60,6 +61,7 @@ interface ExistingProduct {
   isFeatured: boolean;
   isBestseller: boolean;
   isNew?: boolean;
+  brand?: string;
   images: { url: string; alt: string; sortOrder?: number }[];
   tags: { tag: string }[] | string[];
   specs?: SpecInput[];
@@ -93,6 +95,7 @@ const EMPTY_FORM: FormState = {
   isFeatured: false,
   isBestseller: false,
   isNew: false,
+  brand: "",
   images: [],
   tags: [],
   specs: [],
@@ -154,6 +157,7 @@ export default function ProductForm({ product }: ProductFormProps) {
         isFeatured: product.isFeatured,
         isBestseller: product.isBestseller,
         isNew: product.isNew ?? false,
+        brand: product.brand ?? "",
         images: normalizedImages,
         tags: normalizedTags,
         specs: product.specs ?? [],
@@ -273,6 +277,7 @@ export default function ProductForm({ product }: ProductFormProps) {
       isFeatured: form.isFeatured,
       isBestseller: form.isBestseller,
       isNew: form.isNew,
+      brand: form.brand || undefined,
       images: form.images
         .filter((img) => img.url && !img.uploading)
         .map((img, idx) => ({ url: img.url, altText: img.alt, sortOrder: idx })),
@@ -351,6 +356,18 @@ export default function ProductForm({ product }: ProductFormProps) {
               onChange={(e) => set("sku", e.target.value)}
               className={inputClass}
               placeholder="HL-CAM-001"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-ink-muted mb-1">Marka</label>
+            <input
+              type="text"
+              value={form.brand}
+              onChange={(e) => set("brand", e.target.value)}
+              className={inputClass}
+              placeholder="Half Leaf"
+              maxLength={200}
             />
           </div>
 

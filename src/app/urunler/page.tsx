@@ -5,7 +5,7 @@ import { mapProduct, mapCategory } from "@/lib/db/mappers";
 import { getUsdTryRate } from "@/lib/pricing";
 import ProductsClient from "./ProductsClient";
 import type { Product } from "@/lib/types";
-import type { MaterialOption } from "./FilterPanel";
+import type { MaterialOption, BrandOption } from "./FilterPanel";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://halfleafstore.com";
 
@@ -40,6 +40,7 @@ interface SearchParams {
   arama?: string;
   cokSatanlar?: string;
   oneCikan?: string;
+  marka?: string;
 }
 
 interface Props {
@@ -82,6 +83,7 @@ async function fetchAll(sp: SearchParams) {
   const arama = (sp.arama ?? "").trim();
   const cokSatanlar = sp.cokSatanlar === "1";
   const oneCikan = sp.oneCikan === "1";
+  const marcas = sp.marka ? sp.marka.split(",").filter(Boolean) : [];
 
   // ── Step 1: load all categories (needed to resolve descendant IDs) ──
   const allCats = await prisma.category.findMany({
@@ -106,15 +108,19 @@ async function fetchAll(sp: SearchParams) {
       categories,
       activeCategory: null,
       materials: [] as MaterialOption[],
+      brandOptions: [] as BrandOption[],
       sizeOptions: [] as string[],
       colorOptions: [] as { name: string; hex: string }[],
       featuredProduct: null,
       urlState: {
         kategori: sp.kategori ?? "",
         materyal: sp.materyal ?? "",
+        marka: sp.marka ?? "",
         boy: sp.boy ?? "",
         renk: sp.renk ?? "",
         fiyat: sp.fiyat ?? "",
+        indirim: sp.indirim ?? "",
+        cokSatanlar: sp.cokSatanlar ?? "",
         siralama: sp.siralama ?? "onerilen",
         sayfa: sp.sayfa ?? "1",
         grid: sp.grid ?? "3",
@@ -133,6 +139,7 @@ async function fetchAll(sp: SearchParams) {
   if (cokSatanlar) where.isBestseller = true;
   if (oneCikan) where.isFeatured = true;
   if (materyals.length > 0) where.Material = { slug: { in: materyals } };
+  if (marcas.length > 0) where.brand = { in: marcas };
 
   const priceRange = PRICE_RANGE_MAP[fiyat];
   if (priceRange) {
@@ -197,7 +204,7 @@ async function fetchAll(sp: SearchParams) {
   };
 
   // ── Step 2: run all data queries in parallel ──
-  const [dbProducts, totalCount, dbMaterials, allVariants, featuredDb] =
+  const [dbProducts, totalCount, dbMaterials, allVariants, featuredDb, dbBrands] =
     await Promise.all([
       prisma.product.findMany({
         where,
@@ -235,6 +242,12 @@ async function fetchAll(sp: SearchParams) {
         include: productInclude,
         orderBy: { createdAt: "desc" },
       }),
+      prisma.product.groupBy({
+        by: ["brand"],
+        where: { isActive: true, brand: { not: null }, ...catIdFilter },
+        _count: { id: true },
+        orderBy: { brand: "asc" },
+      }),
     ]);
 
   // Map products
@@ -266,6 +279,10 @@ async function fetchAll(sp: SearchParams) {
     count: m._count.Product,
   }));
 
+  const brandOptions: BrandOption[] = dbBrands
+    .filter((b): b is typeof b & { brand: string } => b.brand !== null)
+    .map((b) => ({ name: b.brand, count: b._count.id }));
+
   const sizeSet = new Set<string>();
   const colorMap = new Map<string, string>();
 
@@ -295,15 +312,19 @@ async function fetchAll(sp: SearchParams) {
     categories,
     activeCategory,
     materials,
+    brandOptions,
     sizeOptions,
     colorOptions,
     featuredProduct,
     urlState: {
       kategori: sp.kategori ?? "",
       materyal: sp.materyal ?? "",
+      marka: sp.marka ?? "",
       boy: sp.boy ?? "",
       renk: sp.renk ?? "",
       fiyat: sp.fiyat ?? "",
+      indirim: sp.indirim ?? "",
+      cokSatanlar: sp.cokSatanlar ?? "",
       siralama: sp.siralama ?? "onerilen",
       sayfa: sp.sayfa ?? "1",
       grid: sp.grid ?? "3",

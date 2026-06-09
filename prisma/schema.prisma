@@ -322,6 +322,7 @@ model Product {
   isActive         Boolean          @default(true)
   isFeatured       Boolean          @default(false)
   isBestseller     Boolean          @default(false)
+  brand            String?
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   CartItem         CartItem[]

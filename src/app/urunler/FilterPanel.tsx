@@ -10,6 +10,11 @@ export interface MaterialOption {
   count: number;
 }
 
+export interface BrandOption {
+  name: string;
+  count: number;
+}
+
 export interface PriceRange {
   key: string;
   label: string;
@@ -19,13 +24,17 @@ export interface PriceRange {
 
 interface Props {
   materials: MaterialOption[];
+  brandOptions: BrandOption[];
   sizeOptions: string[];
   colorOptions: Array<{ name: string; hex: string }>;
   priceRanges: PriceRange[];
   activeMateryals: string[];
+  activeBrands: string[];
   activeBoy: string | null;
   activeRenk: string | null;
   activeFiyat: string | null;
+  activeIndirim: boolean;
+  activeCokSatanlar: boolean;
   onChange: (key: string, value: string | null) => void;
   categorySlug?: string;
 }
@@ -61,21 +70,81 @@ function Section({ title, children, defaultOpen = true }: {
   );
 }
 
+const checkboxStyle: React.CSSProperties = {
+  width: 14, height: 14, accentColor: "var(--hl-bronze-400)", cursor: "pointer", flexShrink: 0,
+};
+
 export default function FilterPanel({
   materials,
+  brandOptions,
   sizeOptions,
   colorOptions,
   priceRanges,
   activeMateryals,
+  activeBrands,
   activeBoy,
   activeRenk,
   activeFiyat,
+  activeIndirim,
+  activeCokSatanlar,
   onChange,
   categorySlug,
 }: Props) {
   const tip = getCategoryTip(categorySlug);
   return (
     <div style={{ width: "100%" }}>
+
+      {/* ÖZELLIKLER */}
+      <Section title="Özellikler">
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 9, cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={activeIndirim}
+              onChange={() => onChange("indirim", activeIndirim ? null : "1")}
+              style={checkboxStyle}
+            />
+            <span style={{ fontFamily: "var(--hl-font-ui)", fontSize: 12, color: "var(--hl-text-soft)", flex: 1 }}>
+              İndirimli Ürünler
+            </span>
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 9, cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={activeCokSatanlar}
+              onChange={() => onChange("cokSatanlar", activeCokSatanlar ? null : "1")}
+              style={checkboxStyle}
+            />
+            <span style={{ fontFamily: "var(--hl-font-ui)", fontSize: 12, color: "var(--hl-text-soft)", flex: 1 }}>
+              Çok Satanlar
+            </span>
+          </label>
+        </div>
+      </Section>
+
+      {/* MARKA */}
+      {brandOptions.length > 0 && (
+        <Section title="Marka">
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {brandOptions.map(b => (
+              <label key={b.name} style={{ display: "flex", alignItems: "center", gap: 9, cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={activeBrands.includes(b.name)}
+                  onChange={() => onChange("marka", b.name)}
+                  style={checkboxStyle}
+                />
+                <span style={{ fontFamily: "var(--hl-font-ui)", fontSize: 12, color: "var(--hl-text-soft)", flex: 1 }}>
+                  {b.name}
+                </span>
+                <span style={{ fontFamily: "var(--hl-font-ui)", fontSize: 10, color: "var(--hl-text-mute)" }}>
+                  ({b.count})
+                </span>
+              </label>
+            ))}
+          </div>
+        </Section>
+      )}
 
       {/* MATERYAL */}
       {materials.length > 0 && (
@@ -87,7 +156,7 @@ export default function FilterPanel({
                   type="checkbox"
                   checked={activeMateryals.includes(m.slug)}
                   onChange={() => onChange("materyal", m.slug)}
-                  style={{ width: 14, height: 14, accentColor: "var(--hl-bronze-400)", cursor: "pointer", flexShrink: 0 }}
+                  style={checkboxStyle}
                 />
                 <span style={{ fontFamily: "var(--hl-font-ui)", fontSize: 12, color: "var(--hl-text-soft)", flex: 1 }}>
                   {m.name}

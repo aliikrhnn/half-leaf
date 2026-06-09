@@ -9,7 +9,7 @@ import ProductCard from "@/components/product/ProductCard";
 import FilterPanel from "./FilterPanel";
 import { formatPrice } from "@/lib/utils";
 import type { Product, Category } from "@/lib/types";
-import type { MaterialOption, PriceRange } from "./FilterPanel";
+import type { MaterialOption, BrandOption, PriceRange } from "./FilterPanel";
 
 const PAGE_SIZE = 9;
 
@@ -30,9 +30,12 @@ export const PRICE_RANGES: PriceRange[] = [
 export interface UrlState {
   kategori: string;
   materyal: string;
+  marka: string;
   boy: string;
   renk: string;
   fiyat: string;
+  indirim: string;
+  cokSatanlar: string;
   siralama: string;
   sayfa: string;
   grid: string;
@@ -45,6 +48,7 @@ interface Props {
   featuredProduct: Product | null;
   categories: Category[];
   materials: MaterialOption[];
+  brandOptions: BrandOption[];
   sizeOptions: string[];
   colorOptions: Array<{ name: string; hex: string }>;
   activeCategory: Category | null;
@@ -56,6 +60,7 @@ export default function ProductsClient({
   total,
   featuredProduct,
   materials,
+  brandOptions,
   sizeOptions,
   colorOptions,
   activeCategory,
@@ -64,10 +69,11 @@ export default function ProductsClient({
   const router = useRouter();
   const [filterOpen, setFilterOpen] = useState(false);
 
-  const { kategori, materyal, boy, renk, fiyat, siralama, sayfa: sayfaStr, grid: gridStr, arama } = urlState;
+  const { kategori, materyal, marka, boy, renk, fiyat, indirim, cokSatanlar, siralama, sayfa: sayfaStr, grid: gridStr, arama } = urlState;
   const sayfa = parseInt(sayfaStr || "1", 10);
   const grid = (parseInt(gridStr || "3", 10) === 2 ? 2 : 3) as 2 | 3;
   const activeMateryals = materyal ? materyal.split(",").filter(Boolean) : [];
+  const activeBrands = marka ? marka.split(",").filter(Boolean) : [];
 
   const navigate = useCallback(
     (updates: Record<string, string | null>) => {
@@ -106,6 +112,12 @@ export default function ProductsClient({
         ? activeMateryals.filter(m => m !== slug)
         : [...activeMateryals, slug];
       navigate({ materyal: next.join(",") || null });
+    } else if (key === "marka") {
+      const brand = value ?? "";
+      const next = activeBrands.includes(brand)
+        ? activeBrands.filter(b => b !== brand)
+        : [...activeBrands, brand];
+      navigate({ marka: next.join(",") || null });
     } else {
       navigate({ [key]: value });
     }
@@ -117,7 +129,7 @@ export default function ProductsClient({
     router.push(`/urunler?${params.toString()}`);
   };
 
-  const hasFilters = !!(materyal || boy || renk || fiyat);
+  const hasFilters = !!(materyal || marka || boy || renk || fiyat || indirim || cokSatanlar);
   const totalPages = Math.ceil(total / PAGE_SIZE);
   const showing = Math.min(sayfa * PAGE_SIZE, total);
 
@@ -194,6 +206,21 @@ export default function ProductsClient({
         </button>
 
         {/* Active chips */}
+        {activeBrands.map(brand => (
+          <button key={brand} onClick={() => handleFilterChange("marka", brand)} style={chipStyle}>
+            {brand} <X size={10} />
+          </button>
+        ))}
+        {indirim === "1" && (
+          <button onClick={() => handleFilterChange("indirim", null)} style={chipStyle}>
+            İndirimli <X size={10} />
+          </button>
+        )}
+        {cokSatanlar === "1" && (
+          <button onClick={() => handleFilterChange("cokSatanlar", null)} style={chipStyle}>
+            Çok Satanlar <X size={10} />
+          </button>
+        )}
         {activeMateryals.map(slug => {
           const mat = materials.find(x => x.slug === slug);
           return (
@@ -276,13 +303,17 @@ export default function ProductsClient({
         <aside className="hl-filter-aside" style={{ position: "sticky", top: "calc(var(--hl-bar-h) + var(--hl-header-h) + 24px)" }}>
           <FilterPanel
             materials={materials}
+            brandOptions={brandOptions}
             sizeOptions={sizeOptions}
             colorOptions={colorOptions}
             priceRanges={PRICE_RANGES}
             activeMateryals={activeMateryals}
+            activeBrands={activeBrands}
             activeBoy={boy || null}
             activeRenk={renk || null}
             activeFiyat={fiyat || null}
+            activeIndirim={indirim === "1"}
+            activeCokSatanlar={cokSatanlar === "1"}
             onChange={handleFilterChange}
             categorySlug={activeCategory?.slug}
           />
@@ -447,14 +478,18 @@ export default function ProductsClient({
             </div>
             <FilterPanel
               materials={materials}
+              brandOptions={brandOptions}
               sizeOptions={sizeOptions}
               colorOptions={colorOptions}
               priceRanges={PRICE_RANGES}
               activeMateryals={activeMateryals}
+              activeBrands={activeBrands}
               activeBoy={boy || null}
               activeRenk={renk || null}
               activeFiyat={fiyat || null}
-              onChange={(k, v) => { handleFilterChange(k, v); setFilterOpen(false); }}
+              activeIndirim={indirim === "1"}
+              activeCokSatanlar={cokSatanlar === "1"}
+              onChange={(k, v) => { handleFilterChange(k, v); if (k !== "marka" && k !== "materyal") setFilterOpen(false); }}
               categorySlug={activeCategory?.slug}
             />
           </div>
