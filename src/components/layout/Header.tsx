@@ -46,8 +46,8 @@ export default function Header({ navCategories = [] }: Props) {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state: close mega menu when user scrolls away
-    if (scrolled && activeKey) setActiveKey(null);
-  }, [scrolled, activeKey]);
+    if (scrolled) setActiveKey(null);
+  }, [scrolled]);
 
   // Close search panel on ESC at document level
   useEffect(() => {
