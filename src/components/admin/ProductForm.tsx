@@ -264,7 +264,7 @@ export default function ProductForm({ product }: ProductFormProps) {
       sku: form.sku,
       shortDescription: form.shortDescription || undefined,
       description: form.description || undefined,
-      price: parseFloat(form.price),
+      basePrice: parseFloat(form.price),
       compareAtPrice: form.compareAtPrice ? parseFloat(form.compareAtPrice) : undefined,
       priceCurrency: form.priceCurrency,
       stock: parseInt(form.stock),
