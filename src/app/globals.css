@@ -37,7 +37,7 @@
     --hl-shadow-2: 0 20px 40px -20px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.03) inset;
     --hl-ease: cubic-bezier(0.22,0.61,0.36,1);
     --hl-bar-h: 2.5rem;
-    --hl-header-h: 6.75rem;   /* 4rem logo row + 2.75rem nav row */
+    --hl-header-h: 6.75rem;   /* 4rem logo row + 2.75rem nav row (desktop) */
     --hl-success:      #7ab87a;
     --hl-font-mono:    ui-monospace, "Cascadia Code", "JetBrains Mono", monospace;
     /* ---- existing tokens ---- */
@@ -360,6 +360,18 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    pointer-events: none;
+  }
+
+  /* Children do NOT inherit pointer-events:none — each must be explicit */
+  .hl-splash .hl-s1-bg,
+  .hl-splash .hl-s1-halo,
+  .hl-splash .hl-s1-logo,
+  .hl-splash .hl-s1-logo-img,
+  .hl-splash .hl-s1-dust,
+  .hl-splash .hl-progress-track,
+  .hl-splash .hl-progress-bar,
+  .hl-splash .hl-splash-text {
     pointer-events: none;
   }
 
@@ -991,6 +1003,13 @@
   .hl-s1-halo        { animation: none; opacity: 0.45; transform: translate(-50%, -50%) scale(1); }
   .hl-s1-fill        { animation: none; opacity: 0.08; }
   .hl-logo-hover::after { animation: none !important; }
+}
+
+/* Mobile header height — category nav row is hidden below lg (1024px) */
+@media (max-width: 1023px) {
+  :root {
+    --hl-header-h: 4rem;
+  }
 }
 
 /* Product detail responsive */

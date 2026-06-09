@@ -3,6 +3,7 @@ import { Inter, Cormorant_Garamond, Manrope } from "next/font/google";
 import "./globals.css";
 import AppShell from "@/components/layout/AppShell";
 import AgeGate from "@/components/layout/AgeGate";
+import Footer from "@/components/layout/Footer";
 import { SITE_NAME, SITE_DESCRIPTION, CONTACT_EMAIL, SOCIAL_LINKS } from "@/lib/constants";
 import { prisma } from "@/lib/db/prisma";
 import type { NavCategory, NavFeaturedProduct } from "@/lib/types";
@@ -185,7 +186,7 @@ export default async function RootLayout({
           }}
         />
         <AgeGate />
-        <AppShell navCategories={navCategories} announcementMessages={announcementMessages}>{children}</AppShell>
+        <AppShell footer={<Footer />} navCategories={navCategories} announcementMessages={announcementMessages}>{children}</AppShell>
       </body>
     </html>
   );

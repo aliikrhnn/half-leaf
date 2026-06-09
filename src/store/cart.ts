@@ -81,6 +81,11 @@ export const useCartStore = create<CartState>()(
       name: "half-leaf-cart",
       skipHydration: true,
       partialize: (state) => ({ items: state.items }),
+      merge: (persisted, current) => ({
+        ...current,
+        items: (persisted as { items?: CartItem[] }).items ?? current.items,
+        // isOpen is never restored — cart always starts closed
+      }),
     }
   )
 );

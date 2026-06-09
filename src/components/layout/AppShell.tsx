@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Header from "./Header";
-import Footer from "./Footer";
 import SplashScreen from "@/components/brand/SplashScreen";
 import AnnouncementBar from "@/components/sections/AnnouncementBar";
 import HalfLeafLogo from "@/components/brand/HalfLeafLogo";
@@ -11,11 +10,12 @@ import type { NavCategory } from "@/lib/types";
 
 interface Props {
   children: React.ReactNode;
+  footer: React.ReactNode;
   navCategories?: NavCategory[];
   announcementMessages?: string[];
 }
 
-export default function AppShell({ children, navCategories = [], announcementMessages }: Props) {
+export default function AppShell({ children, footer, navCategories = [], announcementMessages }: Props) {
   const pathname = usePathname();
   const [initialPathname] = useState(pathname);
   const isAdmin = pathname.startsWith("/admin");
@@ -48,7 +48,7 @@ export default function AppShell({ children, navCategories = [], announcementMes
       <main key={pathname} className="hl-page-enter">
         {children}
       </main>
-      <Footer />
+      {footer}
     </>
   );
 }
