@@ -304,50 +304,30 @@
     color: var(--hl-text);
   }
 
-  /* Page-transition leaf curtain — fade + logo + streak (600ms) */
-  .hl-leaf-curtain {
+  /* Page-transition nav pip — small leaf badge, bottom-right corner, 750ms */
+  .hl-nav-pip {
     position: fixed;
-    inset: 0;
-    width: 100vw;
-    height: 100dvh;
+    bottom: 28px;
+    right: 28px;
     z-index: 9998;
-    overflow: hidden;
     pointer-events: none;
-    background: var(--hl-bg);
-    opacity: 1;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: rgba(10, 11, 9, 0.88);
+    border: 1px solid rgba(235, 197, 112, 0.35);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(235, 197, 112, 0.08);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     display: flex;
     align-items: center;
     justify-content: center;
-    animation: hl-lc-fade 650ms var(--hl-ease) forwards;
+    animation: hl-nav-pip 750ms var(--hl-ease) forwards;
   }
-  .hl-lc-streak {
-    position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent 0%, var(--hl-bronze-400) 50%, transparent 100%);
-    transform: scaleX(0);
-    transform-origin: center;
-    z-index: 2;
-    animation: hl-lc-streak 650ms var(--hl-ease) forwards;
-  }
-  .hl-lc-logo {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(0.95);
-    opacity: 0;
-    z-index: 3;
-    animation: hl-lc-logo 650ms var(--hl-ease) forwards;
-  }
-  .hl-lc-logo-img {
-    height: clamp(140px, 28vh, 240px);
-    width: auto;
-    display: block;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .hl-lc-streak { animation: none !important; opacity: 0; }
+  .hl-nav-leaf {
+    pointer-events: none;
+    animation: hl-nav-leaf-pulse 600ms ease-in-out 1;
+    filter: drop-shadow(0 0 4px rgba(235, 197, 112, 0.55));
   }
 
   /* Splash screen */
@@ -578,22 +558,18 @@
   100% { opacity: 0; }
 }
 
-/* Page-transition curtain keyframes — fade + logo + streak */
-@keyframes hl-lc-fade {
-  0%, 62%  { opacity: 1; }
-  100%     { opacity: 0; }
+/* Page-transition nav pip keyframes */
+@keyframes hl-nav-pip {
+  0%   { opacity: 0; transform: translateY(8px) scale(0.82); }
+  18%  { opacity: 1; transform: translateY(0)   scale(1.04); }
+  28%  { opacity: 1; transform: scale(1); }
+  70%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-4px) scale(0.92); }
 }
-@keyframes hl-lc-streak {
-  0%, 10%  { transform: scaleX(0); opacity: 0; }
-  26%      { transform: scaleX(1); opacity: 1; }
-  55%      { transform: scaleX(0); opacity: 0; }
-  100%     { transform: scaleX(0); opacity: 0; }
-}
-@keyframes hl-lc-logo {
-  0%, 12%  { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
-  28%, 52% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  75%      { opacity: 0; }
-  100%     { opacity: 0; }
+@keyframes hl-nav-leaf-pulse {
+  0%   { transform: scale(0.85) rotate(-4deg); }
+  45%  { transform: scale(1.1)  rotate(3deg); }
+  100% { transform: scale(0.95) rotate(0deg); }
 }
 
 /* V1 Cinematic splash keyframes */
@@ -998,7 +974,8 @@
   .hl-progress-bar   { animation: none; width: 100%; }
   .hl-page-enter     { animation: none; }
   .hl-breathe        { animation: none; opacity: 1; transform: none; }
-  .hl-leaf-curtain   { display: none; }
+  .hl-nav-pip        { display: none; }
+  .hl-nav-leaf       { animation: none; }
   .hl-s1-bg          { animation: none; opacity: 1; }
   .hl-s1-halo        { animation: none; opacity: 0.45; transform: translate(-50%, -50%) scale(1); }
   .hl-s1-fill        { animation: none; opacity: 0.08; }

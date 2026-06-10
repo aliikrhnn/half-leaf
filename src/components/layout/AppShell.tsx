@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import Header from "./Header";
 import SplashScreen from "@/components/brand/SplashScreen";
 import AnnouncementBar from "@/components/sections/AnnouncementBar";
-import HalfLeafLogo from "@/components/brand/HalfLeafLogo";
+import LeafMark from "@/components/brand/LeafMark";
 import type { NavCategory } from "@/lib/types";
 
 interface Props {
@@ -38,11 +38,8 @@ export default function AppShell({ children, footer, navCategories = [], announc
       <SplashScreen />
       <Header navCategories={navCategories} />
       {showCurtain && (
-        <div key={`hl-curt-${pathname}`} className="hl-leaf-curtain" aria-hidden="true">
-          <div className="hl-lc-streak" />
-          <div className="hl-lc-logo">
-            <HalfLeafLogo full className="hl-lc-logo-img" />
-          </div>
+        <div key={`hl-nav-${pathname}`} className="hl-nav-pip" aria-hidden="true">
+          <LeafMark width={26} height={52} className="hl-nav-leaf" />
         </div>
       )}
       <main key={pathname} className="hl-page-enter">
