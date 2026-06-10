@@ -337,6 +337,9 @@ model Product {
   @@index([materialId])
   @@index([sku])
   @@index([slug])
+  // Partial index'ler (WHERE clause'lu) doğrudan DB'de yönetilir — migration: add_product_filter_indexes
+  // Product_isActive_idx, Product_brand_idx, Product_compareAtPrice_idx,
+  // Product_basePrice_idx, Product_isFeatured_idx, Product_isBestseller_idx
 }
 
 model ProductImage {

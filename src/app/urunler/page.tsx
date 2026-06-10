@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/db/prisma";
 import { mapProduct, mapCategory } from "@/lib/db/mappers";
 import { getUsdTryRate } from "@/lib/pricing";
@@ -17,6 +18,20 @@ export const metadata: Metadata = {
 };
 
 const PAGE_SIZE = 9;
+
+// Kategoriler nadiren değişir — 60 sn cache
+const getCachedCategories = unstable_cache(
+  () =>
+    prisma.category.findMany({
+      where: { isActive: true },
+      include: {
+        _count: { select: { Product: { where: { isActive: true } } } },
+      },
+      orderBy: { sortOrder: "asc" },
+    }),
+  ["urunler-categories"],
+  { revalidate: 60 },
+);
 const SIXTY_DAYS_MS = 60 * 24 * 60 * 60 * 1000;
 const LOW_STOCK_THRESHOLD = 5;
 
@@ -85,14 +100,8 @@ async function fetchAll(sp: SearchParams) {
   const oneCikan = sp.oneCikan === "1";
   const marcas = sp.marka ? sp.marka.split(",").filter(Boolean) : [];
 
-  // ── Step 1: load all categories (needed to resolve descendant IDs) ──
-  const allCats = await prisma.category.findMany({
-    where: { isActive: true },
-    include: {
-      _count: { select: { Product: { where: { isActive: true } } } },
-    },
-    orderBy: { sortOrder: "asc" },
-  });
+  // ── Step 1: load all categories (cached 60 sn) ──
+  const allCats = await getCachedCategories();
 
   // Resolve category filter: root slug + all sub-categories (recursively)
   const categoryIds: string[] | null = kategori
