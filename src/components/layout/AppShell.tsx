@@ -7,6 +7,7 @@ import SplashScreen from "@/components/brand/SplashScreen";
 import AnnouncementBar from "@/components/sections/AnnouncementBar";
 import LeafMark from "@/components/brand/LeafMark";
 import Toaster from "@/components/ui/Toaster";
+import RegisterPrompt from "./RegisterPrompt";
 import type { NavCategory } from "@/lib/types";
 
 interface Props {
@@ -48,6 +49,7 @@ export default function AppShell({ children, footer, navCategories = [], announc
       </main>
       {footer}
       <Toaster />
+      <RegisterPrompt />
     </>
   );
 }

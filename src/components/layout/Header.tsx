@@ -172,7 +172,7 @@ export default function Header({ navCategories = [] }: Props) {
 
               <Link
                 href="/favorilerim"
-                className="relative hidden sm:flex p-2 text-ink-muted hover:text-ink transition-colors rounded-lg hover:bg-bg-elevated"
+                className="relative min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-ink-muted hover:text-ink transition-colors rounded-lg hover:bg-bg-elevated"
                 aria-label={`Favorilerim${favCount > 0 ? `, ${favCount} ürün` : ""}`}
               >
                 <Heart size={20} />
@@ -374,7 +374,7 @@ export default function Header({ navCategories = [] }: Props) {
         </div>
       )}
 
-      <MobileNav isOpen={mobileOpen} onClose={() => setMobileOpen(false)} navCategories={navCategories} />
+      <MobileNav isOpen={mobileOpen} onClose={() => setMobileOpen(false)} navCategories={navCategories} isAuthed={isAuthed} />
       {cartOpen && <CartDrawer />}
     </>
   );

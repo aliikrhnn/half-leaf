@@ -18,7 +18,7 @@ async function getSiteSettings() {
 export default async function Footer() {
   const s = await getSiteSettings();
 
-  const contactPhone   = s?.contactPhone   ?? "+90 212 000 00 00";
+  const contactPhone   = s?.contactPhone   ?? "+90 543 533 2998";
   const contactEmail   = s?.contactEmail   ?? "info@halfleafstore.com";
   const instagramUrl   = s?.instagramUrl   ?? "https://instagram.com/halfleafstore";
   const facebookUrl    = s?.facebookUrl    ?? "https://facebook.com/halfleafstore";

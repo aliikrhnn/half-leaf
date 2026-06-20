@@ -1045,6 +1045,7 @@
   }
   .hl-product-grid {
     grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
   }
 }
 

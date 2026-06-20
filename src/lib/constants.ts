@@ -7,7 +7,7 @@ export const FREE_SHIPPING_THRESHOLD = 2500;
 export const SHIPPING_COST = 150;
 
 export const CONTACT_EMAIL = "info@halfleafstore.com";
-export const CONTACT_PHONE = "+90 212 000 00 00";
+export const CONTACT_PHONE = "+90 543 533 2998";
 export const CONTACT_ADDRESS = "İstanbul, Türkiye";
 
 export const SOCIAL_LINKS = {

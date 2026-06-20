@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { X, ChevronRight, ChevronDown, Search } from "lucide-react";
+import { X, ChevronRight, ChevronDown, Search, User, Heart, LogIn, Sparkles, Package } from "lucide-react";
 import { SITE_NAME } from "@/lib/constants";
 import type { NavCategory } from "@/lib/types";
 
@@ -11,9 +11,10 @@ interface MobileNavProps {
   isOpen: boolean;
   onClose: () => void;
   navCategories?: NavCategory[];
+  isAuthed?: boolean;
 }
 
-export default function MobileNav({ isOpen, onClose, navCategories = [] }: MobileNavProps) {
+export default function MobileNav({ isOpen, onClose, navCategories = [], isAuthed = false }: MobileNavProps) {
   const rootCategories = navCategories.filter(c => !c.parentId);
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
@@ -97,6 +98,48 @@ export default function MobileNav({ isOpen, onClose, navCategories = [] }: Mobil
               Ara
             </button>
           </form>
+        </div>
+
+        {/* Account / register incentive */}
+        <div className="p-4 border-b border-border-default">
+          {isAuthed ? (
+            <div className="space-y-1">
+              <Link href="/hesabim" onClick={onClose} className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-ink hover:text-gold hover:bg-bg-elevated rounded-lg transition-colors">
+                <User size={17} className="text-ink-dim" /> Hesabım
+              </Link>
+              <Link href="/favorilerim" onClick={onClose} className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-ink hover:text-gold hover:bg-bg-elevated rounded-lg transition-colors">
+                <Heart size={17} className="text-ink-dim" /> Favorilerim
+              </Link>
+              <Link href="/siparis-takip" onClick={onClose} className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-ink hover:text-gold hover:bg-bg-elevated rounded-lg transition-colors">
+                <Package size={17} className="text-ink-dim" /> Sipariş Takibi
+              </Link>
+            </div>
+          ) : (
+            <>
+              {/* Üye olma teşvik CTA */}
+              <Link
+                href="/kayit"
+                onClick={onClose}
+                className="block rounded-xl p-4 text-center"
+                style={{ background: "linear-gradient(135deg, var(--hl-bronze-400), var(--hl-bronze-700))" }}
+              >
+                <span className="inline-flex items-center gap-1.5 text-[15px] font-bold" style={{ color: "#1A1206" }}>
+                  <Sparkles size={16} /> Üye Ol
+                </span>
+                <span className="block text-[11px] mt-1 leading-snug" style={{ color: "rgba(26,18,6,0.78)" }}>
+                  Fırsatlardan ilk sen haberdar ol, siparişlerini takip et, favorilerini kaydet.
+                </span>
+              </Link>
+              <div className="grid grid-cols-2 gap-2 mt-3">
+                <Link href="/giris" onClick={onClose} className="flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium text-ink border border-border-default rounded-lg hover:border-border-light hover:bg-bg-elevated transition-colors">
+                  <LogIn size={15} /> Giriş Yap
+                </Link>
+                <Link href="/favorilerim" onClick={onClose} className="flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium text-ink border border-border-default rounded-lg hover:border-border-light hover:bg-bg-elevated transition-colors">
+                  <Heart size={15} /> Favoriler
+                </Link>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Quick links */}
