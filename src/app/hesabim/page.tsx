@@ -7,6 +7,7 @@ import { formatPrice } from "@/lib/utils";
 import Link from "next/link";
 import { User, Package, MapPin, RotateCcw } from "lucide-react";
 import LogoutButton from "./LogoutButton";
+import AddressManager from "./AddressManager";
 
 const RETURN_WINDOW_DAYS = 14;
 
@@ -153,40 +154,20 @@ export default async function HesabimPage() {
             {/* Addresses */}
             <div style={panelStyle}>
               <SectionTitle icon={<MapPin size={16} />}>Adreslerim</SectionTitle>
-              {user.Address.length === 0 ? (
-                <p style={{ fontSize: 12, color: "var(--hl-text-mute)", lineHeight: 1.6 }}>
-                  Kayıtlı adresiniz bulunmuyor.
-                </p>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {user.Address.map((addr) => (
-                    <div key={addr.id} style={{
-                      padding: "12px 14px", borderRadius: 10,
-                      background: "var(--hl-bg)", border: "1px solid var(--hl-line-strong)",
-                    }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--hl-text)" }}>{addr.title}</span>
-                        {addr.isDefault && (
-                          <span style={{
-                            fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
-                            textTransform: "uppercase", color: "var(--hl-bronze-400)",
-                            padding: "2px 7px", borderRadius: 99,
-                            border: "1px solid var(--hl-bronze-400)",
-                          }}>
-                            Varsayılan
-                          </span>
-                        )}
-                      </div>
-                      <p style={{ fontSize: 11, color: "var(--hl-text-soft)", lineHeight: 1.6, margin: 0 }}>
-                        {addr.fullName} · {addr.phone}<br />
-                        {addr.fullAddress}<br />
-                        {addr.district}, {addr.city}
-                        {addr.postalCode ? ` ${addr.postalCode}` : ""}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <AddressManager
+                initial={user.Address.map((a) => ({
+                  id: a.id,
+                  title: a.title,
+                  fullName: a.fullName,
+                  phone: a.phone,
+                  city: a.city,
+                  district: a.district,
+                  neighborhood: a.neighborhood,
+                  fullAddress: a.fullAddress,
+                  postalCode: a.postalCode,
+                  isDefault: a.isDefault,
+                }))}
+              />
             </div>
           </div>
 
