@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { SlidersHorizontal, X, LayoutGrid, Grid3X3 } from "lucide-react";
@@ -10,8 +9,6 @@ import FilterPanel from "./FilterPanel";
 import { formatPrice } from "@/lib/utils";
 import type { Product, Category } from "@/lib/types";
 import type { MaterialOption, BrandOption, PriceRange } from "./FilterPanel";
-
-const PAGE_SIZE = 9;
 
 const SORT_OPTIONS = [
   { value: "onerilen", label: "Önerilen" },
@@ -55,6 +52,36 @@ interface Props {
   urlState: UrlState;
 }
 
+/** API sorgu dizesi (grid hariç — grid yalnızca UI). */
+function buildApiQuery(f: UrlState): string {
+  const params = new URLSearchParams();
+  (Object.keys(f) as (keyof UrlState)[]).forEach((k) => {
+    const v = f[k];
+    if (!v || k === "grid") return;
+    if (k === "sayfa" && v === "1") return;
+    if (k === "siralama" && v === "onerilen") return;
+    params.set(k, v);
+  });
+  return params.toString();
+}
+
+/** URL'i tam navigasyon olmadan günceller (paylaşılabilirlik için). */
+function syncUrl(f: UrlState): void {
+  const params = new URLSearchParams();
+  (Object.keys(f) as (keyof UrlState)[]).forEach((k) => {
+    const v = f[k];
+    if (!v) return;
+    if (k === "sayfa" && v === "1") return;
+    if (k === "siralama" && v === "onerilen") return;
+    if (k === "grid" && v === "3") return;
+    params.set(k, v);
+  });
+  const qs = params.toString();
+  if (typeof window !== "undefined") {
+    window.history.replaceState(null, "", `/urunler${qs ? "?" + qs : ""}`);
+  }
+}
+
 export default function ProductsClient({
   products,
   total,
@@ -66,77 +93,84 @@ export default function ProductsClient({
   activeCategory,
   urlState,
 }: Props) {
-  const router = useRouter();
-  const [, startTransition] = useTransition();
+  const [filters, setFilters] = useState<UrlState>(urlState);
+  const [items, setItems] = useState<Product[]>(products);
+  const [curTotal, setCurTotal] = useState<number>(total);
+  const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
 
-  const { kategori, materyal, marka, boy, renk, fiyat, indirim, cokSatanlar, siralama, sayfa: sayfaStr, grid: gridStr, arama } = urlState;
-  const sayfa = parseInt(sayfaStr || "1", 10);
+  const { materyal, marka, boy, renk, fiyat, indirim, cokSatanlar, grid: gridStr, arama } = filters;
   const grid = (parseInt(gridStr || "3", 10) === 2 ? 2 : 3) as 2 | 3;
   const activeMateryals = materyal ? materyal.split(",").filter(Boolean) : [];
   const activeBrands = marka ? marka.split(",").filter(Boolean) : [];
 
-  const navigate = useCallback(
-    (updates: Record<string, string | null>) => {
-      const merged: Record<string, string> = { ...urlState };
-
-      for (const [k, v] of Object.entries(updates)) {
-        if (v === null || v === "") {
-          delete merged[k];
-        } else {
-          merged[k] = v;
-        }
+  // İstemci tarafı ürün getirme (tam sayfa navigasyonu yerine → anında tepki).
+  // reqId: hızlı tıklamalarda eski yanıtın yeniyi ezmesini engeller.
+  const reqIdRef = useRef(0);
+  const fetchProducts = useCallback(async (f: UrlState, append: boolean) => {
+    const reqId = ++reqIdRef.current;
+    if (append) setLoadingMore(true); else setLoading(true);
+    try {
+      const res = await fetch(`/api/urunler?${buildApiQuery(f)}`);
+      const data = await res.json() as { products: Product[]; total: number };
+      if (reqId === reqIdRef.current) {
+        setItems((prev) => (append ? [...prev, ...(data.products ?? [])] : (data.products ?? [])));
+        setCurTotal(data.total ?? 0);
       }
+    } catch {
+      /* mevcut listeyi koru */
+    } finally {
+      if (append) setLoadingMore(false); else setLoading(false);
+    }
+  }, []);
 
-      if (!("sayfa" in updates)) delete merged.sayfa;
-
-      const params = new URLSearchParams();
-      for (const [k, v] of Object.entries(merged)) {
-        if (v && v !== "") {
-          if (k === "sayfa" && v === "1") continue;
-          if (k === "siralama" && v === "onerilen") continue;
-          if (k === "grid" && v === "3") continue;
-          if (k === "arama" && v === "") continue;
-          params.set(k, v);
-        }
-      }
-
-      startTransition(() => {
-        router.push(`/urunler?${params.toString()}`);
-      });
-    },
-    [urlState, router, startTransition]
-  );
+  const applyFilters = useCallback((updates: Record<string, string | null>) => {
+    const merged: UrlState = { ...filters };
+    for (const [k, v] of Object.entries(updates)) {
+      merged[k as keyof UrlState] = v ?? "";
+    }
+    if (!("sayfa" in updates)) merged.sayfa = "1"; // filtre değişince ilk sayfaya dön
+    setFilters(merged);
+    syncUrl(merged);
+    fetchProducts(merged, false);
+  }, [filters, fetchProducts]);
 
   const handleFilterChange = (key: string, value: string | null) => {
     if (key === "materyal") {
       const slug = value ?? "";
-      const next = activeMateryals.includes(slug)
-        ? activeMateryals.filter(m => m !== slug)
-        : [...activeMateryals, slug];
-      navigate({ materyal: next.join(",") || null });
+      const next = activeMateryals.includes(slug) ? activeMateryals.filter((m) => m !== slug) : [...activeMateryals, slug];
+      applyFilters({ materyal: next.join(",") || null });
     } else if (key === "marka") {
       const brand = value ?? "";
-      const next = activeBrands.includes(brand)
-        ? activeBrands.filter(b => b !== brand)
-        : [...activeBrands, brand];
-      navigate({ marka: next.join(",") || null });
+      const next = activeBrands.includes(brand) ? activeBrands.filter((b) => b !== brand) : [...activeBrands, brand];
+      applyFilters({ marka: next.join(",") || null });
     } else {
-      navigate({ [key]: value });
+      applyFilters({ [key]: value });
     }
   };
 
   const clearAll = () => {
-    const params = new URLSearchParams();
-    if (kategori) params.set("kategori", kategori);
-    startTransition(() => {
-      router.push(`/urunler?${params.toString()}`);
-    });
+    applyFilters({ materyal: null, marka: null, boy: null, renk: null, fiyat: null, indirim: null, cokSatanlar: null, siralama: null, arama: null });
+  };
+
+  const setGrid = (n: 2 | 3) => {
+    const merged: UrlState = { ...filters, grid: String(n) };
+    setFilters(merged);
+    syncUrl(merged);
+  };
+
+  const loadMore = () => {
+    const next = parseInt(filters.sayfa || "1", 10) + 1;
+    const merged: UrlState = { ...filters, sayfa: String(next) };
+    setFilters(merged);
+    syncUrl(merged);
+    fetchProducts(merged, true); // aşağı ekle (append)
   };
 
   const hasFilters = !!(materyal || marka || boy || renk || fiyat || indirim || cokSatanlar);
-  const totalPages = Math.ceil(total / PAGE_SIZE);
-  const showing = Math.min(sayfa * PAGE_SIZE, total);
+  const hasMore = items.length < curTotal;
+  const siralama = filters.siralama;
 
   const categoryTitle = arama
     ? `"${arama}" · Arama Sonuçları`
@@ -186,7 +220,7 @@ export default function ProductsClient({
           {categoryTitle}
         </h1>
         <p style={{ fontFamily: "var(--hl-font-ui)", fontSize: 12, color: "var(--hl-text-mute)" }}>
-          <span style={{ color: "var(--hl-text-soft)", fontWeight: 600 }}>{total}</span>
+          <span style={{ color: "var(--hl-text-soft)", fontWeight: 600 }}>{curTotal}</span>
           {" "}ürün · {categoryDesc}
         </p>
       </div>
@@ -266,7 +300,7 @@ export default function ProductsClient({
         <div className="hl-listing-controls-right" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
           <select
             value={siralama || "onerilen"}
-            onChange={e => navigate({ siralama: e.target.value })}
+            onChange={e => applyFilters({ siralama: e.target.value })}
             style={{
               fontFamily: "var(--hl-font-ui)", fontSize: 11, fontWeight: 600,
               color: "var(--hl-text-soft)", background: "var(--hl-bg-elev-1)",
@@ -283,7 +317,7 @@ export default function ProductsClient({
             {([2, 3] as const).map(n => (
               <button
                 key={n}
-                onClick={() => navigate({ grid: String(n) })}
+                onClick={() => setGrid(n)}
                 aria-label={`${n} kolon`}
                 style={{
                   width: 32, height: 32, borderRadius: "var(--hl-r-sm)",
@@ -394,7 +428,7 @@ export default function ProductsClient({
           )}
 
           {/* Product grid */}
-          {products.length === 0 ? (
+          {!loading && items.length === 0 ? (
             <div style={{ padding: "80px 0", textAlign: "center" }}>
               <p style={{ fontFamily: "var(--hl-font-ui)", fontSize: 13, color: "var(--hl-text-mute)" }}>
                 Bu filtreyle eşleşen ürün bulunamadı.
@@ -402,56 +436,43 @@ export default function ProductsClient({
             </div>
           ) : (
             <div
-              style={{ display: "grid", gridTemplateColumns: `repeat(${grid}, minmax(0, 1fr))`, gap: 20 }}
+              style={{
+                display: "grid",
+                gridTemplateColumns: `repeat(${grid}, minmax(0, 1fr))`,
+                gap: 20,
+                opacity: loading ? 0.5 : 1,
+                transition: "opacity 150ms ease",
+              }}
               className="hl-product-grid"
             >
-              {products.map(p => <ProductCard key={p.id} product={p} />)}
+              {items.map(p => <ProductCard key={p.id} product={p} />)}
             </div>
           )}
 
-          {/* Bottom controls */}
-          {total > 0 && (
+          {/* Bottom controls — "Daha Fazla Yükle" yeni ürünleri aşağı ekler */}
+          {curTotal > 0 && (
             <div style={{ marginTop: 48, display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
               <p style={{ fontFamily: "var(--hl-font-ui)", fontSize: 11, color: "var(--hl-text-mute)" }}>
-                <span style={{ color: "var(--hl-text-soft)", fontWeight: 600 }}>{showing}</span>/{total} ürün gösteriliyor
+                <span style={{ color: "var(--hl-text-soft)", fontWeight: 600 }}>{items.length}</span>/{curTotal} ürün gösteriliyor
               </p>
 
-              {sayfa < totalPages && (
+              {hasMore && (
                 <button
-                  onClick={() => navigate({ sayfa: String(sayfa + 1) })}
+                  onClick={loadMore}
+                  disabled={loadingMore}
                   className="hl-load-more"
                   style={{
                     padding: "11px 44px", borderRadius: "var(--hl-r-pill)",
                     border: "1.5px solid var(--hl-line-strong)", background: "none",
                     fontFamily: "var(--hl-font-ui)", fontSize: 11, fontWeight: 700,
                     letterSpacing: "0.1em", textTransform: "uppercase",
-                    color: "var(--hl-text-soft)", cursor: "pointer",
+                    color: "var(--hl-text-soft)", cursor: loadingMore ? "default" : "pointer",
+                    opacity: loadingMore ? 0.6 : 1,
                     transition: "all 150ms ease",
                   }}
                 >
-                  Daha Fazla Yükle
+                  {loadingMore ? "Yükleniyor…" : "Daha Fazla Yükle"}
                 </button>
-              )}
-
-              {totalPages > 1 && (
-                <div style={{ display: "flex", gap: 6 }}>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
-                    <button
-                      key={n}
-                      onClick={() => navigate({ sayfa: String(n) })}
-                      style={{
-                        width: 32, height: 32, borderRadius: "var(--hl-r-sm)",
-                        fontFamily: "var(--hl-font-ui)", fontSize: 11, fontWeight: 600,
-                        cursor: "pointer", transition: "all 150ms ease",
-                        border: n === sayfa ? "1.5px solid var(--hl-bronze-400)" : "1.5px solid var(--hl-line-strong)",
-                        background: n === sayfa ? "rgba(201,160,106,0.1)" : "none",
-                        color: n === sayfa ? "var(--hl-bronze-400)" : "var(--hl-text-mute)",
-                      }}
-                    >
-                      {n}
-                    </button>
-                  ))}
-                </div>
               )}
             </div>
           )}
