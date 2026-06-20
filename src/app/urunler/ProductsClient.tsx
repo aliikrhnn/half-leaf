@@ -402,7 +402,7 @@ export default function ProductsClient({
             </div>
           ) : (
             <div
-              style={{ display: "grid", gridTemplateColumns: `repeat(${grid}, 1fr)`, gap: 20 }}
+              style={{ display: "grid", gridTemplateColumns: `repeat(${grid}, minmax(0, 1fr))`, gap: 20 }}
               className="hl-product-grid"
             >
               {products.map(p => <ProductCard key={p.id} product={p} />)}

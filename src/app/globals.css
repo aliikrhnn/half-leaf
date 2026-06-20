@@ -1029,7 +1029,8 @@
 /* Listing page — responsive */
 @media (max-width: 1024px) {
   .hl-listing-grid {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 0 !important;
   }
   .hl-filter-aside {
     display: none !important;
@@ -1044,7 +1045,7 @@
     grid-template-columns: 1fr !important;
   }
   .hl-product-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 12px !important;
   }
 }
