@@ -8,7 +8,7 @@ export const SHIPPING_COST = 150;
 
 export const CONTACT_EMAIL = "info@halfleafstore.com";
 export const CONTACT_PHONE = "+90 543 533 2998";
-export const CONTACT_ADDRESS = "İstanbul, Türkiye";
+export const CONTACT_ADDRESS = "Isparta, Türkiye";
 
 export const SOCIAL_LINKS = {
   instagram: "https://instagram.com/halfleafstore",

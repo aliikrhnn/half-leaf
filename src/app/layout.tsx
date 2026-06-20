@@ -4,7 +4,7 @@ import "./globals.css";
 import AppShell from "@/components/layout/AppShell";
 import AgeGate from "@/components/layout/AgeGate";
 import Footer from "@/components/layout/Footer";
-import { SITE_NAME, SITE_DESCRIPTION, CONTACT_EMAIL, SOCIAL_LINKS } from "@/lib/constants";
+import { SITE_NAME, SITE_DESCRIPTION, CONTACT_EMAIL, CONTACT_PHONE, SOCIAL_LINKS } from "@/lib/constants";
 import { jsonLd } from "@/lib/utils";
 import { prisma } from "@/lib/db/prisma";
 import type { NavCategory, NavFeaturedProduct } from "@/lib/types";
@@ -178,9 +178,14 @@ export default async function RootLayout({
               "@context": "https://schema.org",
               "@type": "Organization",
               name: SITE_NAME,
+              alternateName: ["Half Leaf Store", "Half Leaf Nargile"],
               url: siteUrl,
               logo: `${siteUrl}/brand/half_leaf_logo.svg`,
-              contactPoint: { "@type": "ContactPoint", email: CONTACT_EMAIL, contactType: "customer service", availableLanguage: "Turkish" },
+              image: `${siteUrl}/brand/half_leaf_logo.svg`,
+              email: CONTACT_EMAIL,
+              telephone: CONTACT_PHONE,
+              address: { "@type": "PostalAddress", addressLocality: "Isparta", addressCountry: "TR" },
+              contactPoint: { "@type": "ContactPoint", email: CONTACT_EMAIL, telephone: CONTACT_PHONE, contactType: "customer service", availableLanguage: "Turkish" },
               sameAs: [SOCIAL_LINKS.instagram, SOCIAL_LINKS.facebook],
             }),
           }}

@@ -158,6 +158,7 @@ export default async function HomePage() {
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: SITE_NAME,
+    alternateName: ["Half Leaf Store", "Half Leaf Nargile"],
     url: siteUrl,
     description: SITE_DESCRIPTION,
     potentialAction: {
