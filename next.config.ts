@@ -51,13 +51,26 @@ const nextConfig: NextConfig = {
             key: "X-DNS-Prefetch-Control",
             value: "on",
           },
-          // TODO (deploy): Content-Security-Policy eklenecek.
-          // Önce raporlama modunda başlatılmalı:
-          //   Content-Security-Policy-Report-Only: default-src 'self'; report-uri /api/csp-report
-          // Uyumlu hale geldikten sonra zorlayıcı moda (Content-Security-Policy) geçilecek.
-          // ÖNEMLİ: CSP eklenirken PayTR ödeme iframe'i için şunlara izin verilmeli:
-          //   frame-src https://www.paytr.com;  script-src ... https://www.paytr.com;
-          // (Aksi halde güvenli ödeme formu yüklenmez.)
+          {
+            // CSP — önce Report-Only (siteyi kırmadan ihlalleri tespit eder).
+            // Uyum doğrulandıktan sonra "Content-Security-Policy" olarak zorlayıcı moda geçilebilir.
+            // PayTR ödeme iframe'i (frame-src/script-src/form-action https://www.paytr.com),
+            // Supabase görselleri ve Google Fonts izinlidir.
+            key: "Content-Security-Policy-Report-Only",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' https://www.paytr.com",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "font-src 'self' https://fonts.gstatic.com data:",
+              "img-src 'self' data: blob: https:",
+              "frame-src https://www.paytr.com",
+              "connect-src 'self' https://*.supabase.co https://www.paytr.com",
+              "form-action 'self' https://www.paytr.com",
+              "base-uri 'self'",
+              "object-src 'none'",
+              "frame-ancestors 'none'",
+            ].join("; "),
+          },
         ],
       },
     ];

@@ -11,11 +11,13 @@ const STATIC_ROUTES: MetadataRoute.Sitemap = [
   { url: `${siteUrl}/yardim/sss`,              lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
   { url: `${siteUrl}/yardim/kargo-teslimat`,   lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
   { url: `${siteUrl}/yardim/iade-degisim`,     lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
+  { url: `${siteUrl}/yardim/secim-rehberi`,    lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
+  { url: `${siteUrl}/yardim/bakim-temizlik`,   lastModified: new Date(), changeFrequency: "monthly", priority: 0.4 },
   { url: `${siteUrl}/yasal/gizlilik-politikasi`,    lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },
-  { url: `${siteUrl}/yasal/kullanim-kosullari`,     lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },
   { url: `${siteUrl}/yasal/kvkk`,                   lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },
   { url: `${siteUrl}/yasal/cerez-politikasi`,       lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },
   { url: `${siteUrl}/yasal/mesafeli-satis-sozlesmesi`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },
+  { url: `${siteUrl}/yasal/on-bilgilendirme-formu`,    lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

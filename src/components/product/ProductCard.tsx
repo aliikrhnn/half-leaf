@@ -3,11 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Heart, ShoppingCart } from "lucide-react";
+import { Heart, ShoppingCart, Check } from "lucide-react";
 import { useState } from "react";
 import { formatPrice } from "@/lib/utils";
 import type { Product } from "@/lib/types";
 import { useCartStore } from "@/store/cart";
+import { toast } from "@/store/toast";
 
 interface ProductCardProps {
   product: Product;
@@ -15,9 +16,9 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
   const [liked, setLiked] = useState(false);
+  const [added, setAdded] = useState(false);
   const router = useRouter();
   const addItem = useCartStore((s) => s.addItem);
-  const openCart = useCartStore((s) => s.openCart);
   const isOutOfStock = product.stock === 0;
   const isLowStock = product.lowStock ?? (!isOutOfStock && product.stock <= 5);
   const hasVariants = (product.variantColors?.length ?? 0) > 0;
@@ -31,7 +32,9 @@ export default function ProductCard({ product }: ProductCardProps) {
       return;
     }
     addItem(product);
-    openCart();
+    toast("Sepete eklendi", { label: "Sepete git", href: "/sepet" });
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1400);
   }
 
   return (
@@ -211,8 +214,8 @@ export default function ProductCard({ product }: ProductCardProps) {
             }
           }}
         >
-          <ShoppingCart size={13} />
-          {isOutOfStock ? "Stokta Yok" : "Sepete Ekle"}
+          {added ? <Check size={13} /> : <ShoppingCart size={13} />}
+          {isOutOfStock ? "Stokta Yok" : added ? "Eklendi" : "Sepete Ekle"}
         </button>
       </div>
     </div>

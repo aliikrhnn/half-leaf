@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { prisma } from "@/lib/db/prisma";
 import { mapProduct } from "@/lib/db/mappers";
 import { getUsdTryRate } from "@/lib/pricing";
+import { jsonLd } from "@/lib/utils";
 import { SITE_NAME, SITE_DESCRIPTION } from "@/lib/constants";
 import Hero, { type HeroSlideData } from "@/components/sections/Hero";
 import BestsellersSection from "@/components/sections/BestsellersSection";
@@ -161,7 +162,7 @@ export default async function HomePage() {
     description: SITE_DESCRIPTION,
     potentialAction: {
       "@type": "SearchAction",
-      target: { "@type": "EntryPoint", urlTemplate: `${siteUrl}/urunler?q={search_term_string}` },
+      target: { "@type": "EntryPoint", urlTemplate: `${siteUrl}/urunler?arama={search_term_string}` },
       "query-input": "required name=search_term_string",
     },
   };
@@ -170,7 +171,7 @@ export default async function HomePage() {
     <div style={{ background: "var(--hl-bg)", minHeight: "100vh" }}>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(websiteJsonLd) }}
       />
       <Hero slides={heroSlides} />
       <NewArrivalsSection products={newArrivals} />

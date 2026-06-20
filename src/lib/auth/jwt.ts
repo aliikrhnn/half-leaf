@@ -7,6 +7,11 @@ function getSecret(): Uint8Array {
       "AUTH_SECRET ortam değişkeni tanımlı değil. .env dosyasına güçlü bir değer ekleyin."
     );
   }
+  if (value.length < 32) {
+    throw new Error(
+      "AUTH_SECRET çok kısa (en az 32 karakter olmalı). Güçlü bir değer üretin: node -e \"console.log(require('crypto').randomBytes(32).toString('base64'))\""
+    );
+  }
   return new TextEncoder().encode(value);
 }
 
@@ -19,13 +24,15 @@ export interface TokenPayload extends JWTPayload {
 export async function signToken(payload: TokenPayload): Promise<string> {
   return new SignJWT({ ...payload })
     .setProtectedHeader({ alg: "HS256" })
+    .setSubject(payload.userId) // auth.sub = userId (denetim kaydı aktörü için)
     .setIssuedAt()
     .setExpirationTime("7d")
     .sign(getSecret());
 }
 
 export async function verifyToken(token: string): Promise<TokenPayload> {
-  const { payload } = await jwtVerify(token, getSecret());
+  // algorithms allowlist: algoritma karıştırma (alg confusion) saldırılarını önler.
+  const { payload } = await jwtVerify(token, getSecret(), { algorithms: ["HS256"] });
   return payload as TokenPayload;
 }
 

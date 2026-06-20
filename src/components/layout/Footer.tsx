@@ -149,6 +149,54 @@ export default async function Footer() {
           ))}
         </div>
 
+        {/* Payment trust strip */}
+        <div
+          style={{
+            paddingTop: 14,
+            paddingBottom: 12,
+            borderTop: "1px solid var(--hl-line)",
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: 14,
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "var(--hl-font-ui)",
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color: "var(--hl-bronze-400)",
+            }}
+          >
+            Güvenli Ödeme
+          </span>
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              padding: "5px 10px",
+              borderRadius: 7,
+              background: "var(--hl-bg)",
+              border: "1px solid var(--hl-line-strong)",
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/payment/paytr-logo-white.svg" alt="PayTR ile güvenli ödeme" height={15} style={{ height: 15, width: "auto" }} />
+          </span>
+          <span
+            style={{
+              fontFamily: "var(--hl-font-ui)",
+              fontSize: 11,
+              color: "var(--hl-text-mute)",
+            }}
+          >
+            256-bit SSL · 3D Secure · Kredi / Banka Kartı · Havale / EFT
+          </span>
+        </div>
+
         {/* Bottom bar */}
         <div
           style={{

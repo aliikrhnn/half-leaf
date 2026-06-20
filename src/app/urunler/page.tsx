@@ -10,12 +10,47 @@ import type { MaterialOption, BrandOption } from "./FilterPanel";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://halfleafstore.com";
 
-export const metadata: Metadata = {
-  title: "Tüm Ürünler",
-  description: "Premium nargile ekipmanları koleksiyonumuzu keşfedin. Cam hazneler, pirinç lüleler, aksesuarlar ve daha fazlası.",
-  alternates: { canonical: `${siteUrl}/urunler` },
-  openGraph: { url: `${siteUrl}/urunler` },
-};
+const BASE_DESC =
+  "Premium nargile ekipmanları koleksiyonumuzu keşfedin. Cam hazneler, pirinç lüleler, aksesuarlar ve daha fazlası.";
+
+// Filtre/arama/sıralama/sayfalama kombinasyonları sonsuz sayıda duplicate URL üretir;
+// bunlar noindex (follow) yapılır, yalnızca temiz /urunler ve tek kategori indekslenir.
+export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
+  const sp = await searchParams;
+  const base = `${siteUrl}/urunler`;
+  const kategori = sp.kategori?.trim();
+
+  const hasNoiseFilters = Boolean(
+    sp.materyal || sp.boy || sp.renk || sp.fiyat || sp.siralama || sp.arama ||
+    sp.indirim || sp.cokSatanlar || sp.oneCikan || sp.marka ||
+    (sp.sayfa && sp.sayfa !== "1"),
+  );
+
+  if (hasNoiseFilters) {
+    return {
+      title: "Ürünler",
+      description: BASE_DESC,
+      robots: { index: false, follow: true },
+      alternates: { canonical: kategori ? `${base}?kategori=${kategori}` : base },
+    };
+  }
+
+  if (kategori) {
+    return {
+      title: "Ürünler",
+      description: BASE_DESC,
+      alternates: { canonical: `${base}?kategori=${kategori}` },
+      openGraph: { url: `${base}?kategori=${kategori}` },
+    };
+  }
+
+  return {
+    title: "Tüm Ürünler",
+    description: BASE_DESC,
+    alternates: { canonical: base },
+    openGraph: { url: base },
+  };
+}
 
 const PAGE_SIZE = 9;
 

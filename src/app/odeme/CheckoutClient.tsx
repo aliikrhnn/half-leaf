@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Lock, Check, Shield, Truck, X, ChevronDown, ChevronLeft, MapPin, User, ArrowRight } from "lucide-react";
+import { Lock, Check, Shield, Truck, X, ChevronDown, ChevronLeft, MapPin, User, ArrowRight, RotateCcw } from "lucide-react";
 import { useCartStore } from "@/store/cart";
 import { formatPrice } from "@/lib/utils";
 import HalfLeafLogo from "@/components/brand/HalfLeafLogo";
@@ -788,8 +788,9 @@ export default function CheckoutClient({
               )}
 
               <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 7, fontSize: 11, color: "var(--hl-text-mute)" }}>
-                <span style={{ display: "flex", gap: 7, alignItems: "center" }}><Shield size={11} /> 2 yıl pirinç garantisi</span>
-                <span style={{ display: "flex", gap: 7, alignItems: "center" }}><Truck size={11} /> Hızlı kargo</span>
+                <span style={{ display: "flex", gap: 7, alignItems: "center" }}><Shield size={11} /> PayTR ile güvenli ödeme · 3D Secure</span>
+                <span style={{ display: "flex", gap: 7, alignItems: "center" }}><RotateCcw size={11} /> 14 gün içinde cayma hakkı</span>
+                <span style={{ display: "flex", gap: 7, alignItems: "center" }}><Truck size={11} /> Aynı gün kargo · hızlı teslimat</span>
               </div>
             </div>
           </aside>

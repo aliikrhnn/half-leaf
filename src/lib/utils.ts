@@ -7,6 +7,18 @@ export function formatPrice(price: number): string {
   }).format(price);
 }
 
+/**
+ * JSON-LD verisini güvenli şekilde <script> içine basmak için serialize eder.
+ * `<`, `>`, `&` karakterlerini unicode-escape ederek "</script>" breakout'unu
+ * ve XSS'i önler. dangerouslySetInnerHTML ile birlikte kullanılır.
+ */
+export function jsonLd(data: unknown): string {
+  return JSON.stringify(data)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026");
+}
+
 export function slugify(text: string): string {
   return text
     .toLowerCase()

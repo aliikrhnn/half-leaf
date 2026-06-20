@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
+import { rateLimiter, getClientIp } from "@/lib/rate-limit/limiter";
 
 export async function POST(req: NextRequest) {
+  // Kupon kodu deneme/enumeration koruması: IP başına dakikada 20 deneme.
+  const ip = getClientIp(req);
+  const limit = await rateLimiter.checkLimit(`kupon:${ip}`, { maxRequests: 20, windowMs: 60_000 });
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Çok fazla kupon denemesi. Lütfen biraz sonra tekrar deneyin." },
+      { status: 429 },
+    );
+  }
+
   try {
     const { code, subtotal } = await req.json() as { code: string; subtotal: number };
 

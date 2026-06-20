@@ -81,9 +81,11 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--hl-bronze-400);
     outline-offset: 2px;
     border-radius: 4px;
+    /* Koyu zeminde belirginlik için ek kontrast halkası */
+    box-shadow: 0 0 0 4px rgba(201, 160, 106, 0.28);
   }
 
   /* Scrollbar */

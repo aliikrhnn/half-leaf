@@ -5,6 +5,7 @@ import AppShell from "@/components/layout/AppShell";
 import AgeGate from "@/components/layout/AgeGate";
 import Footer from "@/components/layout/Footer";
 import { SITE_NAME, SITE_DESCRIPTION, CONTACT_EMAIL, SOCIAL_LINKS } from "@/lib/constants";
+import { jsonLd } from "@/lib/utils";
 import { prisma } from "@/lib/db/prisma";
 import type { NavCategory, NavFeaturedProduct } from "@/lib/types";
 import { getUsdTryRate, toTRY, type PriceCurrency } from "@/lib/pricing";
@@ -52,13 +53,12 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     title: `${SITE_NAME} — Premium Nargile Ekipmanları`,
     description: SITE_DESCRIPTION,
-    images: [{ url: "/og-default.jpg", width: 1200, height: 630, alt: SITE_NAME }],
+    // OG görseli app/opengraph-image.tsx dosya kuralıyla otomatik üretilir.
   },
   twitter: {
     card: "summary_large_image",
     title: `${SITE_NAME} — Premium Nargile Ekipmanları`,
     description: SITE_DESCRIPTION,
-    images: ["/og-default.jpg"],
   },
 };
 
@@ -174,12 +174,12 @@ export default async function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
+            __html: jsonLd({
               "@context": "https://schema.org",
               "@type": "Organization",
               name: SITE_NAME,
               url: siteUrl,
-              logo: `${siteUrl}/logo.png`,
+              logo: `${siteUrl}/brand/half_leaf_logo.svg`,
               contactPoint: { "@type": "ContactPoint", email: CONTACT_EMAIL, contactType: "customer service", availableLanguage: "Turkish" },
               sameAs: [SOCIAL_LINKS.instagram, SOCIAL_LINKS.facebook],
             }),

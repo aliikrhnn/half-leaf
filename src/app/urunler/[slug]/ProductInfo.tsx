@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Heart, Gift, Truck, ShieldCheck, Package } from "lucide-react";
 import { useCartStore } from "@/store/cart";
 import { formatPrice } from "@/lib/utils";
+import { FREE_SHIPPING_THRESHOLD } from "@/lib/constants";
 import type { Product, VariantData } from "@/lib/types";
 
 interface Props {
@@ -317,8 +318,8 @@ export default function ProductInfo({ product, categoryName, categorySlug, varia
       {/* Info rows */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10, borderTop: "1px solid var(--hl-line)", paddingTop: 16 }}>
         {[
-          { Icon: Truck, text: "750 TL üzeri siparişlerde ücretsiz kargo" },
-          { Icon: ShieldCheck, text: "2 yıl Half Leaf güvencesi" },
+          { Icon: Truck, text: `${formatPrice(FREE_SHIPPING_THRESHOLD)} üzeri siparişlerde ücretsiz kargo` },
+          { Icon: ShieldCheck, text: "PayTR ile güvenli ödeme · 3D Secure" },
           { Icon: Package, text: "Özenli hediye paketleme seçeneği" },
         ].map(({ Icon, text }) => (
           <div key={text} style={{ display: "flex", alignItems: "center", gap: 9 }}>

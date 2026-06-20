@@ -5,6 +5,7 @@ import { ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/db/prisma";
 import { mapProduct } from "@/lib/db/mappers";
 import { getUsdTryRate } from "@/lib/pricing";
+import { jsonLd } from "@/lib/utils";
 import { SITE_NAME } from "@/lib/constants";
 import ProductCard from "@/components/product/ProductCard";
 import ProductGallery from "./ProductGallery";
@@ -24,33 +25,39 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const p = await prisma.product.findUnique({
     where: { slug, isActive: true },
     select: {
-      name: true, description: true, basePrice: true,
+      name: true, shortDescription: true, description: true, basePrice: true, brand: true,
       Category: { select: { name: true } },
       ProductImage: { orderBy: { sortOrder: "asc" }, take: 1, select: { url: true, altText: true } },
     },
   });
   if (!p) return {};
 
-  const description = p.description?.slice(0, 155) ?? `${p.name} — ${SITE_NAME}'da satışta.`;
+  // Meta açıklama: önce shortDescription (zorunlu, öz), sonra description; ~155 karakterde kelime sınırında kes.
+  const rawDesc = p.shortDescription?.trim() || p.description?.trim() || `${p.name} — ${SITE_NAME}'da satışta.`;
+  const description = rawDesc.length > 155 ? rawDesc.slice(0, 152).replace(/\s+\S*$/, "") + "…" : rawDesc;
+  // Başlık: ürün adı – kategori (+ marka) — nargile bağlamı kategoriden gelir.
+  const titleBase = [p.name, p.Category?.name].filter(Boolean).join(" – ");
+  const title = p.brand ? `${titleBase} | ${p.brand}` : titleBase;
   const image = p.ProductImage[0];
   const url = `${siteUrl}/urunler/${slug}`;
+  const ogImages = image ? [{ url: image.url, alt: image.altText ?? p.name }] : [{ url: `${siteUrl}/opengraph-image`, alt: SITE_NAME }];
 
   return {
-    title: p.name,
+    title,
     description,
     alternates: { canonical: url },
     openGraph: {
       type: "website",
       url,
-      title: `${p.name} | ${SITE_NAME}`,
+      title: `${title} | ${SITE_NAME}`,
       description,
-      images: image ? [{ url: image.url, alt: image.altText ?? p.name }] : undefined,
+      images: ogImages,
     },
     twitter: {
       card: "summary_large_image",
-      title: `${p.name} | ${SITE_NAME}`,
+      title: `${title} | ${SITE_NAME}`,
       description,
-      images: image ? [image.url] : undefined,
+      images: image ? [image.url] : [`${siteUrl}/opengraph-image`],
     },
   };
 }
@@ -124,7 +131,9 @@ export default async function ProductDetailPage({ params }: Props) {
       "@type": "Offer",
       priceCurrency: "TRY",
       price: product.price.toFixed(2),
+      itemCondition: "https://schema.org/NewCondition",
       availability: product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      priceValidUntil: `${new Date(now).getFullYear()}-12-31`,
       url: `${siteUrl}/urunler/${slug}`,
       seller: { "@type": "Organization", name: "Half Leaf" },
     },
@@ -149,8 +158,8 @@ export default async function ProductDetailPage({ params }: Props) {
         padding: "calc(var(--hl-bar-h) + var(--hl-header-h) + 32px) 24px 80px",
       }}
     >
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(productJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbJsonLd) }} />
       {/* Breadcrumb */}
       <nav
         style={{

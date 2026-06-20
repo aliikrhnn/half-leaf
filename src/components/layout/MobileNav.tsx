@@ -36,13 +36,20 @@ export default function MobileNav({ isOpen, onClose, navCategories = [] }: Mobil
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
+      const onKey = (e: KeyboardEvent) => {
+        if (e.key === "Escape") onClose();
+      };
+      document.addEventListener("keydown", onKey);
+      return () => {
+        document.body.style.overflow = "";
+        document.removeEventListener("keydown", onKey);
+      };
     }
+    document.body.style.overflow = "";
     return () => {
       document.body.style.overflow = "";
     };
-  }, [isOpen]);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -54,8 +61,10 @@ export default function MobileNav({ isOpen, onClose, navCategories = [] }: Mobil
         aria-hidden="true"
       />
       <nav
-        className="fixed inset-y-0 left-0 z-50 w-80 max-w-[90vw] bg-bg-surface border-r border-border-default overflow-y-auto animate-slide-in-right"
+        className="fixed inset-y-0 left-0 z-50 w-80 max-w-[90vw] bg-bg-surface border-r border-border-default overflow-y-auto animate-slide-in-left"
         aria-label="Mobil menü"
+        role="dialog"
+        aria-modal="true"
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border-default">
