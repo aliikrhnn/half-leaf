@@ -116,7 +116,7 @@ export default function MegaMenu({
               groups.map(group => (
                 <div key={group.id} className="hl-mega-col">
                   <Link
-                    href={`/urunler?kategori=${group.slug}`}
+                    href={`/kategori/${group.slug}`}
                     className="hl-mega-group-title"
                     onClick={onClose}
                   >
@@ -127,7 +127,7 @@ export default function MegaMenu({
                       {group.children.map(child => (
                         <li key={child.id}>
                           <Link
-                            href={`/urunler?kategori=${child.slug}`}
+                            href={`/kategori/${child.slug}`}
                             className="hl-mega-child-link"
                             onClick={onClose}
                           >

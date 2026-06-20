@@ -25,7 +25,7 @@ export default function CategoryGrid({ categories }: Props) {
         {categories.slice(0, 4).map((cat) => (
           <Link
             key={cat.id}
-            href={`/urunler?kategori=${cat.slug}`}
+            href={`/kategori/${cat.slug}`}
             className="group relative block overflow-hidden"
             style={{
               aspectRatio: "4/5",

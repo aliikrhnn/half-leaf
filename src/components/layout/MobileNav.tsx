@@ -135,7 +135,7 @@ export default function MobileNav({ isOpen, onClose, navCategories = [] }: Mobil
                   {/* Root category row */}
                   <div className="flex items-center gap-1">
                     <Link
-                      href={`/urunler?kategori=${cat.slug}`}
+                      href={`/kategori/${cat.slug}`}
                       onClick={onClose}
                       className="flex-1 px-3 py-2.5 text-sm text-ink-muted hover:text-ink hover:bg-bg-elevated rounded-lg transition-colors"
                     >
@@ -164,7 +164,7 @@ export default function MobileNav({ isOpen, onClose, navCategories = [] }: Mobil
                       {children.map(sub => (
                         <Link
                           key={sub.id}
-                          href={`/urunler?kategori=${sub.slug}`}
+                          href={`/kategori/${sub.slug}`}
                           onClick={onClose}
                           className="flex items-center justify-between w-full px-3 py-2 text-sm text-ink-dim hover:text-ink hover:bg-bg-elevated rounded-lg transition-colors"
                         >

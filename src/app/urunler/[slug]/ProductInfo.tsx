@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Heart, Gift, Truck, ShieldCheck, Package } from "lucide-react";
 import { useCartStore } from "@/store/cart";
+import { useWishlistStore } from "@/store/wishlist";
 import { formatPrice } from "@/lib/utils";
 import { FREE_SHIPPING_THRESHOLD } from "@/lib/constants";
 import type { Product, VariantData } from "@/lib/types";
@@ -31,6 +32,13 @@ export default function ProductInfo({ product, categoryName, categorySlug, varia
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
   const { addItem, openCart } = useCartStore();
+
+  const [mounted, setMounted] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- hydration guard: must run after SSR mount
+  useEffect(() => setMounted(true), []);
+  const inWishlist = useWishlistStore((s) => s.items.some((i) => i.id === product.id));
+  const toggleWishlist = useWishlistStore((s) => s.toggle);
+  const liked = mounted && inWishlist;
 
   const colorEntries = [...new Map(
     variants
@@ -285,16 +293,27 @@ export default function ProductInfo({ product, categoryName, categorySlug, varia
 
           {/* Wishlist */}
           <button
+            type="button"
+            onClick={() =>
+              toggleWishlist({
+                id: product.id,
+                slug: product.slug,
+                name: product.name,
+                image: product.images?.[0]?.url ?? null,
+                price: displayPrice,
+              })
+            }
             style={{
               width: 48, height: 48, flexShrink: 0, borderRadius: 9,
-              border: "1.5px solid var(--hl-line-strong)",
+              border: `1.5px solid ${liked ? "#e53e3e" : "var(--hl-line-strong)"}`,
               background: "var(--hl-bg-elev-1)", cursor: "pointer",
               display: "flex", alignItems: "center", justifyContent: "center",
-              color: "var(--hl-text-mute)", transition: "color 150ms ease",
+              color: liked ? "#e53e3e" : "var(--hl-text-mute)", transition: "all 150ms ease",
             }}
-            aria-label="Favorilere ekle"
+            aria-label={liked ? "Favorilerden çıkar" : "Favorilere ekle"}
+            aria-pressed={liked}
           >
-            <Heart size={16} />
+            <Heart size={16} fill={liked ? "#e53e3e" : "none"} />
           </button>
         </div>
 

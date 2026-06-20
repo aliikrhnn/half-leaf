@@ -4,19 +4,25 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Heart, ShoppingCart, Check } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { formatPrice } from "@/lib/utils";
 import type { Product } from "@/lib/types";
 import { useCartStore } from "@/store/cart";
 import { toast } from "@/store/toast";
+import { useWishlistStore } from "@/store/wishlist";
 
 interface ProductCardProps {
   product: Product;
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const [liked, setLiked] = useState(false);
   const [added, setAdded] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- hydration guard: must run after SSR mount
+  useEffect(() => setMounted(true), []);
+  const inWishlist = useWishlistStore((s) => s.items.some((i) => i.id === product.id));
+  const toggleWishlist = useWishlistStore((s) => s.toggle);
+  const liked = mounted && inWishlist;
   const router = useRouter();
   const addItem = useCartStore((s) => s.addItem);
   const isOutOfStock = product.stock === 0;
@@ -88,7 +94,17 @@ export default function ProductCard({ product }: ProductCardProps) {
 
           {/* Wishlist */}
           <button
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLiked((v) => !v); }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleWishlist({
+                id: product.id,
+                slug: product.slug,
+                name: product.name,
+                image: product.images?.[0]?.url ?? null,
+                price: product.price,
+              });
+            }}
             className="hl-card-heart"
             style={{
               position: "absolute", top: 10, right: 10,
@@ -98,7 +114,8 @@ export default function ProductCard({ product }: ProductCardProps) {
               cursor: "pointer", color: liked ? "#e53e3e" : "var(--hl-text-mute)",
               transition: "color 150ms ease",
             }}
-            aria-label="Favorilere ekle"
+            aria-label={liked ? "Favorilerden çıkar" : "Favorilere ekle"}
+            aria-pressed={liked}
           >
             <Heart size={12} fill={liked ? "#e53e3e" : "none"} />
           </button>

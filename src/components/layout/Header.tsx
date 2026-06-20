@@ -3,8 +3,9 @@
 import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ShoppingCart, Menu, Search, User, X } from "lucide-react";
+import { ShoppingCart, Menu, Search, User, X, Heart } from "lucide-react";
 import { useCartStore } from "@/store/cart";
+import { useWishlistStore } from "@/store/wishlist";
 import { SITE_NAME } from "@/lib/constants";
 import HalfLeafLogo from "@/components/brand/HalfLeafLogo";
 import MobileNav from "./MobileNav";
@@ -58,6 +59,8 @@ export default function Header({ navCategories = [] }: Props) {
   }, [searchOpen]);
 
   const totalItems = mounted ? getTotalItems() : 0;
+  const wishlistCount = useWishlistStore((s) => s.items.length);
+  const favCount = mounted ? wishlistCount : 0;
 
   function openMega(key: string) {
     if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
@@ -132,6 +135,19 @@ export default function Header({ navCategories = [] }: Props) {
               </button>
 
               <Link
+                href="/favorilerim"
+                className="relative hidden sm:flex p-2 text-ink-muted hover:text-ink transition-colors rounded-lg hover:bg-bg-elevated"
+                aria-label={`Favorilerim${favCount > 0 ? `, ${favCount} ürün` : ""}`}
+              >
+                <Heart size={20} />
+                {favCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-gold text-bg text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {favCount > 9 ? "9+" : favCount}
+                  </span>
+                )}
+              </Link>
+
+              <Link
                 href={isAuthed ? "/hesabim" : "/giris"}
                 className="hidden sm:flex p-2 text-ink-muted hover:text-ink transition-colors rounded-lg hover:bg-bg-elevated"
                 aria-label="Hesabım"
@@ -171,7 +187,7 @@ export default function Header({ navCategories = [] }: Props) {
                     onMouseLeave={scheduleClose}
                   >
                     <Link
-                      href={`/urunler?kategori=${cat.slug}`}
+                      href={`/kategori/${cat.slug}`}
                       className={`hl-nav-link${activeKey === cat.slug ? " hl-nav-link--active" : ""}`}
                     >
                       {cat.name}

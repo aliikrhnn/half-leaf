@@ -6,6 +6,7 @@ import { X, ShoppingBag } from "lucide-react";
 import { useCartStore } from "@/store/cart";
 import { formatPrice } from "@/lib/utils";
 import { FREE_SHIPPING_THRESHOLD, SHIPPING_COST } from "@/lib/constants";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 import Button from "@/components/ui/Button";
 import CartItem from "./CartItem";
 
@@ -14,6 +15,7 @@ export default function CartDrawer() {
   const subtotal = getSubtotal();
   const shipping = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
   const total = subtotal + shipping;
+  const panelRef = useFocusTrap<HTMLElement>(true, closeCart);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -30,6 +32,10 @@ export default function CartDrawer() {
         aria-hidden="true"
       />
       <aside
+        ref={panelRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
         className="fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-bg-surface border-l border-border-default flex flex-col animate-slide-in-right"
         aria-label="Alışveriş sepeti"
       >

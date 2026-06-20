@@ -145,7 +145,7 @@ export default async function ProductDetailPage({ params }: Props) {
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Ana Sayfa", item: siteUrl },
       { "@type": "ListItem", position: 2, name: "Ürünler", item: `${siteUrl}/urunler` },
-      { "@type": "ListItem", position: 3, name: dbProduct.Category.name, item: `${siteUrl}/urunler?kategori=${dbProduct.Category.slug}` },
+      { "@type": "ListItem", position: 3, name: dbProduct.Category.name, item: `${siteUrl}/kategori/${dbProduct.Category.slug}` },
       { "@type": "ListItem", position: 4, name: product.name, item: `${siteUrl}/urunler/${slug}` },
     ],
   };
@@ -174,7 +174,7 @@ export default async function ProductDetailPage({ params }: Props) {
         <Link href="/urunler" style={{ color: "inherit", textDecoration: "none" }}>Ürünler</Link>
         <ChevronRight size={11} />
         <Link
-          href={`/urunler?kategori=${dbProduct.Category.slug}`}
+          href={`/kategori/${dbProduct.Category.slug}`}
           style={{ color: "inherit", textDecoration: "none" }}
         >
           {dbProduct.Category.name}
@@ -232,7 +232,7 @@ export default async function ProductDetailPage({ params }: Props) {
               Benzer parçalar
             </h2>
             <Link
-              href={`/urunler?kategori=${product.categorySlug}`}
+              href={`/kategori/${product.categorySlug}`}
               style={{
                 fontFamily: "var(--hl-font-ui)", fontSize: 11, fontWeight: 600,
                 color: "var(--hl-text-mute)", textDecoration: "none",

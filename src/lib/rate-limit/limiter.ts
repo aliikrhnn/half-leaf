@@ -80,9 +80,77 @@ class InMemoryRateLimiter implements RateLimiter {
   }
 }
 
+// ─── Upstash Redis (REST) implementasyonu ────────────────────────────────────
+
+/**
+ * Serverless/çok-instance ortamda paylaşılan, kalıcı rate limiting.
+ * Upstash Redis REST API kullanır (ek bağımlılık YOK — fetch ile).
+ * UPSTASH_REDIS_REST_URL ve UPSTASH_REDIS_REST_TOKEN tanımlıysa devreye girer.
+ */
+class UpstashRateLimiter implements RateLimiter {
+  constructor(
+    private readonly url: string,
+    private readonly token: string,
+  ) {}
+
+  async checkLimit(
+    key: string,
+    { maxRequests, windowMs }: RateLimitOptions,
+  ): Promise<RateLimitResult> {
+    const k = `rl:${key}`;
+    // Sabit pencere: INCR + ilk istekte PEXPIRE(NX), TTL'i oku.
+    const res = await fetch(`${this.url}/pipeline`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify([
+        ["INCR", k],
+        ["PEXPIRE", k, windowMs, "NX"],
+        ["PTTL", k],
+      ]),
+      cache: "no-store",
+    });
+    if (!res.ok) throw new Error(`Upstash error: ${res.status}`);
+    const data = (await res.json()) as Array<{ result: number }>;
+    const count = Number(data[0]?.result ?? 1);
+    const ttl = Number(data[2]?.result ?? windowMs);
+    const resetAt = new Date(Date.now() + (ttl > 0 ? ttl : windowMs));
+
+    if (count > maxRequests) {
+      return { allowed: false, remaining: 0, resetAt };
+    }
+    return { allowed: true, remaining: Math.max(0, maxRequests - count), resetAt };
+  }
+}
+
 // ─── Singleton ────────────────────────────────────────────────────────────────
 
-export const rateLimiter: RateLimiter = new InMemoryRateLimiter();
+const memoryLimiter = new InMemoryRateLimiter();
+
+function createRateLimiter(): RateLimiter {
+  const url = process.env.UPSTASH_REDIS_REST_URL?.trim();
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
+
+  if (url && token) {
+    const upstash = new UpstashRateLimiter(url, token);
+    // Upstash erişilemezse siteyi kilitlememek için in-memory'e düş.
+    return {
+      checkLimit: async (key, opts) => {
+        try {
+          return await upstash.checkLimit(key, opts);
+        } catch {
+          return memoryLimiter.checkLimit(key, opts);
+        }
+      },
+    };
+  }
+
+  return memoryLimiter;
+}
+
+export const rateLimiter: RateLimiter = createRateLimiter();
 
 // ─── Yardımcı: IP adresi ─────────────────────────────────────────────────────
 

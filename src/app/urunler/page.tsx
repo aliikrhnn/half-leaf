@@ -77,7 +77,7 @@ const PRICE_RANGE_MAP: Record<string, { min: number; max: number | null }> = {
   "10000+":      { min: 10000, max: null },
 };
 
-interface SearchParams {
+export interface SearchParams {
   kategori?: string;
   materyal?: string;
   boy?: string;
@@ -119,7 +119,7 @@ function getDescendantIds(
   return [...ids];
 }
 
-async function fetchAll(sp: SearchParams) {
+export async function fetchAll(sp: SearchParams) {
   const usdTryRate = await getUsdTryRate();
   const kategori = sp.kategori ?? "";
   const materyals = sp.materyal ? sp.materyal.split(",").filter(Boolean) : [];
