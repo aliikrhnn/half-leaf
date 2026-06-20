@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
+    // AVIF/WebP ile otomatik daha küçük görsel (daha hızlı LCP, daha az bant genişliği).
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 86400,
     remotePatterns: [
       {
         protocol: "https",
@@ -9,8 +12,9 @@ const nextConfig: NextConfig = {
         pathname: "/**",
       },
       {
+        // Tüm Supabase proje alt alan adları (yüklenen ürün görselleri).
         protocol: "https",
-        hostname: "rikoawvhezkofzahamzf.supabase.co",
+        hostname: "*.supabase.co",
         pathname: "/storage/v1/object/public/**",
       },
     ],

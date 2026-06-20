@@ -17,6 +17,7 @@ import {
   Warehouse,
   MessageSquare,
   Layers,
+  Star,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -32,6 +33,7 @@ const NAV_ITEMS = [
   { href: "/admin/musteriler", label: "Müşteriler", icon: Users },
   { href: "/admin/kuponlar", label: "Kuponlar", icon: Tag },
   { href: "/admin/iade-talepleri", label: "İade Talepleri", icon: RefreshCw },
+  { href: "/admin/yorumlar", label: "Yorumlar", icon: Star },
   { href: "/admin/icerik-sayfalari", label: "İçerik Sayfaları", icon: FileText },
   { href: "/admin/hero-slides",      label: "Hero Slide'lar",   icon: Layers },
   { href: "/admin/iletisim",         label: "İletişim",         icon: MessageSquare },

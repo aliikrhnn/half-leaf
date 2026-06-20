@@ -118,6 +118,25 @@ export default async function ProductDetailPage({ params }: Props) {
 
   const related = relatedRows.map(p => mapProduct(p, usdTryRate));
 
+  // Onaylanmış yorumlar + ürün puanı
+  const reviewRows = await prisma.review.findMany({
+    where: { productId: dbProduct.id, isApproved: true },
+    select: { id: true, authorName: true, rating: true, title: true, body: true, isVerified: true, createdAt: true },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+  });
+  const reviews = reviewRows.map(r => ({
+    id: r.id,
+    authorName: r.authorName,
+    rating: r.rating,
+    title: r.title,
+    body: r.body,
+    isVerified: r.isVerified,
+    createdAt: r.createdAt.toISOString(),
+  }));
+  const ratingAvg = dbProduct.ratingAvg != null ? Number(dbProduct.ratingAvg) : null;
+  const reviewCount = dbProduct.reviewCount;
+
   const productJsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -127,6 +146,10 @@ export default async function ProductDetailPage({ params }: Props) {
     url: `${siteUrl}/urunler/${slug}`,
     image: product.images.map(img => img.url),
     brand: { "@type": "Brand", name: "Half Leaf" },
+    // Gerçek (uydurma değil) değerlendirmeler varsa yıldız zengin sonucu için ekle.
+    ...(reviewCount > 0 && ratingAvg != null
+      ? { aggregateRating: { "@type": "AggregateRating", ratingValue: ratingAvg.toFixed(1), reviewCount } }
+      : {}),
     offers: {
       "@type": "Offer",
       priceCurrency: "TRY",
@@ -216,6 +239,10 @@ export default async function ProductDetailPage({ params }: Props) {
           materialName={dbProduct.Material?.name}
           careInfo={dbProduct.careInfo ?? undefined}
           weightGrams={dbProduct.weightGrams ?? undefined}
+          slug={slug}
+          reviews={reviews}
+          ratingAvg={ratingAvg}
+          reviewCount={reviewCount}
         />
       </div>
 

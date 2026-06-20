@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import ImgSlot from "@/components/ui/ImgSlot";
+import ReviewsSection, { type ReviewData } from "./ReviewsSection";
 import type { Product } from "@/lib/types";
 
 interface Props {
@@ -9,12 +10,16 @@ interface Props {
   materialName?: string;
   careInfo?: string;
   weightGrams?: number;
+  slug: string;
+  reviews: ReviewData[];
+  ratingAvg: number | null;
+  reviewCount: number;
 }
 
 const TABS = ["Açıklama", "Malzeme & Bakım", "Paket İçeriği", "Yorumlar"] as const;
 type Tab = (typeof TABS)[number];
 
-export default function ProductTabs({ product, materialName, careInfo, weightGrams }: Props) {
+export default function ProductTabs({ product, materialName, careInfo, weightGrams, slug, reviews, ratingAvg, reviewCount }: Props) {
   const [active, setActive] = useState<Tab>("Açıklama");
 
   const specs: Array<[string, string]> = [
@@ -50,7 +55,7 @@ export default function ProductTabs({ product, materialName, careInfo, weightGra
               transition: "color 150ms ease, border-color 150ms ease",
             }}
           >
-            {tab}{tab === "Yorumlar" ? " (0)" : ""}
+            {tab}{tab === "Yorumlar" ? ` (${reviewCount})` : ""}
           </button>
         ))}
       </div>
@@ -174,11 +179,7 @@ export default function ProductTabs({ product, materialName, careInfo, weightGra
 
       {/* Yorumlar */}
       {active === "Yorumlar" && (
-        <div style={{ padding: "32px 0", textAlign: "center" }}>
-          <p style={{ fontFamily: "var(--hl-font-ui)", fontSize: 13, color: "var(--hl-text-mute)" }}>
-            Henüz değerlendirme yok.
-          </p>
-        </div>
+        <ReviewsSection slug={slug} reviews={reviews} ratingAvg={ratingAvg} reviewCount={reviewCount} />
       )}
     </div>
   );

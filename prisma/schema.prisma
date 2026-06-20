@@ -323,6 +323,8 @@ model Product {
   isFeatured       Boolean          @default(false)
   isBestseller     Boolean          @default(false)
   brand            String?
+  ratingAvg        Decimal?         @db.Decimal(3, 2)
+  reviewCount      Int              @default(0)
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   CartItem         CartItem[]
@@ -332,6 +334,7 @@ model Product {
   Material         Material?        @relation(fields: [materialId], references: [id])
   ProductImage     ProductImage[]
   ProductVariant   ProductVariant[]
+  Review           Review[]
 
   @@index([categoryId])
   @@index([materialId])
@@ -501,9 +504,30 @@ model User {
   ConsentLog           ConsentLog[]
   ImageProcessingJob   ImageProcessingJob[]
   Order                Order[]
+  Review               Review[]
   ReturnRequest        ReturnRequest[]
   Session              Session[]
   StockMovement        StockMovement[]
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  productId  String
+  userId     String?
+  authorName String
+  rating     Int
+  title      String?
+  body       String
+  isApproved Boolean  @default(false)
+  isVerified Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  Product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  User       User?    @relation(fields: [userId], references: [id])
+
+  @@index([productId])
+  @@index([userId])
+  @@index([isApproved])
 }
 
 model SiteSettings {
