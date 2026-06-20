@@ -28,6 +28,7 @@ export const CreateProductSchema = z.object({
   basePrice: z.number().positive("Fiyat 0'dan büyük olmalıdır."),
   compareAtPrice: z.number().positive().optional(),
   priceCurrency: z.enum(["USD", "TRY"]).default("TRY"),
+  stock: z.number().int().min(0, "Stok 0 veya daha büyük olmalıdır.").default(0),
   isActive: z.boolean().default(true),
   isFeatured: z.boolean().default(false),
   isBestseller: z.boolean().default(false),

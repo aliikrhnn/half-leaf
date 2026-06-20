@@ -4,6 +4,7 @@ import { UpdateProductSchema } from "@/lib/validations/product.schema";
 import { ok, badRequest, notFound, serverError } from "@/lib/api/response";
 import { requireAdmin, isResponse } from "@/lib/auth/middleware";
 import { mapProduct } from "@/lib/db/mappers";
+import type { PriceCurrency } from "@/lib/pricing";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -12,7 +13,17 @@ export async function GET(_req: NextRequest, { params }: Params) {
   try {
     const product = await getProductById(id);
     if (!product) return notFound("Ürün bulunamadı.");
-    return ok(mapProduct(product));
+    // Admin düzenleme formu HAM (depolanan para birimindeki) değerleri geri almalı —
+    // storefront'un TRY'ye çevrilmiş gösterim değerini değil. basePrice, priceCurrency
+    // biriminde girildiği gibi saklanır; TRY'ye çevrim yalnızca okuma anında (mapProduct,
+    // storefront) yapılır. Burada mapProduct döndürürsek, USD etiketli alana TRY'ye
+    // çevrilmiş sayı yüklenir ve kaydedince fiyat her düzenlemede kur kadar şişer.
+    return ok({
+      ...mapProduct(product),
+      price: Number(product.basePrice),
+      compareAtPrice: product.compareAtPrice != null ? Number(product.compareAtPrice) : undefined,
+      priceCurrency: (product.priceCurrency ?? "TRY") as PriceCurrency,
+    });
   } catch {
     return serverError();
   }

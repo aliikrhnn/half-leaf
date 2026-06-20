@@ -60,7 +60,8 @@ export async function getProductBySlug(slug: string) {
 }
 
 export async function createProduct(data: CreateProductInput) {
-  const { images, variants, ...rest } = data;
+  const { images, variants, stock, ...rest } = data;
+  const qty = stock ?? 0;
 
   const imagesWithOriginal = (images ?? []).map((img) => ({
     ...img,
@@ -70,6 +71,16 @@ export async function createProduct(data: CreateProductInput) {
   return prisma.product.create({
     data: {
       ...rest,
+      // Inventory'yi her zaman oluştur (0 olsa bile) — okuma tarafı ve sonraki
+      // stok hareketleri için kayıt gerekli. Başlangıç stoğu varsa ledger'a GIRIS yaz.
+      Inventory: {
+        create: {
+          quantity: qty,
+          ...(qty > 0 && {
+            StockMovement: { create: { type: "GIRIS", quantityChange: qty, reason: "Başlangıç stoğu" } },
+          }),
+        },
+      },
       ...(imagesWithOriginal.length && { ProductImage: { create: imagesWithOriginal } }),
       ...(variants?.length && { ProductVariant: { create: variants } }),
     },
@@ -79,7 +90,7 @@ export async function createProduct(data: CreateProductInput) {
 
 export async function updateProduct(id: string, data: UpdateProductInput) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- intentional: excludes variants from rest spread to avoid Prisma field error
-  const { images, variants: _v, ...rest } = data;
+  const { images, variants: _v, stock, ...rest } = data;
 
   const imagesWithOriginal = images?.map((img) => ({
     ...img,
@@ -89,6 +100,33 @@ export async function updateProduct(id: string, data: UpdateProductInput) {
   return prisma.$transaction(async (tx) => {
     if (imagesWithOriginal !== undefined) {
       await tx.productImage.deleteMany({ where: { productId: id } });
+    }
+
+    // Stok form'dan geldiyse Inventory'yi senkronla + hareketi ledger'a yaz.
+    if (stock !== undefined) {
+      const inv = await tx.inventory.findUnique({ where: { productId: id } });
+      if (!inv) {
+        // Eski (bu düzeltmeden önce oluşturulmuş) ürünlerde Inventory yok — oluştur.
+        await tx.inventory.create({
+          data: {
+            productId: id,
+            quantity: stock,
+            ...(stock > 0 && {
+              StockMovement: { create: { type: "GIRIS", quantityChange: stock, reason: "Ürün düzenleme — başlangıç stoğu" } },
+            }),
+          },
+        });
+      } else if (inv.quantity !== stock) {
+        await tx.inventory.update({ where: { id: inv.id }, data: { quantity: stock } });
+        await tx.stockMovement.create({
+          data: {
+            inventoryId: inv.id,
+            type: "DUZELTME",
+            quantityChange: stock - inv.quantity,
+            reason: "Ürün düzenlemeden güncellendi",
+          },
+        });
+      }
     }
 
     return tx.product.update({

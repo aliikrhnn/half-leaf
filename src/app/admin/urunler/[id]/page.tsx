@@ -19,6 +19,7 @@ interface ProductData {
   description?: string;
   price: number;
   compareAtPrice?: number;
+  priceCurrency?: "TRY" | "USD";
   stock: number;
   categoryId: string;
   isActive: boolean;
