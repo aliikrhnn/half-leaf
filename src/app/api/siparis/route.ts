@@ -213,7 +213,9 @@ export async function POST(req: NextRequest) {
       };
 
       /* ── 9. Create Order ── */
-      const orderNumber = `HL${Date.now()}`;
+      // Çakışmaya dayanıklı, alfa-numerik sipariş no (PayTR merchant_oid kısıtına uygun).
+      // Date.now() tek başına eşzamanlı isteklerde çakışabildiğinden rastgele sonek eklenir.
+      const orderNumber = `HL${Date.now()}${randomUUID().replace(/-/g, "").slice(0, 6)}`;
       const order = await tx.order.create({
         data: {
           orderNumber,
@@ -249,7 +251,7 @@ export async function POST(req: NextRequest) {
 
       /* ── 11. Create Payment ── */
       const providerMap: Record<string, string> = {
-        KREDI_KARTI: "iyzico",
+        KREDI_KARTI: "paytr",
         HAVALE_EFT: "HAVALE_EFT",
       };
       await tx.payment.create({
@@ -324,7 +326,8 @@ export async function POST(req: NextRequest) {
       isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
     }));
 
-    return NextResponse.json(result);
+    // paymentMethod istemciye geri döner: kart ise PayTR iframe sayfasına yönlendirilir.
+    return NextResponse.json({ ...result, paymentMethod });
   } catch (err) {
     if (isSerializationError(err)) {
       return NextResponse.json(

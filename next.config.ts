@@ -55,6 +55,9 @@ const nextConfig: NextConfig = {
           // Önce raporlama modunda başlatılmalı:
           //   Content-Security-Policy-Report-Only: default-src 'self'; report-uri /api/csp-report
           // Uyumlu hale geldikten sonra zorlayıcı moda (Content-Security-Policy) geçilecek.
+          // ÖNEMLİ: CSP eklenirken PayTR ödeme iframe'i için şunlara izin verilmeli:
+          //   frame-src https://www.paytr.com;  script-src ... https://www.paytr.com;
+          // (Aksi halde güvenli ödeme formu yüklenmez.)
         ],
       },
     ];

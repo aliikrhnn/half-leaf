@@ -1,11 +1,15 @@
 import Link from "next/link";
-import { CheckCircle, Package, Truck, ShoppingBag } from "lucide-react";
+import { redirect } from "next/navigation";
+import { CheckCircle, Package, Truck, ShoppingBag, Clock } from "lucide-react";
 import { prisma } from "@/lib/db/prisma";
 import { formatPrice } from "@/lib/utils";
 import HalfLeafLogo from "@/components/brand/HalfLeafLogo";
+import SuccessClient from "./SuccessClient";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Sipariş Alındı", robots: { index: false, follow: false } };
+
+export const dynamic = "force-dynamic";
 
 interface Props {
   searchParams: Promise<{ no?: string }>;
@@ -20,9 +24,23 @@ export default async function SiparisTamamlandiPage({ searchParams }: Props) {
         include: {
           OrderItem: true,
           Shipment: { take: 1 },
+          Payment: { orderBy: { createdAt: "desc" }, take: 1 },
         },
       })
     : null;
+
+  const payment = order?.Payment[0] ?? null;
+  const isPaytr = payment?.provider === "paytr";
+  const isHavale = payment?.provider === "HAVALE_EFT";
+  const isPaid = payment?.status === "ODENDI";
+  // PayTR kart ödemesi henüz onaylanmadıysa (bildirim gecikmiş) sayfayı izle.
+  const isPaytrPending = isPaytr && payment?.status === "BEKLIYOR";
+
+  // Ödeme başarısız/iptal olduysa bu sayfada "başarılı" gösterme — hata sayfasına yönlendir.
+  // (Kullanıcı pending iken buraya gelip, callback sonradan failed işlerse bu yakalar.)
+  if (order && (payment?.status === "BASARISIZ" || order.status === "IPTAL_EDILDI")) {
+    redirect(`/odeme/hata?no=${encodeURIComponent(order.orderNumber)}`);
+  }
 
   return (
     <div style={{
@@ -69,21 +87,26 @@ export default async function SiparisTamamlandiPage({ searchParams }: Props) {
         ) : (
           /* Success */
           <>
-            {/* Success icon */}
+            <SuccessClient clear={isPaid} watch={isPaytrPending} />
+
+            {/* Status icon */}
             <div style={{
               width: 72, height: 72, borderRadius: "50%",
-              background: "rgba(122,184,122,0.12)", border: "1px solid rgba(122,184,122,0.3)",
+              background: isPaytrPending ? "rgba(201,160,106,0.12)" : "rgba(122,184,122,0.12)",
+              border: isPaytrPending ? "1px solid rgba(201,160,106,0.3)" : "1px solid rgba(122,184,122,0.3)",
               display: "flex", alignItems: "center", justifyContent: "center",
               margin: "0 auto 24px",
             }}>
-              <CheckCircle size={36} color="#7ab87a" />
+              {isPaytrPending
+                ? <Clock size={36} color="var(--hl-bronze-400)" />
+                : <CheckCircle size={36} color="#7ab87a" />}
             </div>
 
             <p style={{
               fontSize: 10, fontWeight: 700, letterSpacing: "0.16em",
               textTransform: "uppercase", color: "var(--hl-text-mute)", marginBottom: 12,
             }}>
-              Siparişiniz Alındı
+              {isPaytrPending ? "Ödeme Onaylanıyor" : "Siparişiniz Alındı"}
             </p>
 
             <h1 style={{
@@ -91,12 +114,26 @@ export default async function SiparisTamamlandiPage({ searchParams }: Props) {
               fontWeight: 400, fontStyle: "italic", color: "var(--hl-text)",
               lineHeight: 1.1, margin: "0 0 16px 0",
             }}>
-              Teşekkürler!
+              {isPaytrPending ? "Ödemeniz işleniyor…" : "Teşekkürler!"}
             </h1>
 
-            <p style={{ fontSize: 13, color: "var(--hl-text-mute)", lineHeight: 1.7, marginBottom: 32 }}>
-              Siparişiniz başarıyla alındı. Onay e-postası adresinize gönderildi.
-            </p>
+            {/* Status-aware message */}
+            {isPaytrPending ? (
+              <p style={{ fontSize: 13, color: "var(--hl-text-mute)", lineHeight: 1.7, marginBottom: 32 }}>
+                Ödemeniz bankadan onaylanıyor. Bu işlem birkaç saniye sürebilir — sayfa onaylandığında
+                otomatik olarak güncellenecektir.
+              </p>
+            ) : isHavale ? (
+              <p style={{ fontSize: 13, color: "var(--hl-text-mute)", lineHeight: 1.7, marginBottom: 32 }}>
+                Siparişiniz alındı. Havale/EFT ödemeniz hesabımıza ulaştığında siparişiniz onaylanır.
+                Açıklamaya <strong style={{ color: "var(--hl-text-soft)" }}>sipariş numaranızı</strong> yazmayı unutmayın.
+              </p>
+            ) : (
+              <p style={{ fontSize: 13, color: "var(--hl-text-mute)", lineHeight: 1.7, marginBottom: 32 }}>
+                {isPaid ? "Ödemeniz onaylandı ve siparişiniz hazırlanıyor. " : "Siparişiniz başarıyla alındı. "}
+                Onay e-postası adresinize gönderildi.
+              </p>
+            )}
 
             {/* Order number badge */}
             <div style={{

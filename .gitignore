@@ -1,7 +1,5 @@
 # env
-.env
-.env.local
-.env.*.local
+.env*
 
 # Next.js
 .next/
@@ -23,3 +21,7 @@ prisma/generated/
 # OS
 .DS_Store
 Thumbs.db
+
+# PayTR kaynak paketleri (referans; repoya dahil edilmez — logolar public/payment'a alındı)
+/PayTR_Gorselleri.zip
+/PayTR_IFrame_API.zip

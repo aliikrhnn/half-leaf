@@ -440,7 +440,7 @@ export default function CheckoutClient({
           couponCode: appliedCoupon?.code,
         }),
       });
-      const data = await res.json() as { orderNumber?: string; error?: string };
+      const data = await res.json() as { orderNumber?: string; paymentMethod?: PaymentMethod; error?: string };
       if (!res.ok) {
         if (res.status === 429) {
           setSubmitError(data.error ?? "Çok fazla sipariş denemesi yapıldı. Lütfen bir süre sonra tekrar deneyin.");
@@ -451,8 +451,16 @@ export default function CheckoutClient({
         }
         return;
       }
-      clearCart();
-      router.push(`/siparis-tamamlandi?no=${data.orderNumber}`);
+
+      if (data.paymentMethod === "KREDI_KARTI") {
+        // Kart ödemesi: PayTR güvenli ödeme sayfasına yönlendir.
+        // Sepet, ödeme onaylanana kadar TEMİZLENMEZ (başarısızlıkta tekrar denenebilsin).
+        router.push(`/odeme/paytr/${data.orderNumber}`);
+      } else {
+        // Havale/EFT: sipariş alındı, sepeti temizle ve onay sayfasına git.
+        clearCart();
+        router.push(`/siparis-tamamlandi?no=${data.orderNumber}`);
+      }
     } catch { setSubmitError("Bir hata oluştu. Lütfen tekrar deneyin."); }
     finally { setIsSubmitting(false); }
   };
@@ -608,11 +616,6 @@ export default function CheckoutClient({
             {/* STEP 2: Ödeme */}
             {step === 2 && (
               <Panel title="04 · Ödeme">
-                {/* Demo notice */}
-                <div style={{ padding: "10px 14px", borderRadius: 8, background: "rgba(182,137,80,0.08)", border: "1px solid rgba(182,137,80,0.2)", fontSize: 11, color: "var(--hl-text-mute)", marginBottom: 20 }}>
-                  Bu bir demo ödemedir — gerçek tahsilat yapılmaz.
-                </div>
-
                 {/* Payment tabs */}
                 <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
                   {PAYMENT_OPTIONS.filter(opt => opt.id !== "HAVALE_EFT" || bankTransferEnabled).map(opt => {
@@ -629,8 +632,13 @@ export default function CheckoutClient({
                 <div style={{ padding: "16px 18px", borderRadius: 10, background: "var(--hl-bg)", border: "1px solid var(--hl-line-strong)", fontSize: 12, color: "var(--hl-text-soft)", lineHeight: 1.7, marginBottom: 20 }}>
                   {paymentMethod === "KREDI_KARTI" && (
                     <>
-                      <div style={{ fontWeight: 600, color: "var(--hl-text)", marginBottom: 6 }}>Kredi / Banka Kartı ile Ödeme</div>
-                      Siparişi onayladıktan sonra ödeme sayfasına yönlendirileceksiniz. Kart bilgileriniz güvenli altyapı üzerinden işlenir.
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
+                        <span style={{ fontWeight: 600, color: "var(--hl-text)" }}>Kredi / Banka Kartı ile Ödeme</span>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/payment/paytr-logo-white.svg" alt="PayTR güvenli ödeme" height={16} style={{ height: 16, width: "auto", opacity: 0.9 }} />
+                      </div>
+                      Siparişi onayladıktan sonra <strong style={{ color: "var(--hl-text-soft)" }}>PayTR</strong> güvenli ödeme ekranına yönlendirileceksiniz.
+                      Kart bilgileriniz 256-bit SSL ve 3D Secure ile şifrelenir; tek çekim veya taksit seçenekleri ödeme ekranında sunulur.
                     </>
                   )}
                   {paymentMethod === "HAVALE_EFT" && (
@@ -771,7 +779,11 @@ export default function CheckoutClient({
                 </button>
               ) : (
                 <button type="submit" disabled={!consentChecked || isSubmitting} style={{ width: "100%", padding: "15px 0", borderRadius: 10, background: !consentChecked || isSubmitting ? "var(--hl-bg-elev-3)" : "var(--hl-bronze-400)", border: "none", color: !consentChecked || isSubmitting ? "var(--hl-text-mute)" : "#0A0B09", fontFamily: "var(--hl-font-ui)", fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", cursor: !consentChecked || isSubmitting ? "not-allowed" : "pointer", transition: "all 150ms ease" }}>
-                  {isSubmitting ? "İşleniyor…" : `${formatPrice(total)} — Siparişi Tamamla`}
+                  {isSubmitting
+                    ? "İşleniyor…"
+                    : paymentMethod === "KREDI_KARTI"
+                      ? `${formatPrice(total)} — Güvenli Ödemeye Geç →`
+                      : `${formatPrice(total)} — Siparişi Tamamla`}
                 </button>
               )}
 

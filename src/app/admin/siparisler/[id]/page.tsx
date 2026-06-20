@@ -154,6 +154,12 @@ export default function SiparisDetayPage() {
   const [saveOk, setSaveOk]   = useState(false);
   const [saveErr, setSaveErr] = useState("");
 
+  /* PayTR refund state */
+  const [refundAmount, setRefundAmount] = useState("");
+  const [refunding, setRefunding]       = useState(false);
+  const [refundMsg, setRefundMsg]       = useState("");
+  const [refundErr, setRefundErr]       = useState(false);
+
   useEffect(() => {
     fetch(`/api/admin/siparisler/${id}`)
       .then(r => r.json() as Promise<{ success: boolean; data?: OrderDetail; error?: string }>)
@@ -207,6 +213,45 @@ export default function SiparisDetayPage() {
       setSaveErr("Bir hata oluştu.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleRefund = async () => {
+    if (!order) return;
+    const paytrPayment = order.payments.find(p => p.provider === "paytr");
+    if (!paytrPayment) return;
+
+    const trimmed = refundAmount.trim();
+    const amount = trimmed ? Number(trimmed.replace(",", ".")) : undefined;
+    if (trimmed && (!Number.isFinite(amount) || (amount ?? 0) <= 0)) {
+      setRefundErr(true); setRefundMsg("Geçerli bir tutar girin."); return;
+    }
+    const label = amount ? `${formatPrice(amount)} tutarında kısmi` : "tam";
+    if (!window.confirm(`Bu sipariş için ${label} iade yapılacak. Onaylıyor musunuz?`)) return;
+
+    setRefunding(true); setRefundMsg(""); setRefundErr(false);
+    try {
+      const res = await fetch("/api/admin/odeme/paytr/iade", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: order.id, ...(amount ? { amount } : {}) }),
+      });
+      const json = await res.json() as { success: boolean; data?: { isFull: boolean }; error?: string };
+      if (!json.success) { setRefundErr(true); setRefundMsg(json.error ?? "İade başarısız."); return; }
+
+      setRefundMsg(json.data?.isFull ? "Tam iade tamamlandı." : "Kısmi iade tamamlandı.");
+      setRefundAmount("");
+      const fresh = await fetch(`/api/admin/siparisler/${id}`).then(r => r.json() as Promise<{ success: boolean; data?: OrderDetail }>);
+      if (fresh.success && fresh.data) {
+        const o = fresh.data;
+        setOrder(o);
+        setUpdateStatus(o.status);
+        setUpdatePayment(o.payments[0]?.status ?? "BEKLIYOR");
+      }
+    } catch {
+      setRefundErr(true); setRefundMsg("Bir hata oluştu.");
+    } finally {
+      setRefunding(false);
     }
   };
 
@@ -382,6 +427,39 @@ export default function SiparisDetayPage() {
                   ))}
                 </div>
               )}
+
+              {/* PayTR iade — yalnızca ödenmiş/kısmi iade edilmiş PayTR işlemlerinde */}
+              {(() => {
+                const paytr = order.payments.find(p => p.provider === "paytr");
+                if (!paytr || (paytr.status !== "ODENDI" && paytr.status !== "KISMI_IADE")) return null;
+                return (
+                  <div className="mt-4 pt-4 border-t border-border-default space-y-2">
+                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-ink-dim">
+                      PayTR İade
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={refundAmount}
+                        onChange={e => setRefundAmount(e.target.value)}
+                        placeholder={`Tam iade: ${formatPrice(paytr.amount)}`}
+                        className="flex-1 min-w-0 px-3 py-2 text-sm bg-bg rounded-lg border border-border-default text-ink placeholder:text-ink-dim focus:outline-none focus:border-accent"
+                        disabled={refunding}
+                      />
+                      <Button type="button" onClick={handleRefund} disabled={refunding} variant="secondary">
+                        {refunding ? "İade ediliyor…" : "İade Et"}
+                      </Button>
+                    </div>
+                    <p className="text-[10px] text-ink-dim">
+                      Tutar boş bırakılırsa tam iade yapılır. Kısmi iade için tutar girin.
+                    </p>
+                    {refundMsg && (
+                      <p className={`text-xs ${refundErr ? "text-red-400" : "text-emerald-400"}`}>{refundMsg}</p>
+                    )}
+                  </div>
+                );
+              })()}
             </SectionCard>
 
             {/* Shipment */}
