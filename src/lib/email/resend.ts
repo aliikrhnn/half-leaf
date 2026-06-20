@@ -40,3 +40,36 @@ export async function sendEmail({ to, subject, html }: SendEmailArgs): Promise<b
     return false;
   }
 }
+
+/**
+ * Toplu e-posta gönderir (Resend batch — istek başına en fazla 100).
+ * Her e-postanın kendi HTML'i olabilir (kişiselleştirilmiş abonelik iptali linki).
+ * @returns Gönderilen e-posta sayısı.
+ */
+export async function sendBatchEmails(
+  emails: ReadonlyArray<SendEmailArgs>,
+): Promise<number> {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const from = process.env.EMAIL_FROM?.trim();
+  if (!apiKey || !from || emails.length === 0) return 0;
+
+  let sent = 0;
+  for (let i = 0; i < emails.length; i += 100) {
+    const chunk = emails.slice(i, i + 100).map((e) => ({
+      from,
+      to: e.to,
+      subject: e.subject,
+      html: e.html,
+    }));
+    try {
+      const res = await fetch("https://api.resend.com/emails/batch", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify(chunk),
+        cache: "no-store",
+      });
+      if (res.ok) sent += chunk.length;
+    } catch { /* parça hatasını yoksay */ }
+  }
+  return sent;
+}

@@ -495,6 +495,9 @@ model User {
   isActive        Boolean         @default(true)
   emailVerifiedAt DateTime?
   lastLoginAt     DateTime?
+  marketingOptIn  Boolean         @default(false)
+  marketingOptInAt DateTime?
+  unsubscribeToken String?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   Account              Account[]
@@ -508,6 +511,8 @@ model User {
   ReturnRequest        ReturnRequest[]
   Session              Session[]
   StockMovement        StockMovement[]
+
+  @@index([unsubscribeToken])
 }
 
 model Review {

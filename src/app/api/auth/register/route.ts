@@ -66,6 +66,23 @@ export async function POST(req: NextRequest) {
       ],
     });
 
+    // Ticari ileti onayı verildiyse: pazarlama izni + hoş geldin e-postası (env-gated).
+    if (parsed.data.ticariIletiConsent) {
+      try {
+        const { optInUserToMarketing, unsubscribeUrl } = await import("@/lib/email/marketing");
+        const { welcomeEmail } = await import("@/lib/email/marketing-templates");
+        const { sendEmail } = await import("@/lib/email/resend");
+        const unsubToken = await optInUserToMarketing(user.id);
+        const firstName = user.fullName?.trim().split(" ")[0] ?? "";
+        const mail = welcomeEmail({
+          name: firstName,
+          discountCode: process.env.WELCOME_DISCOUNT_CODE?.trim() || null,
+          unsubscribeUrl: unsubscribeUrl(unsubToken),
+        });
+        await sendEmail({ to: user.email, subject: mail.subject, html: mail.html });
+      } catch { /* e-posta/izin hatası kaydı kırmaz */ }
+    }
+
     const res = created({ user });
     res.cookies.set("hl-token", token, {
       httpOnly: true,

@@ -13,6 +13,7 @@ const bodySchema = z.object({
     email: z.string().email(),
     phone: z.string().min(10),
     smsConsent: z.boolean(),
+    emailMarketingConsent: z.boolean().optional(),
   }),
   address: z.object({
     ad: z.string().min(1),
@@ -314,6 +315,21 @@ export async function POST(req: NextRequest) {
           },
         });
       }
+      // Ticari ileti (pazarlama) onayı verildiyse ayrıca kaydet.
+      if (contact.emailMarketingConsent) {
+        await tx.consentLog.create({
+          data: {
+            userId: user.id,
+            email: contact.email,
+            consentType: "TICARI_ILETI",
+            textVersion: "v1.0",
+            granted: true,
+            ipAddress,
+            userAgent,
+            grantedAt: new Date(),
+          },
+        });
+      }
 
       /* ── 15. Increment coupon usedCount ── */
       if (coupon) {
@@ -323,7 +339,7 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      return { orderNumber, customerEmail: contact.email, grandTotal, emailItems };
+      return { orderNumber, customerEmail: contact.email, grandTotal, emailItems, userId: user.id };
     }, {
       timeout: 15000,
       isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -341,6 +357,14 @@ export async function POST(req: NextRequest) {
       });
       await sendEmail({ to: result.customerEmail, subject: mail.subject, html: mail.html });
     } catch { /* e-posta hatası yoksay */ }
+
+    // Pazarlama izni (checkout'ta onaylandıysa).
+    if (contact.emailMarketingConsent) {
+      try {
+        const { optInUserToMarketing } = await import("@/lib/email/marketing");
+        await optInUserToMarketing(result.userId);
+      } catch { /* izin hatası siparişi etkilemez */ }
+    }
 
     // paymentMethod istemciye geri döner: kart ise PayTR iframe sayfasına yönlendirilir.
     return NextResponse.json({ orderNumber: result.orderNumber, paymentMethod });

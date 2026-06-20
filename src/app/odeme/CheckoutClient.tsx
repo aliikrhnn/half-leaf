@@ -199,6 +199,7 @@ export default function CheckoutClient({
   const [email, setEmail] = useState("");
   const [phoneSuffix, setPhoneSuffix] = useState("");
   const [smsConsent, setSmsConsent] = useState(true);
+  const [emailMarketingConsent, setEmailMarketingConsent] = useState(false);
 
   /* Address */
   const [ad, setAd] = useState("");
@@ -432,7 +433,7 @@ export default function CheckoutClient({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contact: { email, phone: "+90" + phoneSuffix.replace(/\s/g, ""), smsConsent },
+          contact: { email, phone: "+90" + phoneSuffix.replace(/\s/g, ""), smsConsent, emailMarketingConsent },
           address: { ad, soyad, adres: isPickup ? "Mağazadan Teslim" : adres, ilce: isPickup ? "Merkez" : selectedIlce, sehir: isPickup ? "Isparta" : selectedIl, postaKodu },
           shippingMethod,
           paymentMethod,
@@ -489,6 +490,10 @@ export default function CheckoutClient({
                   <label style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14, fontSize: 12, color: "var(--hl-text-soft)", cursor: "pointer" }}>
                     <CheckBox checked={smsConsent} onChange={() => setSmsConsent(v => !v)} />
                     Sipariş güncellemeleri için SMS gönderilsin
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, fontSize: 12, color: "var(--hl-text-soft)", cursor: "pointer" }}>
+                    <CheckBox checked={emailMarketingConsent} onChange={() => setEmailMarketingConsent(v => !v)} />
+                    Kampanya ve özel fırsatlardan e-posta ile haberdar olmak istiyorum
                   </label>
                 </Panel>
 
