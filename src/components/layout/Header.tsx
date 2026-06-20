@@ -7,6 +7,7 @@ import { ShoppingCart, Menu, Search, User, X, Heart } from "lucide-react";
 import { useCartStore } from "@/store/cart";
 import { useWishlistStore } from "@/store/wishlist";
 import { SITE_NAME } from "@/lib/constants";
+import { formatPrice } from "@/lib/utils";
 import HalfLeafLogo from "@/components/brand/HalfLeafLogo";
 import MobileNav from "./MobileNav";
 import CartDrawer from "@/components/cart/CartDrawer";
@@ -17,6 +18,14 @@ interface Props {
   navCategories?: NavCategory[];
 }
 
+interface SearchSuggestion {
+  slug: string;
+  name: string;
+  category: string;
+  price: number;
+  image: string | null;
+}
+
 export default function Header({ navCategories = [] }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -25,6 +34,9 @@ export default function Header({ navCategories = [] }: Props) {
   const [isAuthed, setIsAuthed] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchTotal, setSearchTotal] = useState(0);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
 
@@ -58,6 +70,28 @@ export default function Header({ navCategories = [] }: Props) {
     return () => document.removeEventListener("keydown", onKey);
   }, [searchOpen]);
 
+  const trimmedQuery = searchQuery.trim();
+  const showSuggest = searchOpen && trimmedQuery.length >= 2;
+
+  // Debounce'lu canlı arama önerileri
+  useEffect(() => {
+    if (!showSuggest) return;
+    const ctrl = new AbortController();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- async arama yükleniyor göstergesi
+    setSearchLoading(true);
+    const t = setTimeout(() => {
+      fetch(`/api/search?q=${encodeURIComponent(trimmedQuery)}`, { signal: ctrl.signal })
+        .then((r) => (r.ok ? r.json() : { items: [], total: 0 }))
+        .then((d: { items?: SearchSuggestion[]; total?: number }) => {
+          setSuggestions(d.items ?? []);
+          setSearchTotal(d.total ?? 0);
+        })
+        .catch(() => { /* abort/hata yoksay */ })
+        .finally(() => setSearchLoading(false));
+    }, 250);
+    return () => { clearTimeout(t); ctrl.abort(); };
+  }, [trimmedQuery, showSuggest]);
+
   const totalItems = mounted ? getTotalItems() : 0;
   const wishlistCount = useWishlistStore((s) => s.items.length);
   const favCount = mounted ? wishlistCount : 0;
@@ -78,6 +112,8 @@ export default function Header({ navCategories = [] }: Props) {
   function closeSearch() {
     setSearchOpen(false);
     setSearchQuery("");
+    setSuggestions([]);
+    setSearchTotal(0);
   }
 
   const handleSearchSubmit = useCallback((e: React.FormEvent) => {
@@ -271,6 +307,52 @@ export default function Header({ navCategories = [] }: Props) {
                 </button>
               </div>
             </form>
+
+            {showSuggest && (
+              <div style={{ maxWidth: 860, margin: "0 auto", padding: "0 20px 16px" }}>
+                <div style={{ background: "var(--hl-bg)", border: "1px solid var(--hl-line-strong)", borderRadius: "var(--hl-r-sm)", overflow: "hidden" }}>
+                  {searchLoading && suggestions.length === 0 ? (
+                    <div style={{ padding: 16, fontSize: 13, color: "var(--hl-text-mute)", fontFamily: "var(--hl-font-ui)" }}>Aranıyor…</div>
+                  ) : suggestions.length === 0 ? (
+                    <div style={{ padding: 16, fontSize: 13, color: "var(--hl-text-mute)", fontFamily: "var(--hl-font-ui)" }}>
+                      &quot;{trimmedQuery}&quot; için sonuç bulunamadı.
+                    </div>
+                  ) : (
+                    <>
+                      {suggestions.map((s) => (
+                        <Link
+                          key={s.slug}
+                          href={`/urunler/${s.slug}`}
+                          onClick={closeSearch}
+                          className="hl-search-result-row"
+                          style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", textDecoration: "none", borderBottom: "1px solid var(--hl-line)" }}
+                        >
+                          <span style={{ width: 44, height: 44, borderRadius: 8, overflow: "hidden", background: "var(--hl-bg-elev-2)", flexShrink: 0 }}>
+                            {s.image && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={s.image} alt={s.name} width={44} height={44} style={{ width: 44, height: 44, objectFit: "cover", display: "block" }} />
+                            )}
+                          </span>
+                          <span style={{ flex: 1, minWidth: 0 }}>
+                            <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "var(--hl-text)", fontFamily: "var(--hl-font-ui)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.name}</span>
+                            {s.category && <span style={{ display: "block", fontSize: 11, color: "var(--hl-text-mute)", fontFamily: "var(--hl-font-ui)" }}>{s.category}</span>}
+                          </span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--hl-bronze-400)", whiteSpace: "nowrap", fontFamily: "var(--hl-font-ui)" }}>{formatPrice(s.price)}</span>
+                        </Link>
+                      ))}
+                      <Link
+                        href={`/urunler?arama=${encodeURIComponent(trimmedQuery)}`}
+                        onClick={closeSearch}
+                        className="hl-search-result-row"
+                        style={{ display: "block", padding: "11px 14px", textAlign: "center", fontSize: 12, fontWeight: 700, letterSpacing: "0.04em", color: "var(--hl-bronze-400)", textDecoration: "none", fontFamily: "var(--hl-font-ui)" }}
+                      >
+                        Tüm sonuçları gör ({searchTotal}) →
+                      </Link>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </>
       )}

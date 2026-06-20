@@ -305,6 +305,12 @@
   .hl-search-panel-close:hover {
     color: var(--hl-text);
   }
+  .hl-search-result-row {
+    transition: background 120ms ease;
+  }
+  .hl-search-result-row:hover {
+    background: var(--hl-bg-elev-1);
+  }
 
   /* Page-transition nav pip — small leaf badge, bottom-right corner, 750ms */
   .hl-nav-pip {
