@@ -101,6 +101,7 @@ export async function PATCH(
     const order = await prisma.order.findUnique({
       where: { id },
       include: {
+        User:     { select: { email: true } },
         Payment:  { orderBy: { createdAt: "desc" }, take: 1 },
         Shipment: { orderBy: { createdAt: "desc" }, take: 1 },
       },
@@ -182,6 +183,22 @@ export async function PATCH(
         });
       }
     });
+
+    // Kargo bildirimi e-postası: durum "kargoya verildi"ye geçtiyse (env-gated).
+    if (shipmentStatus === "KARGOYA_VERILDI" && order.User?.email) {
+      try {
+        const { shippingNotificationEmail } = await import("@/lib/email/templates");
+        const { sendEmail } = await import("@/lib/email/resend");
+        const existing = order.Shipment[0];
+        const mail = shippingNotificationEmail({
+          orderNumber: order.orderNumber,
+          provider: existing?.provider ?? "Kargo",
+          trackingNumber: trackingNumber || existing?.trackingNumber || null,
+          trackingUrl: existing?.trackingUrl ?? null,
+        });
+        await sendEmail({ to: order.User.email, subject: mail.subject, html: mail.html });
+      } catch { /* e-posta hatası yoksay */ }
+    }
 
     return ok({ updated: true });
   } catch {

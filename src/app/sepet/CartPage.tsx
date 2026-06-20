@@ -244,7 +244,7 @@ export default function CartPage() {
   };
 
   return (
-    <div style={{
+    <div className="hl-page-pad" style={{
       maxWidth: 1280, margin: "0 auto",
       padding: "calc(var(--hl-bar-h) + var(--hl-header-h) + 32px) 24px 80px",
     }}>

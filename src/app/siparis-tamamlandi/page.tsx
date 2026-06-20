@@ -241,13 +241,13 @@ export default async function SiparisTamamlandiPage({ searchParams }: Props) {
               }}>
                 Alışverişe Devam Et
               </Link>
-              <Link href="/hesabim/siparisler" style={{
+              <Link href={`/siparis-takip?no=${encodeURIComponent(order.orderNumber)}`} style={{
                 padding: "13px 32px", borderRadius: "var(--hl-r-pill)",
                 border: "1.5px solid var(--hl-line-strong)", background: "none",
                 fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
                 textTransform: "uppercase", textDecoration: "none", color: "var(--hl-text-soft)",
               }}>
-                Siparişlerim
+                Siparişini Takip Et
               </Link>
             </div>
           </>

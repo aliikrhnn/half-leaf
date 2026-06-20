@@ -43,7 +43,7 @@ function CheckoutHeader({ step }: { step: 1 | 2 }) {
     { n: "03", label: "Ödeme",    state: step === 2 ? "active" : ""  },
   ];
   return (
-    <header style={{
+    <header className="hl-checkout-header" style={{
       padding: "16px 40px", display: "flex", justifyContent: "space-between",
       alignItems: "center", borderBottom: "1px solid var(--hl-line)",
     }}>
@@ -54,7 +54,7 @@ function CheckoutHeader({ step }: { step: 1 | 2 }) {
         </span>
       </Link>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div className="hl-checkout-steps" style={{ display: "flex", alignItems: "center", gap: 10 }}>
         {stepsData.map((s, i) => (
           <div key={s.n} style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {i > 0 && <span style={{ width: 20, height: 1, background: "var(--hl-line-strong)" }} />}
@@ -368,7 +368,7 @@ export default function CheckoutClient({
         </p>
       </div>
 
-      <footer style={{ borderTop: "1px solid var(--hl-line)", padding: "14px 40px", display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--hl-text-mute)", fontFamily: "var(--hl-font-ui)" }}>
+      <footer className="hl-checkout-footer" style={{ borderTop: "1px solid var(--hl-line)", padding: "14px 40px", display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--hl-text-mute)", fontFamily: "var(--hl-font-ui)" }}>
         <span>© {new Date().getFullYear()} Half Leaf · Yalnızca 18 yaş üstü için</span>
         <span style={{ display: "flex", gap: 16 }}>
           <Link href="/iletisim" style={{ color: "var(--hl-text-mute)", textDecoration: "none" }}>İletişim</Link>
@@ -797,7 +797,7 @@ export default function CheckoutClient({
         </div>
       </form>
 
-      <footer style={{ borderTop: "1px solid var(--hl-line)", padding: "14px 40px", display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--hl-text-mute)", fontFamily: "var(--hl-font-ui)" }}>
+      <footer className="hl-checkout-footer" style={{ borderTop: "1px solid var(--hl-line)", padding: "14px 40px", display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--hl-text-mute)", fontFamily: "var(--hl-font-ui)" }}>
         <span>© {new Date().getFullYear()} Half Leaf · Yalnızca 18 yaş üstü için</span>
         <span style={{ display: "flex", gap: 16 }}>
           <Link href="/iletisim" style={{ color: "var(--hl-text-mute)", textDecoration: "none" }}>İletişim</Link>

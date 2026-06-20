@@ -152,6 +152,7 @@ export default async function ProductDetailPage({ params }: Props) {
 
   return (
     <div
+      className="hl-page-pad"
       style={{
         maxWidth: 1280,
         margin: "0 auto",

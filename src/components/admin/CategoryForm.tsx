@@ -141,7 +141,7 @@ export default function CategoryForm({ category }: CategoryFormProps) {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs text-ink-muted mb-1">Sıra</label>
           <input

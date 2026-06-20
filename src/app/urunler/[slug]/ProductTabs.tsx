@@ -57,7 +57,7 @@ export default function ProductTabs({ product, materialName, careInfo, weightGra
 
       {/* Açıklama */}
       {active === "Açıklama" && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 210px", gap: 48, alignItems: "start" }}>
+        <div className="hl-tabs-desc-grid" style={{ display: "grid", gridTemplateColumns: "1fr 210px", gap: 48, alignItems: "start" }}>
           <div>
             <h2 style={{
               fontFamily: "var(--hl-font-display)",
@@ -75,7 +75,7 @@ export default function ProductTabs({ product, materialName, careInfo, weightGra
             </p>
 
             {specs.length > 0 && (
-              <dl style={{
+              <dl className="hl-spec-grid" style={{
                 display: "grid", gridTemplateColumns: "160px 1fr",
                 rowGap: 10, columnGap: 20,
                 borderTop: "1px solid var(--hl-line)", paddingTop: 24,
@@ -106,7 +106,7 @@ export default function ProductTabs({ product, materialName, careInfo, weightGra
           </div>
 
           {/* Placeholder images */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div className="hl-tabs-desc-aside" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {[1, 2, 3].map(n => (
               <ImgSlot
                 key={n}

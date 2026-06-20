@@ -8,6 +8,7 @@ const STATIC_ROUTES: MetadataRoute.Sitemap = [
   { url: `${siteUrl}/urunler`,    lastModified: new Date(), changeFrequency: "daily",   priority: 0.9 },
   { url: `${siteUrl}/hakkimizda`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
   { url: `${siteUrl}/iletisim`,   lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
+  { url: `${siteUrl}/siparis-takip`,           lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
   { url: `${siteUrl}/yardim/sss`,              lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
   { url: `${siteUrl}/yardim/kargo-teslimat`,   lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
   { url: `${siteUrl}/yardim/iade-degisim`,     lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },

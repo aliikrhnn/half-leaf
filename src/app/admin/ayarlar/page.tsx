@@ -438,7 +438,7 @@ export default function AdminAyarlarPage() {
                   <Toggle checked={settings.ecommerceEnabled} onChange={v => update("ecommerceEnabled", v)} />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                   <div>
                     <label className="block text-xs text-ink-dim mb-1.5">Ücretsiz Kargo Eşiği (₺)</label>
                     <input
@@ -535,12 +535,12 @@ export default function AdminAyarlarPage() {
               {showAddK && (
                 <div className="bg-bg-surface border border-border-default rounded-xl p-4 space-y-3">
                   <h3 className="text-sm font-semibold text-ink">Yeni Kargo Seçeneği</h3>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <Field label="Kod (büyük harf)" value={newKargo.code ?? ""} onChange={v => setNewKargo(p => ({ ...p, code: v.toUpperCase() }))} placeholder="ORNEK_KOD" />
                     <Field label="Etiket" value={newKargo.label ?? ""} onChange={v => setNewKargo(p => ({ ...p, label: v }))} placeholder="Kargo adı" />
                   </div>
                   <Field label="Açıklama" value={newKargo.description ?? ""} onChange={v => setNewKargo(p => ({ ...p, description: v }))} placeholder="Kargo açıklaması" />
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <Field label="Fiyat (₺)" value={String(newKargo.price ?? "")} onChange={v => setNewKargo(p => ({ ...p, price: Number(v) || 0 }))} type="number" placeholder="0" />
                     <div className="flex items-center gap-3 pt-5">
                       <Toggle checked={newKargo.alwaysFree ?? false} onChange={v => setNewKargo(p => ({ ...p, alwaysFree: v }))} />
@@ -633,7 +633,7 @@ export default function AdminAyarlarPage() {
                 {showAddB && (
                   <div className="bg-bg-surface border border-border-default rounded-xl p-4 space-y-3">
                     <h3 className="text-sm font-semibold text-ink">Yeni Banka Hesabı</h3>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <Field label="Banka Adı" value={newBanka.bankName ?? ""} onChange={v => setNewBanka(p => ({ ...p, bankName: v }))} placeholder="Garanti BBVA" />
                       <Field label="Hesap Sahibi" value={newBanka.accountName ?? ""} onChange={v => setNewBanka(p => ({ ...p, accountName: v }))} placeholder="Half Leaf Ltd." />
                     </div>

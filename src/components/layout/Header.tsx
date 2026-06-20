@@ -141,7 +141,7 @@ export default function Header({ navCategories = [] }: Props) {
           <div className="flex items-center justify-between h-16">
             {/* Mobile menu button */}
             <button
-              className="lg:hidden p-2 text-ink-muted hover:text-ink transition-colors rounded-lg hover:bg-bg-elevated"
+              className="lg:hidden min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-ink-muted hover:text-ink transition-colors rounded-lg hover:bg-bg-elevated"
               onClick={() => setMobileOpen(true)}
               aria-label="Menüyü aç"
             >
@@ -163,7 +163,7 @@ export default function Header({ navCategories = [] }: Props) {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setSearchOpen(v => !v)}
-                className={`p-2 transition-colors rounded-lg hover:bg-bg-elevated ${searchOpen ? "text-ink bg-bg-elevated" : "text-ink-muted hover:text-ink"}`}
+                className={`min-h-[44px] min-w-[44px] inline-flex items-center justify-center transition-colors rounded-lg hover:bg-bg-elevated ${searchOpen ? "text-ink bg-bg-elevated" : "text-ink-muted hover:text-ink"}`}
                 aria-label="Ürün ara"
                 aria-expanded={searchOpen}
               >
@@ -193,7 +193,7 @@ export default function Header({ navCategories = [] }: Props) {
 
               <button
                 onClick={openCart}
-                className="relative p-2 text-ink-muted hover:text-ink transition-colors rounded-lg hover:bg-bg-elevated"
+                className="relative min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-ink-muted hover:text-ink transition-colors rounded-lg hover:bg-bg-elevated"
                 aria-label={`Sepet, ${totalItems} ürün`}
               >
                 <ShoppingCart size={20} />

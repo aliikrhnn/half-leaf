@@ -46,7 +46,7 @@ export const FOOTER_LINKS = {
   yardim: [
     { label: "Kargo & Teslimat", href: "/yardim/kargo-teslimat" },
     { label: "İade & Değişim", href: "/yardim/iade-degisim" },
-    { label: "Sipariş Takibi", href: "/hesabim/siparisler" },
+    { label: "Sipariş Takibi", href: "/siparis-takip" },
   ],
   yasal: [
     { label: "KVKK", href: "/yasal/kvkk" },

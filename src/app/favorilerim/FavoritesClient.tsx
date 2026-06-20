@@ -23,7 +23,7 @@ export default function FavoritesClient() {
   }
 
   return (
-    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "calc(var(--hl-bar-h) + var(--hl-header-h) + 40px) 24px 80px" }}>
+    <div className="hl-page-pad" style={{ maxWidth: 1200, margin: "0 auto", padding: "calc(var(--hl-bar-h) + var(--hl-header-h) + 40px) 24px 80px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 28 }}>
         <Heart size={20} color="#e53e3e" fill="#e53e3e" />
         <h1 style={{ fontFamily: "var(--hl-font-display)", fontSize: "clamp(26px, 4vw, 38px)", fontWeight: 400, fontStyle: "italic", color: "var(--hl-text)", margin: 0 }}>

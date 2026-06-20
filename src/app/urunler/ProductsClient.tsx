@@ -154,7 +154,7 @@ export default function ProductsClient({
   };
 
   return (
-    <div style={{
+    <div className="hl-page-pad" style={{
       maxWidth: 1280, margin: "0 auto",
       padding: "calc(var(--hl-bar-h) + var(--hl-header-h) + 32px) 24px 80px",
     }}>
@@ -263,7 +263,7 @@ export default function ProductsClient({
         )}
 
         {/* Right: sort + grid toggle */}
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+        <div className="hl-listing-controls-right" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
           <select
             value={siralama || "onerilen"}
             onChange={e => navigate({ siralama: e.target.value })}
@@ -279,7 +279,7 @@ export default function ProductsClient({
             ))}
           </select>
 
-          <div style={{ display: "flex", gap: 4 }}>
+          <div className="hl-grid-toggle" style={{ display: "flex", gap: 4 }}>
             {([2, 3] as const).map(n => (
               <button
                 key={n}

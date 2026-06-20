@@ -232,10 +232,12 @@ export async function POST(req: NextRequest) {
       });
 
       /* ── 10. Create OrderItems ── */
+      const emailItems: { name: string; quantity: number; lineTotal: number }[] = [];
       for (const item of items) {
         const product = dbProducts.find(p => p.id === item.productId)!;
         const currency = (product.priceCurrency ?? "TRY") as PriceCurrency;
         const unitPriceTRY = toTRY(Number(product.basePrice), currency, usdTryRate);
+        const lineTotal = unitPriceTRY * item.quantity;
         await tx.orderItem.create({
           data: {
             orderId: order.id,
@@ -244,9 +246,10 @@ export async function POST(req: NextRequest) {
             sku: product.sku,
             unitPrice: unitPriceTRY,
             quantity: item.quantity,
-            lineTotal: unitPriceTRY * item.quantity,
+            lineTotal,
           },
         });
+        emailItems.push({ name: product.name, quantity: item.quantity, lineTotal });
       }
 
       /* ── 11. Create Payment ── */
@@ -320,14 +323,27 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      return { orderNumber };
+      return { orderNumber, customerEmail: contact.email, grandTotal, emailItems };
     }, {
       timeout: 15000,
       isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
     }));
 
+    // Sipariş onay e-postası (env-gated; hata sipariş akışını kırmaz).
+    try {
+      const { orderConfirmationEmail } = await import("@/lib/email/templates");
+      const { sendEmail } = await import("@/lib/email/resend");
+      const mail = orderConfirmationEmail({
+        orderNumber: result.orderNumber,
+        items: result.emailItems,
+        grandTotal: result.grandTotal,
+        paymentMethod,
+      });
+      await sendEmail({ to: result.customerEmail, subject: mail.subject, html: mail.html });
+    } catch { /* e-posta hatası yoksay */ }
+
     // paymentMethod istemciye geri döner: kart ise PayTR iframe sayfasına yönlendirilir.
-    return NextResponse.json({ ...result, paymentMethod });
+    return NextResponse.json({ orderNumber: result.orderNumber, paymentMethod });
   } catch (err) {
     if (isSerializationError(err)) {
       return NextResponse.json(
