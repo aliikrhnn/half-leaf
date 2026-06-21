@@ -222,13 +222,14 @@ export default function CheckoutClient({
   const couponRef = useRef<HTMLInputElement>(null);
 
   /* Consent + submit */
-  const [customerNote, setCustomerNote] = useState("");
   const [consentChecked, setConsentChecked] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
   const { items, clearCart } = useCartStore();
+  const customerNote = useCartStore((s) => s.note);
+  const setCustomerNote = useCartStore((s) => s.setNote);
 
   useEffect(() => {
     useCartStore.persist.rehydrate();

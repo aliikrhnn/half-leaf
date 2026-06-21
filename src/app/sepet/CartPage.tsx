@@ -138,7 +138,7 @@ export default function CartPage() {
   const [giftBox, setGiftBox] = useState(false);
   const couponRef = useRef<HTMLInputElement>(null);
 
-  const { items, removeItem, updateQuantity } = useCartStore();
+  const { items, removeItem, updateQuantity, note, setNote } = useCartStore();
 
   useEffect(() => {
     useCartStore.persist.rehydrate();
@@ -413,6 +413,25 @@ export default function CartPage() {
               </p>
             </div>
             <Toggle on={giftBox} onChange={() => setGiftBox(v => !v)} />
+          </div>
+
+          {/* Sipariş notu */}
+          <div style={{ margin: 16, marginTop: 0 }}>
+            <label style={{ ...labelStyle, display: "block", marginBottom: 8 }}>
+              SİPARİŞ NOTU (OPSİYONEL)
+            </label>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              maxLength={1000}
+              rows={3}
+              placeholder="Teslimat veya ürünle ilgili eklemek istediğiniz not (ör. zile basmadan arayın, hediye paketi…)"
+              style={{
+                width: "100%", background: "var(--hl-bg)", border: "1.5px solid var(--hl-line-strong)",
+                borderRadius: "var(--hl-r-sm)", padding: "12px 14px", color: "var(--hl-text)",
+                fontFamily: "var(--hl-font-ui)", fontSize: 13, lineHeight: 1.6, resize: "vertical", outline: "none",
+              }}
+            />
           </div>
         </div>
 

@@ -7,9 +7,11 @@ import type { CartItem, Product } from "@/lib/types";
 interface CartState {
   items: CartItem[];
   isOpen: boolean;
+  note: string;
   addItem: (product: Product, quantity?: number) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
+  setNote: (note: string) => void;
   clearCart: () => void;
   openCart: () => void;
   closeCart: () => void;
@@ -22,6 +24,7 @@ export const useCartStore = create<CartState>()(
     (set, get) => ({
       items: [],
       isOpen: false,
+      note: "",
 
       addItem: (product, quantity = 1) => {
         set((state) => {
@@ -64,7 +67,9 @@ export const useCartStore = create<CartState>()(
         }));
       },
 
-      clearCart: () => set({ items: [] }),
+      setNote: (note) => set({ note }),
+
+      clearCart: () => set({ items: [], note: "" }),
       openCart: () => set({ isOpen: true }),
       closeCart: () => set({ isOpen: false }),
 
@@ -80,10 +85,11 @@ export const useCartStore = create<CartState>()(
     {
       name: "half-leaf-cart",
       skipHydration: true,
-      partialize: (state) => ({ items: state.items }),
+      partialize: (state) => ({ items: state.items, note: state.note }),
       merge: (persisted, current) => ({
         ...current,
         items: (persisted as { items?: CartItem[] }).items ?? current.items,
+        note: (persisted as { note?: string }).note ?? current.note,
         // isOpen is never restored — cart always starts closed
       }),
     }
