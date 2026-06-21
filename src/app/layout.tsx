@@ -101,6 +101,7 @@ async function getNavCategories(): Promise<NavCategory[]> {
           compareAtPrice: true,
           priceCurrency: true,
           categoryId: true,
+          brand: true,
           Category: { select: { name: true } },
           ProductImage: {
             orderBy: { sortOrder: "asc" as const },
@@ -132,6 +133,36 @@ async function getNavCategories(): Promise<NavCategory[]> {
       }
     }
 
+    // Kök kategori bazında markalar (mega menü). Görüntü için normalize:
+    // trim + büyük/küçük harf yinelemelerini en sık biçimde birleştir, sıklığa göre sırala.
+    const brandsByRoot = new Map<string, string[]>();
+    const brandAcc = new Map<string, Map<string, { forms: Map<string, number>; total: number }>>();
+    for (const p of productRows) {
+      const raw = p.brand?.replace(/\s+/g, " ").trim();
+      if (!raw) continue;
+      const rootId = catIdToRoot.get(p.categoryId);
+      if (!rootId || !rootIds.has(rootId)) continue;
+      if (!brandAcc.has(rootId)) brandAcc.set(rootId, new Map());
+      const byKey = brandAcc.get(rootId)!;
+      const key = raw.toLowerCase();
+      if (!byKey.has(key)) byKey.set(key, { forms: new Map(), total: 0 });
+      const e = byKey.get(key)!;
+      e.forms.set(raw, (e.forms.get(raw) ?? 0) + 1);
+      e.total++;
+    }
+    for (const [rootId, byKey] of brandAcc) {
+      const list = [...byKey.values()]
+        .map(e => {
+          let best = "", bestCount = -1;
+          for (const [form, c] of e.forms) if (c > bestCount) { best = form; bestCount = c; }
+          return { display: best, total: e.total };
+        })
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 12)
+        .map(x => x.display);
+      brandsByRoot.set(rootId, list);
+    }
+
     return catRows.map(r => ({
       id: r.id,
       slug: r.slug,
@@ -140,6 +171,7 @@ async function getNavCategories(): Promise<NavCategory[]> {
       productCount: r._count.Product,
       description: r.description ?? undefined,
       featuredProduct: !r.parentId ? (featuredByRoot.get(r.id) ?? undefined) : undefined,
+      brands: !r.parentId ? (brandsByRoot.get(r.id) ?? undefined) : undefined,
     }));
   } catch {
     return [];

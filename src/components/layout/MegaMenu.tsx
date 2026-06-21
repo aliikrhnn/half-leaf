@@ -137,6 +137,32 @@ export default function MegaMenu({
                       ))}
                     </ul>
                   )}
+
+                  {/* Markalar — kök kategorideki ürünlerin markaları */}
+                  {group.brands && group.brands.length > 0 && (
+                    <div style={{ marginTop: 14 }}>
+                      <span style={{
+                        display: "block", fontFamily: "var(--hl-font-ui)", fontSize: 9,
+                        fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase",
+                        color: "var(--hl-bronze-400)", marginBottom: 8,
+                      }}>
+                        Markalar
+                      </span>
+                      <ul style={{ display: "flex", flexWrap: "wrap", gap: "5px 6px", listStyle: "none", margin: 0, padding: 0 }}>
+                        {group.brands.map(brand => (
+                          <li key={brand}>
+                            <Link
+                              href={`/kategori/${group.slug}?marka=${encodeURIComponent(brand)}`}
+                              onClick={onClose}
+                              className="hl-mega-brand-link"
+                            >
+                              {brand}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               ))
             ) : (

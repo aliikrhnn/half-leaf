@@ -92,6 +92,8 @@ export interface NavCategory {
   productCount: number;
   description?: string;
   featuredProduct?: NavFeaturedProduct;
+  /** Kök kategoriler için: bu kategorideki ürünlerin markaları (mega menü için). */
+  brands?: string[];
 }
 
 export interface NavFeaturedProduct {
