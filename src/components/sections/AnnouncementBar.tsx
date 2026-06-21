@@ -2,7 +2,7 @@
 
 const DEFAULT_MESSAGES = [
   "2.500 ₺ ve üzeri siparişlerde ücretsiz kargo",
-  "El yapımı pirinç koleksiyon stoklarda",
+  "Özenle seçilmiş premium nargile koleksiyonu",
   "Aynı gün kargo · 14:00 öncesi siparişler",
   "256-bit SSL ile güvenli ödeme · PayTR 3D Secure",
   "Hediye ambalajı · Ücretsiz ahşap kutu",

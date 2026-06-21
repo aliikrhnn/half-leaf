@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle } from "lucide-react";
 import Button from "@/components/ui/Button";
@@ -10,7 +10,8 @@ interface ExistingCategory {
   name: string;
   slug: string;
   description?: string;
-  image?: string;
+  imageUrl?: string;
+  parentId?: string | null;
   isActive: boolean;
   sortOrder: number;
 }
@@ -34,12 +35,22 @@ export default function CategoryForm({ category }: CategoryFormProps) {
     name: category?.name ?? "",
     slug: category?.slug ?? "",
     description: category?.description ?? "",
-    image: category?.image ?? "",
+    imageUrl: category?.imageUrl ?? "",
+    parentId: category?.parentId ?? "",
     isActive: category?.isActive ?? true,
     sortOrder: String(category?.sortOrder ?? 0),
   });
+  const [parentOptions, setParentOptions] = useState<{ id: string; name: string }[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  // Üst kategori seçimi için mevcut kategoriler.
+  useEffect(() => {
+    fetch("/api/categories")
+      .then((r) => r.json())
+      .then((j) => { if (j.success && Array.isArray(j.data)) setParentOptions(j.data); })
+      .catch(() => { /* opsiyonel */ });
+  }, []);
 
   const set = <K extends keyof typeof form>(key: K, value: typeof form[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -60,7 +71,8 @@ export default function CategoryForm({ category }: CategoryFormProps) {
       name: form.name,
       slug: form.slug,
       description: form.description || undefined,
-      image: form.image || undefined,
+      imageUrl: form.imageUrl || undefined,
+      parentId: form.parentId || null,
       isActive: form.isActive,
       sortOrder: parseInt(form.sortOrder),
     };
@@ -131,11 +143,30 @@ export default function CategoryForm({ category }: CategoryFormProps) {
       </div>
 
       <div>
+        <label className="block text-xs text-ink-muted mb-1">Üst Kategori</label>
+        <select
+          value={form.parentId}
+          onChange={(e) => set("parentId", e.target.value)}
+          className={inputClass}
+        >
+          <option value="">Ana kategori (üst kategori yok)</option>
+          {parentOptions
+            .filter((c) => c.id !== category?.id)
+            .map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+        </select>
+        <p className="text-[11px] text-ink-dim mt-1">
+          Bu kategoriyi başka bir kategorinin alt kategorisi yapmak için seçin. Boş bırakırsanız ana kategori olur.
+        </p>
+      </div>
+
+      <div>
         <label className="block text-xs text-ink-muted mb-1">Görsel URL</label>
         <input
           type="url"
-          value={form.image}
-          onChange={(e) => set("image", e.target.value)}
+          value={form.imageUrl}
+          onChange={(e) => set("imageUrl", e.target.value)}
           className={inputClass}
           placeholder="https://placehold.co/400x400/1a1a1a/4a7c59?text=Kategori"
         />

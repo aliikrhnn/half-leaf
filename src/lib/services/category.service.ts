@@ -6,6 +6,7 @@ export const CreateCategorySchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(1000).optional(),
   imageUrl: z.string().url().optional(),
+  parentId: z.string().nullable().optional(),
   isActive: z.boolean().default(true),
   sortOrder: z.number().int().default(0),
 });
@@ -46,7 +47,9 @@ export async function createCategory(data: CreateCategoryInput) {
 }
 
 export async function updateCategory(id: string, data: UpdateCategoryInput) {
-  return prisma.category.update({ where: { id }, data });
+  // Bir kategori kendisinin üst kategorisi olamaz — döngüyü engelle.
+  const safe = data.parentId === id ? { ...data, parentId: null } : data;
+  return prisma.category.update({ where: { id }, data: safe });
 }
 
 export async function deleteCategory(id: string) {

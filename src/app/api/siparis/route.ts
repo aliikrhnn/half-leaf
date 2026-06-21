@@ -30,6 +30,7 @@ const bodySchema = z.object({
     quantity: z.number().int().min(1),
   })).min(1),
   couponCode: z.string().optional(),
+  customerNote: z.string().trim().max(1000).optional(),
 });
 
 // ─── Stok race condition koruması ────────────────────────────────────────────
@@ -99,7 +100,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Eksik veya hatalı alanlar." }, { status: 400 });
   }
 
-  const { contact, address, shippingMethod, paymentMethod, items, couponCode } = parsed.data;
+  const { contact, address, shippingMethod, paymentMethod, items, couponCode, customerNote } = parsed.data;
 
   try {
     const result = await runWithRetry(() => prisma.$transaction(async (tx) => {
@@ -228,6 +229,7 @@ export async function POST(req: NextRequest) {
           couponId: coupon?.id ?? null,
           shippingAddress: addrJson,
           billingAddress: addrJson,
+          customerNote: customerNote || null,
           placedAt: new Date(),
         },
       });

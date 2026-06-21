@@ -177,7 +177,7 @@ export default function ProductsClient({
     : activeCategory
     ? `${activeCategory.name} · Koleksiyon`
     : "Tüm Ürünler · Koleksiyon";
-  const categoryDesc = activeCategory?.description ?? "El yapımı, özenle tasarlanmış ürünler";
+  const categoryDesc = activeCategory?.description ?? "Özenle seçilmiş, tasarım ürünler";
 
   const chipStyle: React.CSSProperties = {
     display: "inline-flex", alignItems: "center", gap: 5,

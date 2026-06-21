@@ -222,6 +222,7 @@ export default function CheckoutClient({
   const couponRef = useRef<HTMLInputElement>(null);
 
   /* Consent + submit */
+  const [customerNote, setCustomerNote] = useState("");
   const [consentChecked, setConsentChecked] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -439,6 +440,7 @@ export default function CheckoutClient({
           paymentMethod,
           items: items.map(i => ({ productId: i.productId, quantity: i.quantity })),
           couponCode: appliedCoupon?.code,
+          customerNote: customerNote.trim() || undefined,
         }),
       });
       const data = await res.json() as { orderNumber?: string; paymentMethod?: PaymentMethod; error?: string };
@@ -661,6 +663,25 @@ export default function CheckoutClient({
                       <div style={{ marginTop: 6, fontSize: 11 }}>Açıklamaya sipariş numaranızı yazmayı unutmayın.</div>
                     </>
                   )}
+                </div>
+
+                {/* Sipariş notu (opsiyonel) */}
+                <div style={{ marginBottom: 20 }}>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--hl-text)", marginBottom: 8 }}>
+                    Sipariş Notu <span style={{ color: "var(--hl-text-mute)", fontWeight: 400 }}>(opsiyonel)</span>
+                  </label>
+                  <textarea
+                    value={customerNote}
+                    onChange={(e) => setCustomerNote(e.target.value)}
+                    maxLength={1000}
+                    rows={3}
+                    placeholder="Teslimat veya ürünle ilgili eklemek istediğiniz not (ör. zile basmadan arayın, hediye paketi…)"
+                    style={{
+                      width: "100%", background: "var(--hl-bg)", border: "1px solid var(--hl-line-strong)",
+                      borderRadius: 10, padding: "12px 14px", color: "var(--hl-text)", fontSize: 13,
+                      fontFamily: "var(--hl-font-ui)", lineHeight: 1.6, resize: "vertical", outline: "none",
+                    }}
+                  />
                 </div>
 
                 {/* Legal consent */}

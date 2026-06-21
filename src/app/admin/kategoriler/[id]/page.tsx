@@ -14,7 +14,8 @@ interface CategoryData {
   name: string;
   slug: string;
   description?: string;
-  image?: string;
+  imageUrl?: string;
+  parentId?: string | null;
   isActive: boolean;
   sortOrder: number;
 }
