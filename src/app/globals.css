@@ -867,23 +867,6 @@
   color: var(--hl-text-mute);
 }
 
-.hl-mega-brand-link {
-  display: inline-block;
-  font-family: var(--hl-font-ui);
-  font-size: 11px;
-  color: var(--hl-text-mute);
-  text-decoration: none;
-  padding: 3px 9px;
-  border-radius: 999px;
-  border: 1px solid var(--hl-line-strong);
-  transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
-}
-.hl-mega-brand-link:hover {
-  color: var(--hl-bronze-400);
-  border-color: var(--hl-bronze-400);
-  background: rgba(201, 160, 106, 0.08);
-}
-
 /* Right featured product panel */
 .hl-mega-right {
   width: 200px;

@@ -101,7 +101,6 @@ async function getNavCategories(): Promise<NavCategory[]> {
           compareAtPrice: true,
           priceCurrency: true,
           categoryId: true,
-          brand: true,
           Category: { select: { name: true } },
           ProductImage: {
             orderBy: { sortOrder: "asc" as const },
@@ -133,46 +132,30 @@ async function getNavCategories(): Promise<NavCategory[]> {
       }
     }
 
-    // Kök kategori bazında markalar (mega menü). Görüntü için normalize:
-    // trim + büyük/küçük harf yinelemelerini en sık biçimde birleştir, sıklığa göre sırala.
-    const brandsByRoot = new Map<string, string[]>();
-    const brandAcc = new Map<string, Map<string, { forms: Map<string, number>; total: number }>>();
-    for (const p of productRows) {
-      const raw = p.brand?.replace(/\s+/g, " ").trim();
-      if (!raw) continue;
-      const rootId = catIdToRoot.get(p.categoryId);
-      if (!rootId || !rootIds.has(rootId)) continue;
-      if (!brandAcc.has(rootId)) brandAcc.set(rootId, new Map());
-      const byKey = brandAcc.get(rootId)!;
-      const key = raw.toLowerCase();
-      if (!byKey.has(key)) byKey.set(key, { forms: new Map(), total: 0 });
-      const e = byKey.get(key)!;
-      e.forms.set(raw, (e.forms.get(raw) ?? 0) + 1);
-      e.total++;
-    }
-    for (const [rootId, byKey] of brandAcc) {
-      const list = [...byKey.values()]
-        .map(e => {
-          let best = "", bestCount = -1;
-          for (const [form, c] of e.forms) if (c > bestCount) { best = form; bestCount = c; }
-          return { display: best, total: e.total };
-        })
-        .sort((a, b) => b.total - a.total)
-        .slice(0, 12)
-        .map(x => x.display);
-      brandsByRoot.set(rootId, list);
-    }
+    // Alt ağacında (kendisi + tüm alt kategoriler) aktif ürünü olmayan kategorileri
+    // navigasyondan gizle (silme değil — ürün eklenince yeniden görünür).
+    const directCount = new Map(catRows.map(c => [c.id, c._count.Product]));
+    const subtreeCache = new Map<string, number>();
+    const subtreeCount = (catId: string): number => {
+      const cached = subtreeCache.get(catId);
+      if (cached !== undefined) return cached;
+      let sum = directCount.get(catId) ?? 0;
+      for (const c of catRows) if (c.parentId === catId) sum += subtreeCount(c.id);
+      subtreeCache.set(catId, sum);
+      return sum;
+    };
 
-    return catRows.map(r => ({
-      id: r.id,
-      slug: r.slug,
-      name: r.name,
-      parentId: r.parentId,
-      productCount: r._count.Product,
-      description: r.description ?? undefined,
-      featuredProduct: !r.parentId ? (featuredByRoot.get(r.id) ?? undefined) : undefined,
-      brands: !r.parentId ? (brandsByRoot.get(r.id) ?? undefined) : undefined,
-    }));
+    return catRows
+      .filter(r => subtreeCount(r.id) > 0)
+      .map(r => ({
+        id: r.id,
+        slug: r.slug,
+        name: r.name,
+        parentId: r.parentId,
+        productCount: r._count.Product,
+        description: r.description ?? undefined,
+        featuredProduct: !r.parentId ? (featuredByRoot.get(r.id) ?? undefined) : undefined,
+      }));
   } catch {
     return [];
   }
