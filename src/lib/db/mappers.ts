@@ -5,6 +5,8 @@ export interface DbProductImage {
   url: string;
   altText: string;
   sortOrder: number;
+  colorName?: string | null;
+  colorHex?: string | null;
 }
 
 export interface DbProduct {
@@ -48,7 +50,12 @@ export function mapProduct(p: DbProduct, usdTryRate = DEFAULT_USD_TRY_RATE): Pro
     priceCurrency: currency,
     images:
       p.ProductImage.length > 0
-        ? p.ProductImage.map((img) => ({ url: img.url, alt: img.altText }))
+        ? p.ProductImage.map((img) => ({
+            url: img.url,
+            alt: img.altText,
+            colorName: img.colorName ?? undefined,
+            colorHex: img.colorHex ?? undefined,
+          }))
         : [
             {
               url: `https://placehold.co/600x600/191919/c9a96e?text=${encodeURIComponent(p.name)}`,

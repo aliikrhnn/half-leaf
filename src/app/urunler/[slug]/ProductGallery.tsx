@@ -5,12 +5,14 @@ import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import ImgSlot from "@/components/ui/ImgSlot";
 
-interface ImageData { url: string; alt: string; }
+interface ImageData { url: string; alt: string; colorName?: string; colorHex?: string; }
 
 interface Props {
   images: ImageData[];
   name: string;
   isNew: boolean;
+  /** Seçili renk — verilirse galeri yalnızca o renge ait görselleri gösterir. */
+  selectedColor?: string | null;
 }
 
 const arrowBtnStyle: React.CSSProperties = {
@@ -38,13 +40,25 @@ function GallerySlot({ url, alt, fill, sizes, priority }: { url: string; alt: st
   return <Image src={url} alt={alt} fill={fill} sizes={sizes} priority={priority} className="object-cover" />;
 }
 
-export default function ProductGallery({ images, name, isNew }: Props) {
+export default function ProductGallery({ images, name, isNew, selectedColor }: Props) {
   const [active, setActive] = useState(0);
-  const img = images[active] ?? { url: "", alt: name };
-  const multiple = images.length > 1;
+
+  // Seçili renge ait görseller; o renkte görsel yoksa hepsini göster.
+  const colorFiltered = selectedColor ? images.filter((im) => im.colorName === selectedColor) : images;
+  const displayImages = colorFiltered.length > 0 ? colorFiltered : images;
+
+  // Renk değişince ilk görsele dön (effect yerine prop-değişimi deseni).
+  const [prevColor, setPrevColor] = useState<string | null | undefined>(selectedColor);
+  if (selectedColor !== prevColor) {
+    setPrevColor(selectedColor);
+    setActive(0);
+  }
+
+  const img = displayImages[active] ?? displayImages[0] ?? { url: "", alt: name };
+  const multiple = displayImages.length > 1;
 
   // Sonraki/önceki görsel (başa-sona sarmalı).
-  const go = (dir: 1 | -1) => setActive((a) => (a + dir + images.length) % images.length);
+  const go = (dir: 1 | -1) => setActive((a) => (a + dir + displayImages.length) % displayImages.length);
 
   // Dokunmatik/fare ile yatay kaydırma (swipe).
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -69,9 +83,9 @@ export default function ProductGallery({ images, name, isNew }: Props) {
   return (
     <div className="flex gap-3" style={{ minHeight: 520 }}>
       {/* Left: vertical thumbnails */}
-      {images.length > 1 && (
+      {displayImages.length > 1 && (
         <div className="hidden sm:flex flex-col gap-2" style={{ width: 72, flexShrink: 0 }}>
-          {images.map((thumb, i) => {
+          {displayImages.map((thumb, i) => {
             const isReal = thumb.url && !thumb.url.includes("placehold.co");
             return (
               <button
@@ -187,9 +201,9 @@ export default function ProductGallery({ images, name, isNew }: Props) {
         </div>
 
         {/* Dot indicators */}
-        {images.length > 1 && (
+        {displayImages.length > 1 && (
           <div style={{ display: "flex", justifyContent: "center", gap: 5 }}>
-            {images.map((_, i) => (
+            {displayImages.map((_, i) => (
               <button
                 key={i}
                 onClick={() => setActive(i)}

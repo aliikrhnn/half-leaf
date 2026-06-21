@@ -10,6 +10,8 @@ export interface Category {
 export interface ProductImage {
   url: string;
   alt: string;
+  colorName?: string;
+  colorHex?: string;
 }
 
 export interface Product {

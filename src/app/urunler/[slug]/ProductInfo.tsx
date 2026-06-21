@@ -15,6 +15,10 @@ interface Props {
   categorySlug: string;
   variants: VariantData[];
   lowStockThreshold: number;
+  /** Görsellerden türetilen renk seçenekleri (varsa swatch'lar bunlardan; renk seçimi galeriyi filtreler). */
+  imageColors?: { renk: string; hex: string }[];
+  selectedColor: string | null;
+  onSelectColor: (color: string | null) => void;
 }
 
 function getAttr(attrs: Record<string, string> | null, ...keys: string[]): string | undefined {
@@ -27,9 +31,9 @@ function getAttr(attrs: Record<string, string> | null, ...keys: string[]): strin
   return undefined;
 }
 
-export default function ProductInfo({ product, categoryName, categorySlug, variants, lowStockThreshold }: Props) {
-  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+export default function ProductInfo({ product, categoryName, categorySlug, variants, lowStockThreshold, imageColors, selectedColor, onSelectColor }: Props) {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const useImageColors = (imageColors?.length ?? 0) > 0;
   const [qty, setQty] = useState(1);
   const { addItem, openCart } = useCartStore();
 
@@ -40,7 +44,7 @@ export default function ProductInfo({ product, categoryName, categorySlug, varia
   const toggleWishlist = useWishlistStore((s) => s.toggle);
   const liked = mounted && inWishlist;
 
-  const colorEntries = [...new Map(
+  const variantColorEntries = [...new Map(
     variants
       .filter(v => getAttr(v.attributes, "renk", "color"))
       .map(v => {
@@ -49,6 +53,10 @@ export default function ProductInfo({ product, categoryName, categorySlug, varia
         return [renk, { renk, hex }] as [string, { renk: string; hex: string }];
       })
   ).values()];
+
+  // Görsel renkleri varsa onları kullan (kozmetik — galeriyi filtreler, fiyat/stok'u etkilemez);
+  // yoksa eski varyant renklerine düş.
+  const colorEntries = useImageColors ? imageColors! : variantColorEntries;
 
   const sizeEntries = [...new Map(
     variants
@@ -60,7 +68,8 @@ export default function ProductInfo({ product, categoryName, categorySlug, varia
   ).values()];
 
   const activeVariant = variants.find(v => {
-    const matchColor = !selectedColor || getAttr(v.attributes, "renk", "color") === selectedColor;
+    // Görsel renkleri kozmetik → varyant eşleşmesini renk kısıtlamaz (yalnızca boy).
+    const matchColor = useImageColors || !selectedColor || getAttr(v.attributes, "renk", "color") === selectedColor;
     const matchSize = !selectedSize || getAttr(v.attributes, "boy", "size", "boyut") === selectedSize;
     return matchColor && matchSize;
   }) ?? null;
@@ -165,7 +174,7 @@ export default function ProductInfo({ product, categoryName, categorySlug, varia
             {colorEntries.map(({ renk, hex }) => (
               <button
                 key={renk}
-                onClick={() => setSelectedColor(selectedColor === renk ? null : renk)}
+                onClick={() => onSelectColor(selectedColor === renk ? null : renk)}
                 title={renk}
                 aria-label={renk}
                 aria-pressed={selectedColor === renk}

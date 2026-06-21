@@ -352,6 +352,8 @@ model ProductImage {
   altText          String
   sortOrder        Int       @default(0)
   isPrimary        Boolean   @default(false)
+  colorName        String?
+  colorHex         String?
   originalUrl      String?
   processedUrl     String?
   isProcessed      Boolean   @default(false)

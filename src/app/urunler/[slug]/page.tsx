@@ -8,8 +8,7 @@ import { getUsdTryRate } from "@/lib/pricing";
 import { jsonLd } from "@/lib/utils";
 import { SITE_NAME } from "@/lib/constants";
 import ProductCard from "@/components/product/ProductCard";
-import ProductGallery from "./ProductGallery";
-import ProductInfo from "./ProductInfo";
+import ProductDetailMain from "./ProductDetailMain";
 import ProductTabs from "./ProductTabs";
 import type { VariantData } from "@/lib/types";
 
@@ -208,29 +207,14 @@ export default async function ProductDetailPage({ params }: Props) {
       </nav>
 
       {/* Main two-column layout */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "clamp(32px, 5vw, 64px)",
-          marginBottom: 72,
-          alignItems: "start",
-        }}
-        className="product-detail-grid"
-      >
-        <ProductGallery
-          images={product.images}
-          name={product.name}
-          isNew={!!product.isNew}
-        />
-        <ProductInfo
-          product={product}
-          categoryName={dbProduct.Category.name}
-          categorySlug={dbProduct.Category.slug}
-          variants={variants}
-          lowStockThreshold={lowStockThreshold}
-        />
-      </div>
+      <ProductDetailMain
+        product={product}
+        isNew={!!product.isNew}
+        categoryName={dbProduct.Category.name}
+        categorySlug={dbProduct.Category.slug}
+        variants={variants}
+        lowStockThreshold={lowStockThreshold}
+      />
 
       {/* Tabs section */}
       <div style={{ marginBottom: 72 }}>

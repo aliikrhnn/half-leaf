@@ -5,6 +5,8 @@ export const ProductImageSchema = z.object({
   altText: z.string().max(200).default(""),
   sortOrder: z.number().int().default(0),
   isPrimary: z.boolean().default(false),
+  colorName: z.string().max(60).optional(),
+  colorHex: z.string().max(20).optional(),
 });
 
 export const ProductVariantSchema = z.object({

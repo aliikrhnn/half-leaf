@@ -16,6 +16,13 @@ interface ImageInput {
   alt: string;
   sortOrder: number;
   uploading?: boolean;
+  colorName?: string;
+  colorHex?: string;
+}
+
+interface ColorOption {
+  name: string;
+  hex: string;
 }
 
 interface SpecInput {
@@ -62,7 +69,7 @@ interface ExistingProduct {
   isBestseller: boolean;
   isNew?: boolean;
   brand?: string;
-  images: { url: string; alt: string; sortOrder?: number }[];
+  images: { url: string; alt: string; sortOrder?: number; colorName?: string; colorHex?: string }[];
   tags: { tag: string }[] | string[];
   specs?: SpecInput[];
 }
@@ -117,6 +124,14 @@ export default function ProductForm({ product }: ProductFormProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [usdTryRate, setUsdTryRate] = useState<number | null>(null);
+  const [colors, setColors] = useState<ColorOption[]>(() => {
+    // Renk seçeneklerini (varsa) mevcut ürün görsellerinden türet — düzenleme modunda.
+    const m = new Map<string, ColorOption>();
+    for (const img of product?.images ?? []) {
+      if (img.colorName) m.set(img.colorName, { name: img.colorName, hex: img.colorHex ?? "#888888" });
+    }
+    return [...m.values()];
+  });
 
   useEffect(() => {
     fetch("/api/categories").then((r) => r.json()).then((j) => {
@@ -139,6 +154,8 @@ export default function ProductForm({ product }: ProductFormProps) {
         url: img.url,
         alt: img.alt,
         sortOrder: img.sortOrder ?? i,
+        colorName: img.colorName,
+        colorHex: img.colorHex,
       }));
 
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -188,6 +205,35 @@ export default function ProductForm({ product }: ProductFormProps) {
     const arr = [...form.images];
     [arr[i], arr[next]] = [arr[next], arr[i]];
     set("images", arr.map((img, idx) => ({ ...img, sortOrder: idx })));
+  };
+
+  /* ── Renk seçenekleri ── */
+  const addColor = () => setColors((cs) => [...cs, { name: "", hex: "#c9a96e" }]);
+
+  const removeColor = (i: number) => {
+    const removed = colors[i];
+    setColors((cs) => cs.filter((_, idx) => idx !== i));
+    if (removed?.name) {
+      set("images", form.images.map((img) =>
+        img.colorName === removed.name ? { ...img, colorName: undefined, colorHex: undefined } : img));
+    }
+  };
+
+  const updateColor = (i: number, field: keyof ColorOption, value: string) => {
+    const prev = colors[i];
+    setColors((cs) => cs.map((c, idx) => (idx === i ? { ...c, [field]: value } : c)));
+    if (prev?.name) {
+      set("images", form.images.map((img) =>
+        img.colorName === prev.name
+          ? { ...img, ...(field === "name" ? { colorName: value } : { colorHex: value }) }
+          : img));
+    }
+  };
+
+  const setImageColor = (i: number, colorName: string) => {
+    const c = colors.find((x) => x.name === colorName);
+    set("images", form.images.map((img, idx) =>
+      idx === i ? { ...img, colorName: colorName || undefined, colorHex: c?.hex } : img));
   };
 
   const uploadFile = useCallback(async (file: File) => {
@@ -280,7 +326,13 @@ export default function ProductForm({ product }: ProductFormProps) {
       brand: form.brand || undefined,
       images: form.images
         .filter((img) => img.url && !img.uploading)
-        .map((img, idx) => ({ url: img.url, altText: img.alt, sortOrder: idx })),
+        .map((img, idx) => ({
+          url: img.url,
+          altText: img.alt,
+          sortOrder: idx,
+          colorName: img.colorName || undefined,
+          colorHex: img.colorName ? (img.colorHex || undefined) : undefined,
+        })),
       tags: form.tags,
       specs: form.specs.filter((s) => s.key && s.value),
     };
@@ -522,6 +574,45 @@ export default function ProductForm({ product }: ProductFormProps) {
         </div>
       </section>
 
+      {/* Color options */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between border-b border-border-default pb-2">
+          <h2 className="text-sm font-semibold text-ink-muted uppercase tracking-wider">Renk Seçenekleri</h2>
+          <button type="button" onClick={addColor} className="flex items-center gap-1 text-xs text-accent-light hover:text-gold transition-colors">
+            <Plus size={13} /> Renk Ekle
+          </button>
+        </div>
+        <p className="text-xs text-ink-dim leading-relaxed">
+          Renk ekleyip aşağıda her görsele bir renk atayın. Ürün sayfasında müşteri rengi seçince yalnızca o renge ait görsel(ler) gösterilir. Renk seçeneği gerekmiyorsa boş bırakın.
+        </p>
+        <div className="space-y-2">
+          {colors.map((c, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input
+                type="color"
+                value={c.hex}
+                onChange={(e) => updateColor(i, "hex", e.target.value)}
+                className="w-10 h-10 rounded border border-border-default bg-bg-surface cursor-pointer flex-shrink-0"
+                aria-label="Renk"
+              />
+              <input
+                type="text"
+                value={c.name}
+                onChange={(e) => updateColor(i, "name", e.target.value)}
+                className={inputClass + " flex-1"}
+                placeholder="Renk adı (ör. Siyah, Gold, Mavi)"
+              />
+              <button type="button" onClick={() => removeColor(i)} className="p-2 text-ink-dim hover:text-red-400 transition-colors flex-shrink-0" aria-label="Rengi kaldır">
+                <Trash2 size={15} />
+              </button>
+            </div>
+          ))}
+          {colors.length === 0 && (
+            <p className="text-xs text-ink-dim italic">Henüz renk eklenmedi.</p>
+          )}
+        </div>
+      </section>
+
       {/* Images */}
       <section className="space-y-4">
         <h2 className="text-sm font-semibold text-ink-muted uppercase tracking-wider border-b border-border-default pb-2">
@@ -605,6 +696,20 @@ export default function ProductForm({ product }: ProductFormProps) {
                     className={inputClass + " text-xs"}
                     placeholder="Ürün görsel açıklaması"
                   />
+                  {colors.length > 0 && (
+                    <select
+                      value={img.colorName ?? ""}
+                      onChange={(e) => setImageColor(i, e.target.value)}
+                      disabled={img.uploading}
+                      className={inputClass + " text-xs mt-1"}
+                      aria-label="Görselin rengi"
+                    >
+                      <option value="">Renk yok (tüm renklerde göster)</option>
+                      {colors.filter((c) => c.name).map((c) => (
+                        <option key={c.name} value={c.name}>{c.name}</option>
+                      ))}
+                    </select>
+                  )}
                   {img.uploading && (
                     <span className="text-[10px] text-ink-dim mt-0.5 inline-block">Yükleniyor...</span>
                   )}
