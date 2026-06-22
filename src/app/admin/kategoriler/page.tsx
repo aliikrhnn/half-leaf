@@ -82,7 +82,57 @@ export default function AdminKategorilerPage() {
           </div>
         )}
 
-        <div className="bg-bg-surface border border-border-default rounded-xl overflow-hidden">
+        {/* Mobile: kart görünümü */}
+        <div className="sm:hidden space-y-3">
+          {loading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-20 bg-bg-elevated rounded-xl animate-pulse" />
+            ))
+          ) : categories.length === 0 ? (
+            <p className="text-center text-ink-muted py-12">Kategori bulunamadı.</p>
+          ) : (
+            categories.map((cat) => (
+              <div key={cat.id} className="bg-bg-surface border border-border-default rounded-xl p-3 flex items-center gap-3">
+                {cat.image ? (
+                  <div className="relative w-11 h-11 rounded-lg overflow-hidden bg-bg-elevated flex-shrink-0">
+                    <Image src={cat.image} alt={cat.name} fill className="object-cover" sizes="44px" />
+                  </div>
+                ) : (
+                  <div className="w-11 h-11 rounded-lg bg-bg-elevated flex-shrink-0 flex items-center justify-center">
+                    <span className="text-sm font-bold text-accent">{cat.name[0]}</span>
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium text-ink truncate">{cat.name}</span>
+                    {cat.isActive ? <Badge variant="success">Aktif</Badge> : <Badge variant="default">Pasif</Badge>}
+                  </div>
+                  <div className="text-xs text-ink-dim font-mono truncate">{cat.slug}</div>
+                  <div className="text-xs text-ink-muted mt-0.5">{cat._count.products} ürün · sıra {cat.sortOrder}</div>
+                </div>
+                <div className="flex flex-col gap-1.5 flex-shrink-0">
+                  <Link href={`/admin/kategoriler/${cat.id}`}>
+                    <button className="p-2 text-ink-muted hover:text-ink hover:bg-bg-elevated rounded-md transition-colors" aria-label="Düzenle">
+                      <Edit size={16} />
+                    </button>
+                  </Link>
+                  <button
+                    onClick={() => setDeleteId(cat.id)}
+                    disabled={cat._count.products > 0}
+                    className="p-2 text-ink-muted hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    title={cat._count.products > 0 ? "Ürün içeren kategori silinemez" : "Sil"}
+                    aria-label="Sil"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop: tablo görünümü */}
+        <div className="hidden sm:block bg-bg-surface border border-border-default rounded-xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border-default bg-bg-elevated">
