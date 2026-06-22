@@ -15,6 +15,7 @@ export const ProductVariantSchema = z.object({
   price: z.number().positive("Fiyat 0'dan büyük olmalıdır."),
   attributes: z.record(z.string(), z.string()).optional(),
   isActive: z.boolean().default(true),
+  stock: z.number().int().min(0).default(0),
 });
 
 export const CreateProductSchema = z.object({

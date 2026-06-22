@@ -69,7 +69,7 @@ export default function CartDrawer() {
           ) : (
             <div>
               {items.map((item) => (
-                <CartItem key={item.productId} item={item} />
+                <CartItem key={item.productId + (item.variantId ?? "")} item={item} />
               ))}
             </div>
           )}

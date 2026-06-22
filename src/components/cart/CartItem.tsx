@@ -28,9 +28,12 @@ export default function CartItem({ item }: CartItemProps) {
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-ink line-clamp-2 mb-1">
+        <p className="text-sm font-medium text-ink line-clamp-2 mb-0.5">
           {item.product.name}
         </p>
+        {item.variantLabel && (
+          <p className="text-xs font-semibold text-accent-light mb-0.5">Renk: {item.variantLabel}</p>
+        )}
         <p className="text-sm font-semibold text-gold">
           {formatPrice(item.product.price)}
         </p>
@@ -39,7 +42,7 @@ export default function CartItem({ item }: CartItemProps) {
           <div className="flex items-center gap-1">
             <button
               onClick={() =>
-                updateQuantity(item.productId, item.quantity - 1)
+                updateQuantity(item.productId, item.quantity - 1, item.variantId)
               }
               className="w-6 h-6 flex items-center justify-center rounded border border-border-default text-ink-muted hover:text-ink hover:border-border-light transition-colors"
               aria-label="Azalt"
@@ -51,7 +54,7 @@ export default function CartItem({ item }: CartItemProps) {
             </span>
             <button
               onClick={() =>
-                updateQuantity(item.productId, item.quantity + 1)
+                updateQuantity(item.productId, item.quantity + 1, item.variantId)
               }
               className="w-6 h-6 flex items-center justify-center rounded border border-border-default text-ink-muted hover:text-ink hover:border-border-light transition-colors"
               aria-label="Artır"
@@ -61,7 +64,7 @@ export default function CartItem({ item }: CartItemProps) {
           </div>
 
           <button
-            onClick={() => removeItem(item.productId)}
+            onClick={() => removeItem(item.productId, item.variantId)}
             className="p-1 text-ink-dim hover:text-red-400 transition-colors"
             aria-label="Ürünü sil"
           >

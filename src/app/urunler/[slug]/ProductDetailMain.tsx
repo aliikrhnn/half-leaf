@@ -28,15 +28,6 @@ export default function ProductDetailMain({
 }: Props) {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
 
-  // Görsellerden renk seçeneklerini türet (isim → hex), sıra korunur.
-  const colorMap = new Map<string, { renk: string; hex: string }>();
-  for (const img of product.images) {
-    if (img.colorName && !colorMap.has(img.colorName)) {
-      colorMap.set(img.colorName, { renk: img.colorName, hex: img.colorHex ?? "#888888" });
-    }
-  }
-  const imageColors = [...colorMap.values()];
-
   return (
     <div
       style={{
@@ -60,7 +51,6 @@ export default function ProductDetailMain({
         categorySlug={categorySlug}
         variants={variants}
         lowStockThreshold={lowStockThreshold}
-        imageColors={imageColors}
         selectedColor={selectedColor}
         onSelectColor={setSelectedColor}
       />

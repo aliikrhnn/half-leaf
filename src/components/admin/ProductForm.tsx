@@ -23,6 +23,7 @@ interface ImageInput {
 interface ColorOption {
   name: string;
   hex: string;
+  stock: number;
 }
 
 interface SpecInput {
@@ -72,6 +73,7 @@ interface ExistingProduct {
   images: { url: string; alt: string; sortOrder?: number; colorName?: string; colorHex?: string }[];
   tags: { tag: string }[] | string[];
   specs?: SpecInput[];
+  colors?: { name: string; hex: string; stock: number }[];
 }
 
 interface ProductFormProps {
@@ -125,10 +127,13 @@ export default function ProductForm({ product }: ProductFormProps) {
   const [error, setError] = useState("");
   const [usdTryRate, setUsdTryRate] = useState<number | null>(null);
   const [colors, setColors] = useState<ColorOption[]>(() => {
-    // Renk seçeneklerini (varsa) mevcut ürün görsellerinden türet — düzenleme modunda.
+    // Renk seçenekleri: önce ürünün renk varyantlarından (stok dahil), yoksa görsellerden türet.
+    if (product?.colors?.length) {
+      return product.colors.map((c) => ({ name: c.name, hex: c.hex, stock: c.stock }));
+    }
     const m = new Map<string, ColorOption>();
     for (const img of product?.images ?? []) {
-      if (img.colorName) m.set(img.colorName, { name: img.colorName, hex: img.colorHex ?? "#888888" });
+      if (img.colorName) m.set(img.colorName, { name: img.colorName, hex: img.colorHex ?? "#888888", stock: 0 });
     }
     return [...m.values()];
   });
@@ -208,7 +213,10 @@ export default function ProductForm({ product }: ProductFormProps) {
   };
 
   /* ── Renk seçenekleri ── */
-  const addColor = () => setColors((cs) => [...cs, { name: "", hex: "#c9a96e" }]);
+  const addColor = () => setColors((cs) => [...cs, { name: "", hex: "#c9a96e", stock: 0 }]);
+
+  const updateColorStock = (i: number, n: number) =>
+    setColors((cs) => cs.map((c, idx) => (idx === i ? { ...c, stock: Number.isFinite(n) ? Math.max(0, n) : 0 } : c)));
 
   const removeColor = (i: number) => {
     const removed = colors[i];
@@ -308,6 +316,21 @@ export default function ProductForm({ product }: ProductFormProps) {
     setSaving(true);
     setError("");
 
+    // Renkleri stoklu varyantlara çevir (renk = ProductVariant, kendi envanteriyle).
+    const colorVariants = colors
+      .filter((c) => c.name.trim())
+      .map((c, i) => ({
+        name: c.name.trim(),
+        sku: `${form.sku}-${slugify(c.name) || `renk${i + 1}`}`,
+        price: parseFloat(form.price) || 0.01,
+        attributes: { renk: c.name.trim(), renk_hex: c.hex },
+        isActive: true,
+        stock: c.stock || 0,
+      }));
+
+    // Renk varsa ürün-düzeyi stok = renk stoklarının toplamı (listeleme kartları için).
+    const totalColorStock = colorVariants.reduce((s, v) => s + v.stock, 0);
+
     const payload = {
       name: form.name,
       slug: form.slug,
@@ -317,7 +340,7 @@ export default function ProductForm({ product }: ProductFormProps) {
       basePrice: parseFloat(form.price),
       compareAtPrice: form.compareAtPrice ? parseFloat(form.compareAtPrice) : undefined,
       priceCurrency: form.priceCurrency,
-      stock: parseInt(form.stock),
+      stock: colorVariants.length > 0 ? totalColorStock : (parseInt(form.stock) || 0),
       categoryId: form.categoryId,
       isActive: form.isActive,
       isFeatured: form.isFeatured,
@@ -335,6 +358,7 @@ export default function ProductForm({ product }: ProductFormProps) {
         })),
       tags: form.tags,
       specs: form.specs.filter((s) => s.key && s.value),
+      variants: colorVariants,
     };
 
     try {
@@ -583,7 +607,7 @@ export default function ProductForm({ product }: ProductFormProps) {
           </button>
         </div>
         <p className="text-xs text-ink-dim leading-relaxed">
-          Renk ekleyip aşağıda her görsele bir renk atayın. Ürün sayfasında müşteri rengi seçince yalnızca o renge ait görsel(ler) gösterilir. Renk seçeneği gerekmiyorsa boş bırakın.
+          Her renk için ad, renk ve <strong>stok</strong> girin; aşağıda her görsele bir renk atayın. Ürün sayfasında müşteri rengi seçince yalnızca o renge ait görsel(ler) gösterilir ve <strong>o rengin stoğu</strong> kullanılır. Renk seçeneği gerekmiyorsa boş bırakın.
         </p>
         <div className="space-y-2">
           {colors.map((c, i) => (
@@ -601,6 +625,17 @@ export default function ProductForm({ product }: ProductFormProps) {
                 onChange={(e) => updateColor(i, "name", e.target.value)}
                 className={inputClass + " flex-1"}
                 placeholder="Renk adı (ör. Siyah, Gold, Mavi)"
+              />
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={c.stock}
+                onChange={(e) => updateColorStock(i, parseInt(e.target.value))}
+                className={inputClass + " w-20 flex-shrink-0"}
+                placeholder="Stok"
+                aria-label="Stok"
+                title="Bu rengin stoğu"
               />
               <button type="button" onClick={() => removeColor(i)} className="p-2 text-ink-dim hover:text-red-400 transition-colors flex-shrink-0" aria-label="Rengi kaldır">
                 <Trash2 size={15} />

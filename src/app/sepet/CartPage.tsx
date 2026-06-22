@@ -285,10 +285,11 @@ export default function CartPage() {
           {/* Items */}
           {items.map((item, idx) => {
             const lineTotal = item.product.price * item.quantity;
-            const maxQty = item.product.stock > 0 ? item.product.stock : 99;
+            const lineStock = item.maxStock ?? item.product.stock;
+            const maxQty = lineStock > 0 ? lineStock : 99;
 
             return (
-              <div key={item.productId}>
+              <div key={item.productId + (item.variantId ?? "")}>
                 <div style={{
                   padding: "20px 20px 16px",
                   borderBottom: idx < items.length - 1 ? "1px solid var(--hl-line)" : "none",
@@ -322,6 +323,14 @@ export default function CartPage() {
                         }}>
                           {item.product.name}
                         </p>
+                        {item.variantLabel && (
+                          <p style={{
+                            fontFamily: "var(--hl-font-ui)", fontSize: 11, fontWeight: 600,
+                            color: "var(--hl-bronze-400)", lineHeight: 1.4, marginBottom: 2,
+                          }}>
+                            Renk: {item.variantLabel}
+                          </p>
+                        )}
                         <p style={{
                           fontFamily: "var(--hl-font-ui)", fontSize: 11,
                           color: "var(--hl-text-mute)", lineHeight: 1.4,
@@ -336,7 +345,7 @@ export default function CartPage() {
                       <QtyStepper
                         qty={item.quantity}
                         max={maxQty}
-                        onChange={n => updateQuantity(item.productId, n)}
+                        onChange={n => updateQuantity(item.productId, n, item.variantId)}
                       />
                     </div>
 
@@ -349,7 +358,7 @@ export default function CartPage() {
                         {formatPrice(lineTotal)}
                       </span>
                       <button
-                        onClick={() => removeItem(item.productId)}
+                        onClick={() => removeItem(item.productId, item.variantId)}
                         style={{
                           width: 28, height: 28, borderRadius: "50%",
                           background: "none", border: "1px solid var(--hl-line-strong)",

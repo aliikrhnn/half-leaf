@@ -45,6 +45,11 @@ export interface CartItem {
   productId: string;
   product: Product;
   quantity: number;
+  /** Renk varyantı (varsa) — aynı ürünün farklı renkleri ayrı sepet satırı olur. */
+  variantId?: string;
+  variantLabel?: string;
+  /** Bu satırın stok üst sınırı (varyant stoğu ya da ürün stoğu). */
+  maxStock?: number;
 }
 
 export interface Address {

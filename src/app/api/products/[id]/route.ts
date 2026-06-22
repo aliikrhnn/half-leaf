@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getProductById, updateProduct, deleteProduct } from "@/lib/services/product.service";
+import { getProductById, updateProduct, deleteProduct, getProductColorVariants } from "@/lib/services/product.service";
 import { UpdateProductSchema } from "@/lib/validations/product.schema";
 import { ok, badRequest, notFound, serverError } from "@/lib/api/response";
 import { requireAdmin, isResponse } from "@/lib/auth/middleware";
@@ -18,11 +18,13 @@ export async function GET(_req: NextRequest, { params }: Params) {
     // biriminde girildiği gibi saklanır; TRY'ye çevrim yalnızca okuma anında (mapProduct,
     // storefront) yapılır. Burada mapProduct döndürürsek, USD etiketli alana TRY'ye
     // çevrilmiş sayı yüklenir ve kaydedince fiyat her düzenlemede kur kadar şişer.
+    const colors = await getProductColorVariants(id);
     return ok({
       ...mapProduct(product),
       price: Number(product.basePrice),
       compareAtPrice: product.compareAtPrice != null ? Number(product.compareAtPrice) : undefined,
       priceCurrency: (product.priceCurrency ?? "TRY") as PriceCurrency,
+      colors,
     });
   } catch {
     return serverError();

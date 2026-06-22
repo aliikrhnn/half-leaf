@@ -28,6 +28,7 @@ const bodySchema = z.object({
   items: z.array(z.object({
     productId: z.string().min(1),
     quantity: z.number().int().min(1),
+    variantId: z.string().optional(),
   })).min(1),
   couponCode: z.string().optional(),
   customerNote: z.string().trim().max(1000).optional(),
@@ -122,23 +123,42 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      /* ── 2. Fetch products from DB ── */
-      const productIds = items.map(i => i.productId);
+      /* ── 2. Fetch products + variants from DB ── */
+      const uniqueProductIds = [...new Set(items.map(i => i.productId))];
       const dbProducts = await tx.product.findMany({
-        where: { id: { in: productIds }, isActive: true },
+        where: { id: { in: uniqueProductIds }, isActive: true },
         include: { Inventory: true, ProductImage: { where: { isPrimary: true }, take: 1 } },
       });
 
-      if (dbProducts.length !== productIds.length) {
+      if (dbProducts.length !== uniqueProductIds.length) {
         throw new Error("Sepetteki bazı ürünler artık mevcut değil.");
       }
 
-      /* ── 3. Stock validation ── */
+      const variantIds = [...new Set(items.map(i => i.variantId).filter((v): v is string => !!v))];
+      const dbVariants = variantIds.length > 0
+        ? await tx.productVariant.findMany({ where: { id: { in: variantIds } }, include: { Inventory: true } })
+        : [];
+      const variantById = new Map(dbVariants.map(v => [v.id, v]));
+      for (const item of items) {
+        if (item.variantId && !variantById.has(item.variantId)) {
+          throw new Error("Seçilen renk/varyant artık mevcut değil.");
+        }
+      }
+
+      /* ── 3. Stock validation (varyant varsa varyant stoğu) ── */
       for (const item of items) {
         const product = dbProducts.find(p => p.id === item.productId)!;
-        const available = product.Inventory?.quantity ?? 0;
-        if (available < item.quantity) {
-          throw new Error(`"${product.name}" için yeterli stok yok. Kalan: ${available}`);
+        if (item.variantId) {
+          const variant = variantById.get(item.variantId)!;
+          const available = variant.Inventory?.quantity ?? 0;
+          if (available < item.quantity) {
+            throw new Error(`"${product.name}" (${variant.name}) için yeterli stok yok. Kalan: ${available}`);
+          }
+        } else {
+          const available = product.Inventory?.quantity ?? 0;
+          if (available < item.quantity) {
+            throw new Error(`"${product.name}" için yeterli stok yok. Kalan: ${available}`);
+          }
         }
       }
 
@@ -152,11 +172,12 @@ export async function POST(req: NextRequest) {
         : DEFAULT_USD_TRY_RATE;
 
       /* ── 5. Compute prices from DB (convert USD → TRY if needed) ── */
-      const subtotal = dbProducts.reduce((sum, product) => {
-        const qty = items.find(i => i.productId === product.id)!.quantity;
+      // Item bazında topla — aynı ürünün farklı renk satırları ayrı sayılır.
+      const subtotal = items.reduce((sum, item) => {
+        const product = dbProducts.find(p => p.id === item.productId)!;
         const currency = (product.priceCurrency ?? "TRY") as PriceCurrency;
         const priceInTRY = toTRY(Number(product.basePrice), currency, usdTryRate);
-        return sum + priceInTRY * qty;
+        return sum + priceInTRY * item.quantity;
       }, 0);
 
       /* ── 6. Coupon validation ── */
@@ -238,6 +259,8 @@ export async function POST(req: NextRequest) {
       const emailItems: { name: string; quantity: number; lineTotal: number }[] = [];
       for (const item of items) {
         const product = dbProducts.find(p => p.id === item.productId)!;
+        const variant = item.variantId ? variantById.get(item.variantId)! : null;
+        const colorName = variant ? (((variant.attributes as Record<string, string> | null)?.renk) ?? variant.name) : null;
         const currency = (product.priceCurrency ?? "TRY") as PriceCurrency;
         const unitPriceTRY = toTRY(Number(product.basePrice), currency, usdTryRate);
         const lineTotal = unitPriceTRY * item.quantity;
@@ -245,14 +268,17 @@ export async function POST(req: NextRequest) {
           data: {
             orderId: order.id,
             productId: product.id,
+            variantId: variant?.id ?? null,
             productName: product.name,
-            sku: product.sku,
+            variantName: colorName,
+            sku: variant?.sku ?? product.sku,
             unitPrice: unitPriceTRY,
             quantity: item.quantity,
             lineTotal,
           },
         });
-        emailItems.push({ name: product.name, quantity: item.quantity, lineTotal });
+        const emailName = colorName ? `${product.name} (${colorName})` : product.name;
+        emailItems.push({ name: emailName, quantity: item.quantity, lineTotal });
       }
 
       /* ── 11. Create Payment ── */
@@ -280,23 +306,31 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      /* ── 13. Stock movements + inventory update ── */
+      /* ── 13. Stock movements + inventory update (varyant varsa varyant stoğu) ── */
       for (const item of items) {
         const product = dbProducts.find(p => p.id === item.productId)!;
-        if (product.Inventory) {
+        const inv = item.variantId ? variantById.get(item.variantId)?.Inventory : product.Inventory;
+        if (inv) {
           await tx.inventory.update({
-            where: { id: product.Inventory.id },
+            where: { id: inv.id },
             data: { quantity: { decrement: item.quantity } },
           });
           await tx.stockMovement.create({
             data: {
-              inventoryId: product.Inventory.id,
+              inventoryId: inv.id,
               type: "SATIS",
               quantityChange: -item.quantity,
               reason: "Sipariş",
               referenceType: "Order",
               referenceId: order.id,
             },
+          });
+        }
+        // Renkli üründe ürün-düzeyi toplam stoğu da düşür (listeleme kartı gösterimi senkron kalsın).
+        if (item.variantId && product.Inventory) {
+          await tx.inventory.update({
+            where: { id: product.Inventory.id },
+            data: { quantity: { decrement: item.quantity } },
           });
         }
       }

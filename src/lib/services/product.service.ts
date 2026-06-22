@@ -59,6 +59,43 @@ export async function getProductBySlug(slug: string) {
   return prisma.product.findUnique({ where: { slug }, include: PRODUCT_INCLUDE });
 }
 
+/** Admin formu için: ürünün renk varyantları (isim + hex + stok). */
+export async function getProductColorVariants(id: string) {
+  const variants = await prisma.productVariant.findMany({
+    where: { productId: id, isActive: true },
+    include: { Inventory: { select: { quantity: true } } },
+  });
+  return variants
+    .map((v) => {
+      const a = v.attributes as Record<string, string> | null;
+      if (!a?.renk) return null;
+      return { name: a.renk, hex: a.renk_hex ?? a.colorHex ?? a.hex ?? "#888888", stock: v.Inventory?.quantity ?? 0 };
+    })
+    .filter((c): c is { name: string; hex: string; stock: number } => c != null);
+}
+
+/**
+ * Varyant verisini (stok dahil) Prisma nested-create şekline çevirir.
+ * Her varyant kendi Inventory'sini alır; başlangıç stoğu varsa ledger'a GIRIS yazılır.
+ */
+function buildVariantCreate(variants: CreateProductInput["variants"]) {
+  return (variants ?? []).map((v) => {
+    const { stock: vStock = 0, ...vRest } = v;
+    return {
+      ...vRest,
+      attributes: vRest.attributes as Prisma.InputJsonValue | undefined,
+      Inventory: {
+        create: {
+          quantity: vStock,
+          ...(vStock > 0
+            ? { StockMovement: { create: { type: "GIRIS" as const, quantityChange: vStock, reason: "Başlangıç stoğu" } } }
+            : {}),
+        },
+      },
+    };
+  });
+}
+
 export async function createProduct(data: CreateProductInput) {
   const { images, variants, stock, ...rest } = data;
   const qty = stock ?? 0;
@@ -82,15 +119,14 @@ export async function createProduct(data: CreateProductInput) {
         },
       },
       ...(imagesWithOriginal.length && { ProductImage: { create: imagesWithOriginal } }),
-      ...(variants?.length && { ProductVariant: { create: variants } }),
+      ...(variants?.length && { ProductVariant: { create: buildVariantCreate(variants) } }),
     },
     include: PRODUCT_INCLUDE,
   });
 }
 
 export async function updateProduct(id: string, data: UpdateProductInput) {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- intentional: excludes variants from rest spread to avoid Prisma field error
-  const { images, variants: _v, stock, ...rest } = data;
+  const { images, variants, stock, ...rest } = data;
 
   const imagesWithOriginal = images?.map((img) => ({
     ...img,
@@ -100,6 +136,26 @@ export async function updateProduct(id: string, data: UpdateProductInput) {
   return prisma.$transaction(async (tx) => {
     if (imagesWithOriginal !== undefined) {
       await tx.productImage.deleteMany({ where: { productId: id } });
+    }
+
+    // Renk varyantları: form tam renk listesini gönderir → mevcut RENK varyantlarını
+    // (attributes.renk olanlar) sil + yeniden oluştur. Boy vb. diğer varyantlara dokunma.
+    // Sipariş geçmişi OrderItem.variantName (string snapshot) ile korunur.
+    if (variants !== undefined) {
+      const existing = await tx.productVariant.findMany({ where: { productId: id }, include: { Inventory: true } });
+      const colorVariants = existing.filter((v) => {
+        const a = v.attributes as Record<string, unknown> | null;
+        return a != null && typeof a === "object" && a.renk != null;
+      });
+      for (const v of colorVariants) {
+        if (v.Inventory) await tx.inventory.delete({ where: { id: v.Inventory.id } }); // StockMovement cascade
+      }
+      if (colorVariants.length > 0) {
+        await tx.productVariant.deleteMany({ where: { id: { in: colorVariants.map((v) => v.id) } } });
+      }
+      for (const vc of buildVariantCreate(variants)) {
+        await tx.productVariant.create({ data: { ...vc, Product: { connect: { id } } } });
+      }
     }
 
     // Stok form'dan geldiyse Inventory'yi senkronla + hareketi ledger'a yaz.

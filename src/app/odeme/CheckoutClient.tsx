@@ -439,7 +439,7 @@ export default function CheckoutClient({
           address: { ad, soyad, adres: isPickup ? "Mağazadan Teslim" : adres, ilce: isPickup ? "Merkez" : selectedIlce, sehir: isPickup ? "Isparta" : selectedIl, postaKodu },
           shippingMethod,
           paymentMethod,
-          items: items.map(i => ({ productId: i.productId, quantity: i.quantity })),
+          items: items.map(i => ({ productId: i.productId, quantity: i.quantity, variantId: i.variantId })),
           couponCode: appliedCoupon?.code,
           customerNote: customerNote.trim() || undefined,
         }),

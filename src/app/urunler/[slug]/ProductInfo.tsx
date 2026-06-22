@@ -15,8 +15,6 @@ interface Props {
   categorySlug: string;
   variants: VariantData[];
   lowStockThreshold: number;
-  /** Görsellerden türetilen renk seçenekleri (varsa swatch'lar bunlardan; renk seçimi galeriyi filtreler). */
-  imageColors?: { renk: string; hex: string }[];
   selectedColor: string | null;
   onSelectColor: (color: string | null) => void;
 }
@@ -31,9 +29,8 @@ function getAttr(attrs: Record<string, string> | null, ...keys: string[]): strin
   return undefined;
 }
 
-export default function ProductInfo({ product, categoryName, categorySlug, variants, lowStockThreshold, imageColors, selectedColor, onSelectColor }: Props) {
+export default function ProductInfo({ product, categoryName, categorySlug, variants, lowStockThreshold, selectedColor, onSelectColor }: Props) {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const useImageColors = (imageColors?.length ?? 0) > 0;
   const [qty, setQty] = useState(1);
   const { addItem, openCart } = useCartStore();
 
@@ -44,7 +41,8 @@ export default function ProductInfo({ product, categoryName, categorySlug, varia
   const toggleWishlist = useWishlistStore((s) => s.toggle);
   const liked = mounted && inWishlist;
 
-  const variantColorEntries = [...new Map(
+  // Renk seçenekleri varyantlardan gelir; her renk kendi stoğunu taşır.
+  const colorEntries = [...new Map(
     variants
       .filter(v => getAttr(v.attributes, "renk", "color"))
       .map(v => {
@@ -53,10 +51,6 @@ export default function ProductInfo({ product, categoryName, categorySlug, varia
         return [renk, { renk, hex }] as [string, { renk: string; hex: string }];
       })
   ).values()];
-
-  // Görsel renkleri varsa onları kullan (kozmetik — galeriyi filtreler, fiyat/stok'u etkilemez);
-  // yoksa eski varyant renklerine düş.
-  const colorEntries = useImageColors ? imageColors! : variantColorEntries;
 
   const sizeEntries = [...new Map(
     variants
@@ -67,28 +61,43 @@ export default function ProductInfo({ product, categoryName, categorySlug, varia
       })
   ).values()];
 
-  const activeVariant = variants.find(v => {
-    // Görsel renkleri kozmetik → varyant eşleşmesini renk kısıtlamaz (yalnızca boy).
-    const matchColor = useImageColors || !selectedColor || getAttr(v.attributes, "renk", "color") === selectedColor;
-    const matchSize = !selectedSize || getAttr(v.attributes, "boy", "size", "boyut") === selectedSize;
-    return matchColor && matchSize;
-  }) ?? null;
+  // Renkli üründe renk seçimi zorunlu — seçilmeden fiyat/stok hesaplanmaz, sepete eklenemez.
+  const colorRequired = colorEntries.length > 0;
+  const needsColor = colorRequired && !selectedColor;
 
-  const displayPrice = activeVariant ? activeVariant.price : product.price;
-  const displayStock = activeVariant ? activeVariant.stock : product.stock;
+  const activeVariant = (!colorRequired || selectedColor)
+    ? variants.find(v => {
+        const matchColor = !selectedColor || getAttr(v.attributes, "renk", "color") === selectedColor;
+        const matchSize = !selectedSize || getAttr(v.attributes, "boy", "size", "boyut") === selectedSize;
+        return matchColor && matchSize;
+      }) ?? null
+    : null;
+
+  // Fiyat her renkte aynı (ürün fiyatı); product.price zaten TRY'ye çevrilmiş.
+  const displayPrice = product.price;
+  const displayStock = needsColor ? 0 : (activeVariant ? activeVariant.stock : product.stock);
   const maxQty = displayStock > 0 ? displayStock : 99;
 
   const stockLabel =
-    displayStock === 0 ? "Stokta yok"
+    needsColor ? "Renk seçiniz"
+    : displayStock === 0 ? "Stokta yok"
     : displayStock <= lowStockThreshold ? `Son ${displayStock} ürün`
     : "Stokta";
   const stockDot =
-    displayStock === 0 ? "#e05252"
+    needsColor ? "var(--hl-text-mute)"
+    : displayStock === 0 ? "#e05252"
     : displayStock <= lowStockThreshold ? "#d4a04a"
     : "#7ab87a";
 
   const handleAddToCart = () => {
-    addItem({ ...product, price: displayPrice, stock: displayStock }, qty);
+    if (needsColor || displayStock === 0) return;
+    addItem(
+      product,
+      qty,
+      activeVariant && selectedColor
+        ? { id: activeVariant.id, label: selectedColor, stock: activeVariant.stock }
+        : undefined,
+    );
     openCart();
   };
 
@@ -284,18 +293,20 @@ export default function ProductInfo({ product, categoryName, categorySlug, varia
           {/* Cart button */}
           <button
             onClick={handleAddToCart}
-            disabled={displayStock === 0}
+            disabled={needsColor || displayStock === 0}
             style={{
               flex: 1, height: 48, borderRadius: 9, border: "none",
-              background: displayStock === 0 ? "var(--hl-line-strong)" : "var(--hl-bronze-400)",
-              color: displayStock === 0 ? "var(--hl-text-mute)" : "#0A0B09",
-              cursor: displayStock === 0 ? "not-allowed" : "pointer",
+              background: (needsColor || displayStock === 0) ? "var(--hl-line-strong)" : "var(--hl-bronze-400)",
+              color: (needsColor || displayStock === 0) ? "var(--hl-text-mute)" : "#0A0B09",
+              cursor: (needsColor || displayStock === 0) ? "not-allowed" : "pointer",
               fontFamily: "var(--hl-font-ui)", fontSize: 11, fontWeight: 700,
               letterSpacing: "0.1em", textTransform: "uppercase",
               transition: "opacity 150ms ease",
             }}
           >
-            {displayStock === 0
+            {needsColor
+              ? "Renk Seçin"
+              : displayStock === 0
               ? "Stokta Yok"
               : `Sepete Ekle · ${formatPrice(displayPrice * qty)}`}
           </button>
