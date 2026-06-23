@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db/prisma";
 import { mapProduct } from "@/lib/db/mappers";
 import { getUsdTryRate } from "@/lib/pricing";
 import { jsonLd } from "@/lib/utils";
-import { SITE_NAME } from "@/lib/constants";
+import { SITE_NAME, FREE_SHIPPING_THRESHOLD, SHIPPING_COST } from "@/lib/constants";
 import ProductCard from "@/components/product/ProductCard";
 import ProductDetailMain from "./ProductDetailMain";
 import ProductTabs from "./ProductTabs";
@@ -158,6 +158,29 @@ export default async function ProductDetailPage({ params }: Props) {
       priceValidUntil: `${new Date(now).getFullYear()}-12-31`,
       url: `${siteUrl}/urunler/${slug}`,
       seller: { "@type": "Organization", name: "Half Leaf" },
+      // Google "Satıcı girişleri" için: kargo bilgisi (eşik üstü ücretsiz) + iade politikası.
+      shippingDetails: {
+        "@type": "OfferShippingDetails",
+        shippingRate: {
+          "@type": "MonetaryAmount",
+          value: (product.price >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST).toFixed(2),
+          currency: "TRY",
+        },
+        shippingDestination: { "@type": "DefinedRegion", addressCountry: "TR" },
+        deliveryTime: {
+          "@type": "ShippingDeliveryTime",
+          handlingTime: { "@type": "QuantitativeValue", minValue: 0, maxValue: 1, unitCode: "DAY" },
+          transitTime: { "@type": "QuantitativeValue", minValue: 1, maxValue: 3, unitCode: "DAY" },
+        },
+      },
+      hasMerchantReturnPolicy: {
+        "@type": "MerchantReturnPolicy",
+        applicableCountry: "TR",
+        returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+        merchantReturnDays: 14,
+        returnMethod: "https://schema.org/ReturnByMail",
+        returnFees: "https://schema.org/ReturnShippingFees",
+      },
     },
   };
 
