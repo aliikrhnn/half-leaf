@@ -38,11 +38,15 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://halfleafstore.com";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: `${SITE_NAME} — Premium Nargile Ekipmanları`,
+    default: `${SITE_NAME} — Nargile Takımı, Lüle & Nargile Aksesuarları`,
     template: `%s | ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
-  keywords: ["nargile", "nargile ekipmanları", "cam hazne", "lüle", "nargile aksesuar", "premium nargile", "half leaf"],
+  keywords: [
+    "nargile", "nargile takımı", "nargile takımları", "lüle", "rus takım", "ithal takım",
+    "yerli takım", "çelik nargile", "cam şişe", "nargile camı", "nargile şişesi",
+    "nargile aksesuarları", "nargile kömürü", "marpuç", "premium nargile", "half leaf",
+  ],
   authors: [{ name: SITE_NAME }],
   creator: SITE_NAME,
   robots: { index: true, follow: true },
@@ -51,13 +55,13 @@ export const metadata: Metadata = {
     locale: "tr_TR",
     url: siteUrl,
     siteName: SITE_NAME,
-    title: `${SITE_NAME} — Premium Nargile Ekipmanları`,
+    title: `${SITE_NAME} — Nargile Takımı, Lüle & Nargile Aksesuarları`,
     description: SITE_DESCRIPTION,
     // OG görseli app/opengraph-image.tsx dosya kuralıyla otomatik üretilir.
   },
   twitter: {
     card: "summary_large_image",
-    title: `${SITE_NAME} — Premium Nargile Ekipmanları`,
+    title: `${SITE_NAME} — Nargile Takımı, Lüle & Nargile Aksesuarları`,
     description: SITE_DESCRIPTION,
   },
 };

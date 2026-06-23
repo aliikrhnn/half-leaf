@@ -11,6 +11,7 @@ import FeaturedSection from "@/components/sections/FeaturedSection";
 import FlashProductsSection from "@/components/sections/FlashProductsSection";
 import BrandsSection from "@/components/sections/BrandsSection";
 import ContentCards from "@/components/sections/ContentCards";
+import SeoIntro from "@/components/sections/SeoIntro";
 import TrustBar from "@/components/sections/TrustBar";
 import type { Product } from "@/lib/types";
 
@@ -181,6 +182,7 @@ export default async function HomePage() {
       <FlashProductsSection products={flashProducts} />
       <BrandsSection />
       <ContentCards />
+      <SeoIntro />
       <TrustBar />
     </div>
   );

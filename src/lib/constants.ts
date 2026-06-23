@@ -1,7 +1,7 @@
 export const SITE_NAME = "Half Leaf";
 export const SITE_TAGLINE = "Modern Nargile Ekipmanları";
 export const SITE_DESCRIPTION =
-  "Premium nargile ekipmanları, cam hazneler, lüleler ve aksesuarlar. Seçilmiş ürünler, güvenli alışveriş.";
+  "Nargile takımı, lüle, cam şişe, kömür ve nargile aksesuarları — ithal ve yerli takımlar, premium markalar. Güvenli ödeme, hızlı kargo.";
 
 export const FREE_SHIPPING_THRESHOLD = 2500;
 export const SHIPPING_COST = 150;
