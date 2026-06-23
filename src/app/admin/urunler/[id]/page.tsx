@@ -26,9 +26,11 @@ interface ProductData {
   isFeatured: boolean;
   isBestseller: boolean;
   isNew: boolean;
-  images: { url: string; alt: string; sortOrder: number }[];
+  brand?: string;
+  images: { url: string; alt: string; sortOrder: number; colorName?: string; colorHex?: string }[];
   tags: { tag: string }[];
   specs: { key: string; value: string; sortOrder: number }[];
+  colors?: { name: string; hex: string; hex2?: string; stock: number }[];
 }
 
 export default function UrunDuzenlemePage({ params }: Props) {

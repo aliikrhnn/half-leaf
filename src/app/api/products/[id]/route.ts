@@ -24,6 +24,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
       price: Number(product.basePrice),
       compareAtPrice: product.compareAtPrice != null ? Number(product.compareAtPrice) : undefined,
       priceCurrency: (product.priceCurrency ?? "TRY") as PriceCurrency,
+      brand: product.brand ?? undefined,
       colors,
     });
   } catch {
