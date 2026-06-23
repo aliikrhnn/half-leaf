@@ -152,11 +152,11 @@ export async function updateProduct(id: string, data: UpdateProductInput) {
         const a = v.attributes as Record<string, unknown> | null;
         return a != null && typeof a === "object" && a.renk != null;
       });
-      for (const v of colorVariants) {
-        if (v.Inventory) await tx.inventory.delete({ where: { id: v.Inventory.id } }); // StockMovement cascade
-      }
       if (colorVariants.length > 0) {
-        await tx.productVariant.deleteMany({ where: { id: { in: colorVariants.map((v) => v.id) } } });
+        const colorIds = colorVariants.map((v) => v.id);
+        // Envanterleri tek sorguda sil (StockMovement DB-seviyesinde cascade) → daha az round-trip.
+        await tx.inventory.deleteMany({ where: { variantId: { in: colorIds } } });
+        await tx.productVariant.deleteMany({ where: { id: { in: colorIds } } });
       }
       for (const vc of buildVariantCreate(variants)) {
         await tx.productVariant.create({ data: { ...vc, Product: { connect: { id } } } });
@@ -198,7 +198,7 @@ export async function updateProduct(id: string, data: UpdateProductInput) {
       },
       include: PRODUCT_INCLUDE,
     });
-  });
+  }, { maxWait: 15000, timeout: 30000 }); // çok renk/görselli üründe varsayılan 5sn yetmiyordu (P2028)
 }
 
 export async function deleteProduct(id: string) {
