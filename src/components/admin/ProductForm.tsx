@@ -23,6 +23,7 @@ interface ImageInput {
 interface ColorOption {
   name: string;
   hex: string;
+  hex2?: string; // çift renkli ürünler için ikinci renk (ör. Kahverengi + Gold)
   stock: number;
 }
 
@@ -73,7 +74,7 @@ interface ExistingProduct {
   images: { url: string; alt: string; sortOrder?: number; colorName?: string; colorHex?: string }[];
   tags: { tag: string }[] | string[];
   specs?: SpecInput[];
-  colors?: { name: string; hex: string; stock: number }[];
+  colors?: { name: string; hex: string; hex2?: string; stock: number }[];
 }
 
 interface ProductFormProps {
@@ -129,7 +130,7 @@ export default function ProductForm({ product }: ProductFormProps) {
   const [colors, setColors] = useState<ColorOption[]>(() => {
     // Renk seçenekleri: önce ürünün renk varyantlarından (stok dahil), yoksa görsellerden türet.
     if (product?.colors?.length) {
-      return product.colors.map((c) => ({ name: c.name, hex: c.hex, stock: c.stock }));
+      return product.colors.map((c) => ({ name: c.name, hex: c.hex, hex2: c.hex2, stock: c.stock }));
     }
     const m = new Map<string, ColorOption>();
     for (const img of product?.images ?? []) {
@@ -217,6 +218,15 @@ export default function ProductForm({ product }: ProductFormProps) {
 
   const updateColorStock = (i: number, n: number) =>
     setColors((cs) => cs.map((c, idx) => (idx === i ? { ...c, stock: Number.isFinite(n) ? Math.max(0, n) : 0 } : c)));
+
+  const addSecondColor = (i: number) =>
+    setColors((cs) => cs.map((c, idx) => (idx === i ? { ...c, hex2: "#c9a96e" } : c)));
+
+  const updateColorHex2 = (i: number, value: string) =>
+    setColors((cs) => cs.map((c, idx) => (idx === i ? { ...c, hex2: value } : c)));
+
+  const removeSecondColor = (i: number) =>
+    setColors((cs) => cs.map((c, idx) => (idx === i ? { ...c, hex2: undefined } : c)));
 
   const removeColor = (i: number) => {
     const removed = colors[i];
@@ -323,7 +333,7 @@ export default function ProductForm({ product }: ProductFormProps) {
         name: c.name.trim(),
         sku: `${form.sku}-${slugify(c.name) || `renk${i + 1}`}`,
         price: parseFloat(form.price) || 0.01,
-        attributes: { renk: c.name.trim(), renk_hex: c.hex },
+        attributes: { renk: c.name.trim(), renk_hex: c.hex, ...(c.hex2 ? { renk_hex2: c.hex2 } : {}) },
         isActive: true,
         stock: c.stock || 0,
       }));
@@ -611,32 +621,61 @@ export default function ProductForm({ product }: ProductFormProps) {
         </p>
         <div className="space-y-2">
           {colors.map((c, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <input
-                type="color"
-                value={c.hex}
-                onChange={(e) => updateColor(i, "hex", e.target.value)}
-                className="w-10 h-10 rounded border border-border-default bg-bg-surface cursor-pointer flex-shrink-0"
-                aria-label="Renk"
-              />
-              <input
-                type="text"
-                value={c.name}
-                onChange={(e) => updateColor(i, "name", e.target.value)}
-                className={inputClass + " flex-1"}
-                placeholder="Renk adı (ör. Siyah, Gold, Mavi)"
-              />
-              <input
-                type="number"
-                min="0"
-                step="1"
-                value={c.stock}
-                onChange={(e) => updateColorStock(i, parseInt(e.target.value))}
-                className={inputClass + " w-20 flex-shrink-0"}
-                placeholder="Stok"
-                aria-label="Stok"
-                title="Bu rengin stoğu"
-              />
+            <div key={i} className="flex items-start gap-2 sm:items-center">
+              {/* Renk(ler) — ikinci renk eklenebilir (çift renkli) */}
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <input
+                  type="color"
+                  value={c.hex}
+                  onChange={(e) => updateColor(i, "hex", e.target.value)}
+                  className="w-10 h-10 rounded border border-border-default bg-bg-surface cursor-pointer"
+                  aria-label="Renk"
+                  title="Birinci renk"
+                />
+                {c.hex2 !== undefined ? (
+                  <>
+                    <input
+                      type="color"
+                      value={c.hex2}
+                      onChange={(e) => updateColorHex2(i, e.target.value)}
+                      className="w-10 h-10 rounded border border-border-default bg-bg-surface cursor-pointer"
+                      aria-label="İkinci renk"
+                      title="İkinci renk"
+                    />
+                    <button type="button" onClick={() => removeSecondColor(i)} className="px-0.5 text-lg leading-none text-ink-dim hover:text-red-400" title="İkinci rengi kaldır">×</button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => addSecondColor(i)}
+                    className="w-7 h-10 rounded border border-dashed border-border-default text-ink-dim hover:text-accent hover:border-accent text-lg leading-none flex items-center justify-center"
+                    title="İkinci renk ekle (çift renkli)"
+                  >+</button>
+                )}
+              </div>
+
+              {/* Ad + stok — mobilde alt alta (ad geniş ve okunur), sm+ yan yana */}
+              <div className="flex-1 flex flex-col sm:flex-row gap-2 min-w-0">
+                <input
+                  type="text"
+                  value={c.name}
+                  onChange={(e) => updateColor(i, "name", e.target.value)}
+                  className={inputClass + " flex-1"}
+                  placeholder="Renk adı (ör. Kahverengi Gold)"
+                />
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={c.stock}
+                  onChange={(e) => updateColorStock(i, parseInt(e.target.value))}
+                  className={inputClass + " sm:w-24"}
+                  placeholder="Stok"
+                  aria-label="Stok"
+                  title="Bu rengin stoğu"
+                />
+              </div>
+
               <button type="button" onClick={() => removeColor(i)} className="p-2 text-ink-dim hover:text-red-400 transition-colors flex-shrink-0" aria-label="Rengi kaldır">
                 <Trash2 size={15} />
               </button>

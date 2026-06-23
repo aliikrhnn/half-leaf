@@ -48,7 +48,8 @@ export default function ProductInfo({ product, categoryName, categorySlug, varia
       .map(v => {
         const renk = getAttr(v.attributes, "renk", "color")!;
         const hex = getAttr(v.attributes, "renk_hex", "colorHex", "hex") ?? "#888888";
-        return [renk, { renk, hex }] as [string, { renk: string; hex: string }];
+        const hex2 = getAttr(v.attributes, "renk_hex2", "colorHex2");
+        return [renk, { renk, hex, hex2 }] as [string, { renk: string; hex: string; hex2?: string }];
       })
   ).values()];
 
@@ -180,7 +181,7 @@ export default function ProductInfo({ product, categoryName, categorySlug, varia
             Renk
           </p>
           <div style={{ display: "flex", gap: 8 }}>
-            {colorEntries.map(({ renk, hex }) => (
+            {colorEntries.map(({ renk, hex, hex2 }) => (
               <button
                 key={renk}
                 onClick={() => onSelectColor(selectedColor === renk ? null : renk)}
@@ -189,7 +190,8 @@ export default function ProductInfo({ product, categoryName, categorySlug, varia
                 aria-pressed={selectedColor === renk}
                 style={{
                   width: 32, height: 32, borderRadius: "50%",
-                  background: hex, padding: 0, cursor: "pointer",
+                  background: hex2 ? `linear-gradient(135deg, ${hex} 0 50%, ${hex2} 50% 100%)` : hex,
+                  padding: 0, cursor: "pointer",
                   border: selectedColor === renk
                     ? "2px solid var(--hl-bronze-400)"
                     : "2px solid var(--hl-line-strong)",

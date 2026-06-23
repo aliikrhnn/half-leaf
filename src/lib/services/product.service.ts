@@ -67,11 +67,16 @@ export async function getProductColorVariants(id: string) {
   });
   return variants
     .map((v) => {
-      const a = v.attributes as Record<string, string> | null;
+      const a = v.attributes as Record<string, string | undefined> | null;
       if (!a?.renk) return null;
-      return { name: a.renk, hex: a.renk_hex ?? a.colorHex ?? a.hex ?? "#888888", stock: v.Inventory?.quantity ?? 0 };
+      return {
+        name: a.renk,
+        hex: a.renk_hex ?? a.colorHex ?? a.hex ?? "#888888",
+        hex2: a.renk_hex2 ?? a.colorHex2,
+        stock: v.Inventory?.quantity ?? 0,
+      };
     })
-    .filter((c): c is { name: string; hex: string; stock: number } => c != null);
+    .filter((c): c is { name: string; hex: string; hex2: string | undefined; stock: number } => c != null);
 }
 
 /**
