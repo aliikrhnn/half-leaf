@@ -15,6 +15,8 @@ interface Props {
   categorySlug: string;
   variants: VariantData[];
   lowStockThreshold: number;
+  /** Eski (varyantsız) ürünler için görsellerden türetilen renkler — kozmetik fallback. */
+  imageColors?: { renk: string; hex: string }[];
   selectedColor: string | null;
   onSelectColor: (color: string | null) => void;
 }
@@ -29,7 +31,7 @@ function getAttr(attrs: Record<string, string> | null, ...keys: string[]): strin
   return undefined;
 }
 
-export default function ProductInfo({ product, categoryName, categorySlug, variants, lowStockThreshold, selectedColor, onSelectColor }: Props) {
+export default function ProductInfo({ product, categoryName, categorySlug, variants, lowStockThreshold, imageColors, selectedColor, onSelectColor }: Props) {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
   const { addItem, openCart } = useCartStore();
@@ -41,8 +43,8 @@ export default function ProductInfo({ product, categoryName, categorySlug, varia
   const toggleWishlist = useWishlistStore((s) => s.toggle);
   const liked = mounted && inWishlist;
 
-  // Renk seçenekleri varyantlardan gelir; her renk kendi stoğunu taşır.
-  const colorEntries = [...new Map(
+  // Renk seçenekleri önce varyantlardan (her renk kendi stoğunu taşır).
+  const variantColorEntries = [...new Map(
     variants
       .filter(v => getAttr(v.attributes, "renk", "color"))
       .map(v => {
@@ -53,6 +55,12 @@ export default function ProductInfo({ product, categoryName, categorySlug, varia
       })
   ).values()];
 
+  // Varyant rengi yoksa görsellerden gelen renklere düş (eski ürünler — kozmetik).
+  const useVariantColors = variantColorEntries.length > 0;
+  const colorEntries: { renk: string; hex: string; hex2?: string }[] = useVariantColors
+    ? variantColorEntries
+    : (imageColors ?? []).map(c => ({ renk: c.renk, hex: c.hex, hex2: undefined }));
+
   const sizeEntries = [...new Map(
     variants
       .filter(v => getAttr(v.attributes, "boy", "size", "boyut"))
@@ -62,8 +70,8 @@ export default function ProductInfo({ product, categoryName, categorySlug, varia
       })
   ).values()];
 
-  // Renkli üründe renk seçimi zorunlu — seçilmeden fiyat/stok hesaplanmaz, sepete eklenemez.
-  const colorRequired = colorEntries.length > 0;
+  // Stoklu (varyant) renkli üründe renk seçimi zorunlu; kozmetik (görsel) renklerde değil.
+  const colorRequired = useVariantColors;
   const needsColor = colorRequired && !selectedColor;
 
   const activeVariant = (!colorRequired || selectedColor)

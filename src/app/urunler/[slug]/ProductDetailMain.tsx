@@ -28,6 +28,16 @@ export default function ProductDetailMain({
 }: Props) {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
 
+  // Eski (varyantsız) ürünler için görsellerden renk seçenekleri — varyant rengi
+  // yoksa ProductInfo bunlara geri düşer (kozmetik: galeriyi filtreler).
+  const imageColorMap = new Map<string, { renk: string; hex: string }>();
+  for (const img of product.images) {
+    if (img.colorName && !imageColorMap.has(img.colorName)) {
+      imageColorMap.set(img.colorName, { renk: img.colorName, hex: img.colorHex ?? "#888888" });
+    }
+  }
+  const imageColors = [...imageColorMap.values()];
+
   return (
     <div
       style={{
@@ -51,6 +61,7 @@ export default function ProductDetailMain({
         categorySlug={categorySlug}
         variants={variants}
         lowStockThreshold={lowStockThreshold}
+        imageColors={imageColors}
         selectedColor={selectedColor}
         onSelectColor={setSelectedColor}
       />
