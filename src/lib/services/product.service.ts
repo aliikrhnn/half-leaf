@@ -83,11 +83,19 @@ export async function getProductColorVariants(id: string) {
  * Varyant verisini (stok dahil) Prisma nested-create şekline çevirir.
  * Her varyant kendi Inventory'sini alır; başlangıç stoğu varsa ledger'a GIRIS yazılır.
  */
-function buildVariantCreate(variants: CreateProductInput["variants"]) {
+function buildVariantCreate(variants: CreateProductInput["variants"], reserved?: Set<string>) {
+  const used = new Set<string>(reserved ?? []);
   return (variants ?? []).map((v) => {
     const { stock: vStock = 0, ...vRest } = v;
+    // sku çakışırsa (iki renk aynı slug'a çözülüyorsa ya da DB'de aynı sku varsa)
+    // otomatik benzersizleştir → "Bu SKU zaten kullanılıyor" (P2002) hatasını önler.
+    let sku = vRest.sku;
+    let n = 2;
+    while (used.has(sku)) sku = `${vRest.sku}-${n++}`;
+    used.add(sku);
     return {
       ...vRest,
+      sku,
       attributes: vRest.attributes as Prisma.InputJsonValue | undefined,
       Inventory: {
         create: {
@@ -110,6 +118,11 @@ export async function createProduct(data: CreateProductInput) {
     originalUrl: img.url,
   }));
 
+  // Mevcut tüm varyant sku'ları — yeni renk varyantları bunlarla çakışmasın.
+  const reservedSkus = variants?.length
+    ? new Set((await prisma.productVariant.findMany({ select: { sku: true } })).map((v) => v.sku))
+    : undefined;
+
   return prisma.product.create({
     data: {
       ...rest,
@@ -124,7 +137,7 @@ export async function createProduct(data: CreateProductInput) {
         },
       },
       ...(imagesWithOriginal.length && { ProductImage: { create: imagesWithOriginal } }),
-      ...(variants?.length && { ProductVariant: { create: buildVariantCreate(variants) } }),
+      ...(variants?.length && { ProductVariant: { create: buildVariantCreate(variants, reservedSkus) } }),
     },
     include: PRODUCT_INCLUDE,
   });
@@ -158,7 +171,9 @@ export async function updateProduct(id: string, data: UpdateProductInput) {
         await tx.inventory.deleteMany({ where: { variantId: { in: colorIds } } });
         await tx.productVariant.deleteMany({ where: { id: { in: colorIds } } });
       }
-      for (const vc of buildVariantCreate(variants)) {
+      // Silinenler hariç kalan tüm varyant sku'ları — yeni renkler bunlarla çakışmasın (P2002 önle).
+      const reserved = new Set((await tx.productVariant.findMany({ select: { sku: true } })).map((v) => v.sku));
+      for (const vc of buildVariantCreate(variants, reserved)) {
         await tx.productVariant.create({ data: { ...vc, Product: { connect: { id } } } });
       }
     }
