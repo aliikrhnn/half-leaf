@@ -5,24 +5,24 @@ import Link from "next/link";
 import Image from "next/image";
 
 export interface HeroSlideData {
-  id:       string;
-  title:    string;
-  subtitle: string | null;
-  eyebrow:  string | null;
-  ctaLabel: string;
-  ctaHref:  string;
-  image:    string | null;
+  id:          string;
+  title:       string;
+  subtitle:    string | null;
+  eyebrow:     string | null;
+  ctaLabel:    string;
+  ctaHref:     string;
+  image:       string | null;
   mobileImage: string | null;
 }
 
-const AUTO_MS = 6000;
+const AUTO_MS = 6500;
 
 interface Props { slides: HeroSlideData[]; }
 
 export default function Hero({ slides }: Props) {
-  const [idx,          setIdx]    = useState(0);
-  const [enterCount,   setEnter]  = useState(0);
-  const [paused,       setPaused] = useState(false);
+  const [idx,           setIdx]   = useState(0);
+  const [enterCount,    setEnter] = useState(0);
+  const [paused,        setPaused] = useState(false);
   const [reducedMotion, setRM]    = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchX   = useRef<number | null>(null);
@@ -36,7 +36,7 @@ export default function Hero({ slides }: Props) {
     return () => mq.removeEventListener("change", cb);
   }, []);
 
-  const count = slides.length;
+  const count  = slides.length;
   const goNext = useCallback(() => { setIdx(i => (i + 1) % count); setEnter(c => c + 1); }, [count]);
   const goPrev = useCallback(() => { setIdx(i => (i - 1 + count) % count); setEnter(c => c + 1); }, [count]);
   const goTo   = useCallback((n: number) => { setIdx(n); setEnter(c => c + 1); }, []);
@@ -54,26 +54,24 @@ export default function Hero({ slides }: Props) {
     touchX.current = null;
     if (Math.abs(dx) < 44) return;
     setPaused(true);
-    if (dx < 0) { goNext(); } else { goPrev(); }
+    if (dx < 0) goNext(); else goPrev();
   };
 
   if (count === 0) return null;
+  const cur = slides[idx];
 
   return (
     <section
       aria-label="Ana sayfa slayt gösterisi"
       aria-roledescription="carousel"
       className="hl-hero-section"
-      style={{
-        position: "relative",
-        overflow: "hidden",
-      }}
+      style={{ position: "relative", overflow: "hidden" }}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
-      {/* Slide stack */}
+      {/* ── Slide stack (images crossfade) ── */}
       <div aria-live="polite" aria-atomic="true" style={{ position: "absolute", inset: 0 }}>
         {slides.map((s, i) => {
           const active = i === idx;
@@ -88,11 +86,9 @@ export default function Hero({ slides }: Props) {
                 position: "absolute",
                 inset: 0,
                 opacity: active ? 1 : 0,
-                transition: reducedMotion ? "none" : "opacity 800ms cubic-bezier(0.22,0.61,0.36,1)",
-                pointerEvents: active ? "auto" : "none",
+                transition: reducedMotion ? "none" : "opacity 900ms cubic-bezier(0.22,0.61,0.36,1)",
               }}
             >
-              {/* Background image — ayrı mobil görseli varsa telefonda o kullanılır */}
               <div aria-hidden style={{ position: "absolute", inset: 0 }}>
                 {s.image || s.mobileImage ? (
                   <>
@@ -118,246 +114,106 @@ export default function Hero({ slides }: Props) {
                     )}
                   </>
                 ) : (
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      background:
-                        "radial-gradient(80% 70% at 65% 40%, rgba(110,122,85,0.10), transparent 60%)," +
-                        "radial-gradient(50% 50% at 20% 70%, rgba(182,137,80,0.07), transparent 50%)," +
-                        "var(--hl-bg)",
-                    }}
-                  />
+                  <div style={{
+                    position: "absolute", inset: 0,
+                    background:
+                      "radial-gradient(80% 70% at 65% 40%, rgba(110,122,85,0.10), transparent 60%)," +
+                      "radial-gradient(50% 50% at 20% 70%, rgba(182,137,80,0.07), transparent 50%)," +
+                      "var(--hl-bg)",
+                  }} />
                 )}
-              </div>
-
-              {/* Gradient overlay — left vignette + bottom lift */}
-              <div
-                aria-hidden
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background:
-                    "linear-gradient(to right, rgba(10,10,8,0.78) 0%, rgba(10,10,8,0.48) 45%, rgba(10,10,8,0.08) 100%)," +
-                    "linear-gradient(to top, rgba(10,10,8,0.72) 0%, rgba(10,10,8,0.18) 45%, transparent 100%)",
-                  pointerEvents: "none",
-                }}
-              />
-
-              {/* Text block */}
-              <div
-                className="hl-hero-text-block"
-                style={{
-                  position: "absolute",
-                  bottom: "clamp(80px, 12vh, 130px)",
-                  left: "clamp(20px, 8vw, 100px)",
-                  maxWidth: 640,
-                }}
-              >
-                <div
-                  key={active ? `text-${enterCount}` : `text-idle-${i}`}
-                  style={{
-                    animation: active && !reducedMotion
-                      ? "hl-hero-text-enter 700ms cubic-bezier(0.22,0.61,0.36,1) both"
-                      : "none",
-                  }}
-                >
-                  {s.eyebrow && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
-                      <span aria-hidden style={{ width: 34, height: 1, background: "var(--hl-bronze-400)", flexShrink: 0 }} />
-                      <span className="hl-eyebrow" style={{ color: "var(--hl-bronze-300)", letterSpacing: "0.14em" }}>
-                        {s.eyebrow}
-                      </span>
-                    </div>
-                  )}
-
-                  <h1
-                    className="hl-display"
-                    style={{
-                      fontSize: "clamp(44px, 6vw, 100px)",
-                      lineHeight: 1.0,
-                      letterSpacing: "-0.03em",
-                      fontWeight: 400,
-                      margin: 0,
-                      color: "#ECEAE2",
-                      fontStyle: "italic",
-                    }}
-                  >
-                    {s.title}
-                  </h1>
-
-                  {s.subtitle && (
-                    <p
-                      style={{
-                        marginTop: 16,
-                        fontSize: "clamp(14px, 1.1vw, 16px)",
-                        lineHeight: 1.75,
-                        color: "rgba(236,234,226,0.70)",
-                        maxWidth: 480,
-                        fontFamily: "var(--hl-font-ui)",
-                      }}
-                    >
-                      {s.subtitle}
-                    </p>
-                  )}
-
-                  <div style={{ marginTop: 28 }}>
-                    <Link href={s.ctaHref}>
-                      <HLButton>{s.ctaLabel}</HLButton>
-                    </Link>
-                  </div>
-                </div>
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Arrows — desktop only (mobile uses touch swipe) */}
-      {count > 1 && (
-        <div className="hidden lg:contents">
-          <button
-            onClick={() => { setPaused(true); goPrev(); }}
-            aria-label="Önceki slayt"
-            style={arrowStyle("left")}
-            onMouseEnter={e => Object.assign((e.currentTarget as HTMLElement).style, arrowHover)}
-            onMouseLeave={e => Object.assign((e.currentTarget as HTMLElement).style, arrowStyle("left"))}
-          >
-            <ChevronLeft />
-          </button>
-          <button
-            onClick={() => { setPaused(true); goNext(); }}
-            aria-label="Sonraki slayt"
-            style={arrowStyle("right")}
-            onMouseEnter={e => Object.assign((e.currentTarget as HTMLElement).style, arrowHover)}
-            onMouseLeave={e => Object.assign((e.currentTarget as HTMLElement).style, arrowStyle("right"))}
-          >
-            <ChevronRight />
-          </button>
-        </div>
-      )}
+      {/* ── Cinematic scrim (okunabilirlik + derinlik) ── */}
+      <div aria-hidden className="hl-hero-scrim" />
 
-      {/* Bottom controls */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 32,
-          left: "clamp(20px, 8vw, 100px)",
-          display: "flex",
-          alignItems: "center",
-          gap: 16,
-          zIndex: 10,
-        }}
-      >
-        <span
-          style={{
-            fontFamily: "var(--hl-font-ui)",
-            fontSize: 11,
-            letterSpacing: "0.1em",
-            color: "rgba(236,234,226,0.45)",
-          }}
+      {/* ── Content (aktif slayt) ── */}
+      <div className="hl-hero-content">
+        <div
+          key={`hero-text-${enterCount}`}
+          style={{ animation: reducedMotion ? "none" : "hl-hero-text-enter 700ms cubic-bezier(0.22,0.61,0.36,1) both" }}
         >
-          <span style={{ color: "var(--hl-bronze-400)", fontWeight: 600 }}>
-            {String(idx + 1).padStart(2, "0")}
+          {cur.eyebrow && (
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
+              <span aria-hidden style={{ width: 38, height: 1, background: "var(--hl-bronze-400)", flexShrink: 0 }} />
+              <span className="hl-eyebrow" style={{ color: "var(--hl-bronze-300)", letterSpacing: "0.16em" }}>
+                {cur.eyebrow}
+              </span>
+            </div>
+          )}
+
+          <h1 className="hl-display hl-hero-title">{cur.title}</h1>
+
+          {cur.subtitle && <p className="hl-hero-subtitle">{cur.subtitle}</p>}
+
+          <div className="hl-hero-ctas">
+            <Link href={cur.ctaHref} className="hl-hero-cta">
+              {cur.ctaLabel}
+              <svg className="hl-hero-cta-arrow" width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M5 12h14m-6-6 6 6-6 6" />
+              </svg>
+            </Link>
+            {cur.ctaHref !== "/urunler" && (
+              <Link href="/urunler" className="hl-hero-ghost">Tüm Koleksiyon</Link>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Alt kontrol çubuğu ── */}
+      <div className="hl-hero-bar">
+        <div className="hl-hero-bar-left">
+          <span className="hl-hero-counter">
+            <span style={{ color: "var(--hl-bronze-400)", fontWeight: 700 }}>{String(idx + 1).padStart(2, "0")}</span>
+            <span style={{ opacity: 0.4 }}> / {String(count).padStart(2, "0")}</span>
           </span>
-          {" / "}
-          {String(count).padStart(2, "0")}
-        </span>
+          {count > 1 && (
+            <div role="tablist" aria-label="Slayt göstergeleri" style={{ display: "flex", gap: 7 }}>
+              {slides.map((s, i) => (
+                <button
+                  key={s.id}
+                  role="tab"
+                  aria-selected={i === idx}
+                  aria-label={`Slayt ${i + 1}`}
+                  onClick={() => { setPaused(true); goTo(i); }}
+                  className="hl-hero-dot"
+                  style={{
+                    width: i === idx ? 26 : 7,
+                    background: i === idx ? "var(--hl-bronze-400)" : "rgba(236,234,226,0.32)",
+                    transition: reducedMotion ? "none" : "width 320ms var(--hl-ease), background 320ms ease",
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
 
         {count > 1 && (
-          <div role="tablist" aria-label="Slayt göstergeleri" style={{ display: "flex", gap: 6 }}>
-            {slides.map((s, i) => (
-              <button
-                key={s.id}
-                role="tab"
-                aria-selected={i === idx}
-                aria-label={`Slayt ${i + 1}`}
-                onClick={() => { setPaused(true); goTo(i); }}
-                style={{
-                  width: i === idx ? 24 : 6,
-                  height: 6,
-                  borderRadius: 3,
-                  border: "none",
-                  padding: 0,
-                  cursor: "pointer",
-                  background: i === idx ? "var(--hl-bronze-400)" : "rgba(182,137,80,0.3)",
-                  transition: reducedMotion ? "none" : "width 300ms var(--hl-ease), background 300ms ease",
-                }}
-              />
-            ))}
+          <div className="hl-hero-bar-arrows">
+            <button onClick={() => { setPaused(true); goPrev(); }} aria-label="Önceki slayt" className="hl-hero-arrow">
+              <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+            </button>
+            <button onClick={() => { setPaused(true); goNext(); }} aria-label="Sonraki slayt" className="hl-hero-arrow">
+              <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
           </div>
         )}
       </div>
 
-      {/* Progress bar */}
+      {/* ── İnce ilerleme çizgisi ── */}
       {!paused && !reducedMotion && count > 1 && (
-        <div aria-hidden style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 2, background: "rgba(182,137,80,0.08)" }}>
-          <div
-            key={`pb-${idx}`}
-            style={{
-              height: "100%",
-              background: "var(--hl-bronze-400)",
-              width: "0%",
-              animation: `hl-progress ${AUTO_MS}ms linear forwards`,
-            }}
-          />
+        <div aria-hidden style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 2, background: "rgba(182,137,80,0.10)", zIndex: 3 }}>
+          <div key={`pb-${idx}`} style={{ height: "100%", background: "var(--hl-bronze-400)", width: "0%", animation: `hl-progress ${AUTO_MS}ms linear forwards` }} />
         </div>
       )}
     </section>
-  );
-}
-
-/* ─── Arrow styles ─── */
-const arrowBase: React.CSSProperties = {
-  position: "absolute",
-  top: "50%",
-  transform: "translateY(-50%)",
-  zIndex: 10,
-  width: 44,
-  height: 44,
-  borderRadius: "50%",
-  border: "1px solid rgba(255,255,255,0.15)",
-  background: "rgba(10,10,8,0.5)",
-  backdropFilter: "blur(12px)",
-  WebkitBackdropFilter: "blur(12px)",
-  color: "rgba(236,234,226,0.8)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  cursor: "pointer",
-  transition: "border-color 200ms ease, background 200ms ease",
-};
-const arrowHover: React.CSSProperties = {
-  borderColor: "rgba(182,137,80,0.5)",
-  background: "rgba(182,137,80,0.15)",
-};
-function arrowStyle(side: "left" | "right"): React.CSSProperties {
-  return { ...arrowBase, [side]: "clamp(8px, 2vw, 24px)" };
-}
-
-function ChevronLeft() {
-  return (
-    <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <polyline points="15 18 9 12 15 6" />
-    </svg>
-  );
-}
-function ChevronRight() {
-  return (
-    <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <polyline points="9 18 15 12 9 6" />
-    </svg>
-  );
-}
-
-function HLButton({ children }: { children: React.ReactNode }) {
-  // Link içinde olduğu için <span> (anchor tıklanabilir öğedir). Stil + hover globals.css'te.
-  return (
-    <span className="hl-hero-cta">
-      {children}
-      <svg className="hl-hero-cta-arrow" width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <path d="M5 12h14m-6-6 6 6-6 6" />
-      </svg>
-    </span>
   );
 }
