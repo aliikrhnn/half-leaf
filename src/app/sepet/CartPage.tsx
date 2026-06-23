@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ShoppingBag, Package, X, Check, Lock } from "lucide-react";
 import { useCartStore } from "@/store/cart";
+import { useSiteFlags } from "@/components/layout/SiteFlags";
 import { formatPrice } from "@/lib/utils";
 import { FREE_SHIPPING_THRESHOLD, SHIPPING_COST } from "@/lib/constants";
 
@@ -139,6 +140,7 @@ export default function CartPage() {
   const couponRef = useRef<HTMLInputElement>(null);
 
   const { items, removeItem, updateQuantity, note, setNote } = useCartStore();
+  const { giftBoxEnabled } = useSiteFlags();
 
   useEffect(() => {
     useCartStore.persist.rehydrate();
@@ -376,14 +378,16 @@ export default function CartPage() {
 
                   {/* Sub-actions */}
                   <div className="hl-cart-sub-actions" style={{ marginTop: 10, paddingLeft: 86, display: "flex", gap: 16 }}>
-                    <button style={{
-                      fontFamily: "var(--hl-font-ui)", fontSize: 10, fontWeight: 600,
-                      color: "var(--hl-bronze-400)", background: "none", border: "none",
-                      cursor: "pointer", letterSpacing: "0.04em", padding: 0,
-                      textDecoration: "underline", textUnderlineOffset: 3,
-                    }}>
-                      Hediye paketi ekle
-                    </button>
+                    {giftBoxEnabled && (
+                      <button style={{
+                        fontFamily: "var(--hl-font-ui)", fontSize: 10, fontWeight: 600,
+                        color: "var(--hl-bronze-400)", background: "none", border: "none",
+                        cursor: "pointer", letterSpacing: "0.04em", padding: 0,
+                        textDecoration: "underline", textUnderlineOffset: 3,
+                      }}>
+                        Hediye paketi ekle
+                      </button>
+                    )}
                     <span style={{
                       fontFamily: "var(--hl-font-ui)", fontSize: 10, fontWeight: 600,
                       color: "var(--hl-text-mute)", letterSpacing: "0.04em",
@@ -397,7 +401,8 @@ export default function CartPage() {
             );
           })}
 
-          {/* Gift box toggle */}
+          {/* Gift box toggle — admin'den açık/kapalı */}
+          {giftBoxEnabled && (
           <div style={{
             margin: 16, borderRadius: "var(--hl-r-md)",
             background: "var(--hl-olive-800)", border: "1px solid var(--hl-line)",
@@ -423,6 +428,7 @@ export default function CartPage() {
             </div>
             <Toggle on={giftBox} onChange={() => setGiftBox(v => !v)} />
           </div>
+          )}
 
           {/* Sipariş notu */}
           <div style={{ margin: 16, marginTop: 0 }}>

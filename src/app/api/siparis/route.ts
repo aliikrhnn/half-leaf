@@ -402,6 +402,15 @@ export async function POST(req: NextRequest) {
       } catch { /* izin hatası siparişi etkilemez */ }
     }
 
+    // Sipariş tamamlandı → kullanıcının AKTIF sepetini siparişe dönüştü olarak işaretle
+    // (terk-edilen-sepet hatırlatma cron'u bu sepeti atlasın).
+    try {
+      await prisma.cart.updateMany({
+        where: { userId: result.userId, status: "AKTIF" },
+        data: { status: "SIPARISE_DONUSTU" },
+      });
+    } catch { /* sepet işaretleme hatası siparişi etkilemez */ }
+
     // paymentMethod istemciye geri döner: kart ise PayTR iframe sayfasına yönlendirilir.
     return NextResponse.json({ orderNumber: result.orderNumber, paymentMethod });
   } catch (err) {

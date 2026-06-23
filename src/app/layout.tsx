@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Cormorant_Garamond, Manrope } from "next/font/google";
 import "./globals.css";
 import AppShell from "@/components/layout/AppShell";
+import { SiteFlagsProvider } from "@/components/layout/SiteFlags";
 import AgeGate from "@/components/layout/AgeGate";
 import Footer from "@/components/layout/Footer";
 import { SITE_NAME, SITE_DESCRIPTION, CONTACT_EMAIL, CONTACT_PHONE, SOCIAL_LINKS } from "@/lib/constants";
@@ -165,15 +166,19 @@ async function getNavCategories(): Promise<NavCategory[]> {
   }
 }
 
-async function getAnnouncementMessages(): Promise<string[]> {
+async function getSiteData(): Promise<{ announcementMessages: string[]; giftBoxEnabled: boolean; whatsappNumber: string | null }> {
   try {
     const s = await prisma.siteSettings.findUnique({
       where:  { id: "site" },
-      select: { announcementMessages: true },
+      select: { announcementMessages: true, giftBoxEnabled: true, whatsappNumber: true },
     });
-    return s?.announcementMessages ?? [];
+    return {
+      announcementMessages: s?.announcementMessages ?? [],
+      giftBoxEnabled: s?.giftBoxEnabled ?? true,
+      whatsappNumber: s?.whatsappNumber ?? CONTACT_PHONE,
+    };
   } catch {
-    return [];
+    return { announcementMessages: [], giftBoxEnabled: true, whatsappNumber: CONTACT_PHONE };
   }
 }
 
@@ -182,10 +187,11 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [navCategories, announcementMessages] = await Promise.all([
+  const [navCategories, siteData] = await Promise.all([
     getNavCategories(),
-    getAnnouncementMessages(),
+    getSiteData(),
   ]);
+  const { announcementMessages, giftBoxEnabled, whatsappNumber } = siteData;
 
   return (
     <html lang="tr" className={`scroll-smooth ${inter.variable} ${cormorant.variable} ${manrope.variable}`}>
@@ -210,7 +216,9 @@ export default async function RootLayout({
           }}
         />
         <AgeGate />
-        <AppShell footer={<Footer />} navCategories={navCategories} announcementMessages={announcementMessages}>{children}</AppShell>
+        <SiteFlagsProvider flags={{ giftBoxEnabled, whatsappNumber }}>
+          <AppShell footer={<Footer />} navCategories={navCategories} announcementMessages={announcementMessages}>{children}</AppShell>
+        </SiteFlagsProvider>
       </body>
     </html>
   );

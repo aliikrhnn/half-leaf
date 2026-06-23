@@ -7,6 +7,7 @@ import { requireAdmin, isResponse } from "@/lib/auth/middleware";
 const UpdateSchema = z.object({
   maintenanceMode:       z.boolean().optional(),
   ecommerceEnabled:      z.boolean().optional(),
+  giftBoxEnabled:        z.boolean().optional(),
   freeShippingThreshold: z.number().min(0).optional(),
   shippingCost:          z.number().min(0).optional(),
   bankTransferEnabled:   z.boolean().optional(),

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Heart, Gift, Truck, ShieldCheck, Package } from "lucide-react";
 import { useCartStore } from "@/store/cart";
 import { useWishlistStore } from "@/store/wishlist";
+import { useSiteFlags } from "@/components/layout/SiteFlags";
 import { formatPrice } from "@/lib/utils";
 import { FREE_SHIPPING_THRESHOLD } from "@/lib/constants";
 import type { Product, VariantData } from "@/lib/types";
@@ -35,6 +36,7 @@ export default function ProductInfo({ product, categoryName, categorySlug, varia
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
   const { addItem, openCart } = useCartStore();
+  const { giftBoxEnabled } = useSiteFlags();
 
   const [mounted, setMounted] = useState(false);
   // eslint-disable-next-line react-hooks/set-state-in-effect -- hydration guard: must run after SSR mount
@@ -347,21 +349,23 @@ export default function ProductInfo({ product, categoryName, categorySlug, varia
           </button>
         </div>
 
-        {/* Gift button */}
-        <button
-          style={{
-            width: "100%", height: 44, borderRadius: 9,
-            background: "var(--hl-olive-700)",
-            border: "1px solid var(--hl-line)",
-            color: "var(--hl-text-soft)", cursor: "pointer",
-            fontFamily: "var(--hl-font-ui)", fontSize: 10, fontWeight: 700,
-            letterSpacing: "0.1em", textTransform: "uppercase",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-          }}
-        >
-          <Gift size={12} />
-          Hediye Paketi Olarak Gönder
-        </button>
+        {/* Gift button — admin'den açık/kapalı */}
+        {giftBoxEnabled && (
+          <button
+            style={{
+              width: "100%", height: 44, borderRadius: 9,
+              background: "var(--hl-olive-700)",
+              border: "1px solid var(--hl-line)",
+              color: "var(--hl-text-soft)", cursor: "pointer",
+              fontFamily: "var(--hl-font-ui)", fontSize: 10, fontWeight: 700,
+              letterSpacing: "0.1em", textTransform: "uppercase",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+            }}
+          >
+            <Gift size={12} />
+            Hediye Paketi Olarak Gönder
+          </button>
+        )}
       </div>
 
       {/* Info rows */}

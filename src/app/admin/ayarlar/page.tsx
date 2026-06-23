@@ -8,6 +8,7 @@ import AdminHeader from "@/components/admin/layout/AdminHeader";
 type SiteSettings = {
   maintenanceMode: boolean;
   ecommerceEnabled: boolean;
+  giftBoxEnabled: boolean;
   freeShippingThreshold: number;
   shippingCost: number;
   bankTransferEnabled: boolean;
@@ -457,6 +458,17 @@ export default function AdminAyarlarPage() {
                       className="w-full bg-bg-elevated border border-border-default text-ink rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-accent transition-colors"
                     />
                   </div>
+                </div>
+              </div>
+
+              <div className="bg-bg-surface border border-border-default rounded-xl p-5 space-y-4">
+                <h2 className="text-sm font-semibold text-ink">Hediye Kutusu</h2>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-ink">Ahşap Hediye Kutusu Seçeneği</p>
+                    <p className="text-xs text-ink-dim mt-0.5">Aktifken ürün ve sepet sayfasında “hediye kutusu” seçeneği müşteriye gösterilir.</p>
+                  </div>
+                  <Toggle checked={settings.giftBoxEnabled} onChange={v => update("giftBoxEnabled", v)} />
                 </div>
               </div>
 

@@ -79,6 +79,53 @@ export function orderConfirmationEmail(data: OrderEmailData): { subject: string;
   return { subject: `Siparişiniz alındı · ${data.orderNumber}`, html: shell("Teşekkürler! Siparişiniz alındı", body) };
 }
 
+export interface AbandonedCartEmailData {
+  firstName?: string | null;
+  items: ReadonlyArray<{ name: string; quantity: number; lineTotal: number; image?: string | null }>;
+  total: number;
+}
+
+/** Terk edilen sepet hatırlatma e-postası — reklam diliyle, "fırsatı kaçırma" tonu. */
+export function abandonedCartEmail(data: AbandonedCartEmailData): { subject: string; html: string } {
+  const cartUrl = `${SITE_URL}/sepet`;
+  const hi = data.firstName?.trim() ? `${escapeHtml(data.firstName.trim())}, ` : "";
+
+  const rows = data.items
+    .map((i) => {
+      const thumb = i.image
+        ? `<td width="56" style="padding:0 12px 0 0;vertical-align:middle;">
+             <img src="${escapeHtml(i.image)}" width="56" height="56" alt="" style="display:block;width:56px;height:56px;border-radius:10px;object-fit:cover;border:1px solid #ece7db;">
+           </td>`
+        : "";
+      return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-bottom:1px solid #f0ede5;">
+        <tr>
+          ${thumb}
+          <td style="padding:10px 0;vertical-align:middle;font-size:14px;color:${INK};">
+            ${escapeHtml(i.name)} <span style="color:${MUTE};">× ${i.quantity}</span>
+          </td>
+          <td style="padding:10px 0;vertical-align:middle;text-align:right;font-size:14px;font-weight:700;color:${BRONZE};white-space:nowrap;">${formatPrice(i.lineTotal)}</td>
+        </tr>
+      </table>`;
+    })
+    .join("");
+
+  const body = `
+    <p style="font-size:15px;color:${INK};line-height:1.7;margin:0 0 6px;">${hi}sepetinde harika ürünler bıraktın 🌿</p>
+    <p style="font-size:14px;color:${MUTE};line-height:1.7;margin:0 0 18px;">Seçtiklerin hâlâ seni bekliyor — ama stoklar hızla eriyor. Siparişini tamamlamak yalnızca birkaç saniye sürer.</p>
+    ${rows}
+    <div style="display:flex;justify-content:space-between;padding:14px 0 0;margin-top:6px;border-top:2px solid #ece7db;">
+      <span style="font-size:15px;font-weight:700;color:${INK};">Sepet Toplamı</span>
+      <span style="font-size:18px;font-weight:800;color:${BRONZE};">${formatPrice(data.total)}</span>
+    </div>
+    <div style="text-align:center;margin-top:24px;">${button(cartUrl, "Sepetime Geri Dön")}</div>
+    <p style="text-align:center;font-size:12px;color:${MUTE};margin:16px 0 0;line-height:1.6;">Ücretsiz kargo ve güvenli ödeme · Aklında soru varsa WhatsApp&apos;tan bize yazabilirsin.</p>
+  `;
+  return {
+    subject: "Sepetinde unuttuğun ürünler var 🌿 — fırsatı kaçırma",
+    html: shell("Sepetin seni bekliyor", body),
+  };
+}
+
 export interface ShippingEmailData {
   orderNumber: string;
   provider: string;
