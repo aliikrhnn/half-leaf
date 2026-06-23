@@ -119,6 +119,7 @@ async function getHeroSlides(): Promise<HeroSlideData[]> {
       ctaLabel:   r.ctaLabel,
       ctaHref:    r.ctaHref,
       image:      r.image,
+      mobileImage: r.mobileImage,
     }));
   } catch {
     return [];

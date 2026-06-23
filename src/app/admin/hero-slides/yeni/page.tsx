@@ -17,6 +17,7 @@ export default function YeniHeroSlidePage() {
   const [ctaLabel,  setCtaLabel]  = useState("Keşfet");
   const [ctaHref,   setCtaHref]   = useState("/urunler");
   const [image,     setImage]     = useState("");
+  const [mobileImage, setMobileImage] = useState("");
   const [sortOrder, setSortOrder] = useState("0");
   const [isActive,  setIsActive]  = useState(true);
   const [startsAt,  setStartsAt]  = useState("");
@@ -38,6 +39,7 @@ export default function YeniHeroSlidePage() {
       ...(subtitle && { subtitle: subtitle.trim() }),
       ...(eyebrow  && { eyebrow:  eyebrow.trim() }),
       ...(image    && { image }),
+      ...(mobileImage && { mobileImage }),
       ...(startsAt && { startsAt: new Date(startsAt).toISOString() }),
       ...(endsAt   && { endsAt:   new Date(endsAt).toISOString() }),
     };
@@ -85,8 +87,11 @@ export default function YeniHeroSlidePage() {
             </Field>
           </div>
 
-          <ImageUploadField label="Hero Görseli" value={image} onChange={setImage} />
-          <p className="text-[11px] text-ink-dim -mt-2">Önerilen oran 16:9 veya 21:9, geniş yatay görsel. Maks. 5 MB.</p>
+          <ImageUploadField label="Hero Görseli (Masaüstü)" value={image} onChange={setImage} />
+          <p className="text-[11px] text-ink-dim -mt-2">Geniş yatay görsel — önerilen oran 16:9 veya 21:9. Maks. 5 MB.</p>
+
+          <ImageUploadField label="Mobil Görsel (isteğe bağlı)" value={mobileImage} onChange={setMobileImage} />
+          <p className="text-[11px] text-ink-dim -mt-2">Telefonda gösterilir — dikey/kare bir görsel önerilir (ör. 4:5 veya 1:1). Boş bırakılırsa masaüstü görseli kullanılır.</p>
 
           <div className="grid sm:grid-cols-2 gap-5">
             <Field label="Sıra">

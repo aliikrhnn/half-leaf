@@ -16,6 +16,7 @@ interface HeroSlide {
   ctaLabel:  string;
   ctaHref:   string;
   image:     string | null;
+  mobileImage: string | null;
   sortOrder: number;
   isActive:  boolean;
   startsAt:  string | null;
@@ -39,6 +40,7 @@ export default function EditHeroSlidePage({ params }: { params: Promise<{ id: st
   const [ctaLabel,  setCtaLabel]  = useState("Keşfet");
   const [ctaHref,   setCtaHref]   = useState("");
   const [image,     setImage]     = useState("");
+  const [mobileImage, setMobileImage] = useState("");
   const [sortOrder, setSortOrder] = useState("0");
   const [isActive,  setIsActive]  = useState(true);
   const [startsAt,  setStartsAt]  = useState("");
@@ -61,6 +63,7 @@ export default function EditHeroSlidePage({ params }: { params: Promise<{ id: st
         setCtaLabel(s.ctaLabel);
         setCtaHref(s.ctaHref);
         setImage(s.image ?? "");
+        setMobileImage(s.mobileImage ?? "");
         setSortOrder(String(s.sortOrder));
         setIsActive(s.isActive);
         setStartsAt(toLocalDt(s.startsAt));
@@ -82,6 +85,7 @@ export default function EditHeroSlidePage({ params }: { params: Promise<{ id: st
       ctaLabel:  ctaLabel.trim() || "Keşfet",
       ctaHref:   ctaHref.trim(),
       image:     image || null,
+      mobileImage: mobileImage || null,
       sortOrder: parseInt(sortOrder) || 0,
       isActive,
       startsAt:  startsAt ? new Date(startsAt).toISOString() : null,
@@ -140,8 +144,11 @@ export default function EditHeroSlidePage({ params }: { params: Promise<{ id: st
             </Field>
           </div>
 
-          <ImageUploadField label="Hero Görseli" value={image} onChange={setImage} />
-          <p className="text-[11px] text-ink-dim -mt-2">Önerilen oran 16:9 veya 21:9, geniş yatay görsel. Maks. 5 MB.</p>
+          <ImageUploadField label="Hero Görseli (Masaüstü)" value={image} onChange={setImage} />
+          <p className="text-[11px] text-ink-dim -mt-2">Geniş yatay görsel — önerilen oran 16:9 veya 21:9. Maks. 5 MB.</p>
+
+          <ImageUploadField label="Mobil Görsel (isteğe bağlı)" value={mobileImage} onChange={setMobileImage} />
+          <p className="text-[11px] text-ink-dim -mt-2">Telefonda gösterilir — dikey/kare bir görsel önerilir (ör. 4:5 veya 1:1). Boş bırakılırsa masaüstü görseli kullanılır.</p>
 
           <div className="grid sm:grid-cols-2 gap-5">
             <Field label="Sıra">

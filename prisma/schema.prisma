@@ -87,6 +87,7 @@ model HeroSlide {
   leftImage  String?
   rightImage String?
   image      String?
+  mobileImage String?
   sortOrder Int       @default(0)
   isActive  Boolean   @default(true)
   startsAt  DateTime?

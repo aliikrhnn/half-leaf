@@ -12,6 +12,7 @@ export interface HeroSlideData {
   ctaLabel: string;
   ctaHref:  string;
   image:    string | null;
+  mobileImage: string | null;
 }
 
 const AUTO_MS = 6000;
@@ -91,18 +92,31 @@ export default function Hero({ slides }: Props) {
                 pointerEvents: active ? "auto" : "none",
               }}
             >
-              {/* Background image */}
+              {/* Background image — ayrı mobil görseli varsa telefonda o kullanılır */}
               <div aria-hidden style={{ position: "absolute", inset: 0 }}>
-                {s.image ? (
-                  <Image
-                    src={s.image}
-                    alt=""
-                    fill
-                    priority={i === 0}
-                    style={{ objectFit: "cover" }}
-                    className={`hl-hero-img${!reducedMotion && active ? " hero-ken-burns" : ""}`}
-                    sizes="100vw"
-                  />
+                {s.image || s.mobileImage ? (
+                  <>
+                    <Image
+                      src={s.image ?? s.mobileImage!}
+                      alt=""
+                      fill
+                      priority={i === 0}
+                      style={{ objectFit: "cover" }}
+                      className={`hl-hero-img${s.mobileImage ? " hidden sm:block" : ""}${!reducedMotion && active ? " hero-ken-burns" : ""}`}
+                      sizes="100vw"
+                    />
+                    {s.mobileImage && (
+                      <Image
+                        src={s.mobileImage}
+                        alt=""
+                        fill
+                        priority={i === 0}
+                        style={{ objectFit: "cover" }}
+                        className={`hl-hero-img block sm:hidden${!reducedMotion && active ? " hero-ken-burns" : ""}`}
+                        sizes="100vw"
+                      />
+                    )}
+                  </>
                 ) : (
                   <div
                     style={{
@@ -149,11 +163,11 @@ export default function Hero({ slides }: Props) {
                   }}
                 >
                   {s.eyebrow && (
-                    <div
-                      className="hl-eyebrow"
-                      style={{ marginBottom: 16, color: "var(--hl-bronze-300)", letterSpacing: "0.14em" }}
-                    >
-                      {s.eyebrow}
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+                      <span aria-hidden style={{ width: 34, height: 1, background: "var(--hl-bronze-400)", flexShrink: 0 }} />
+                      <span className="hl-eyebrow" style={{ color: "var(--hl-bronze-300)", letterSpacing: "0.14em" }}>
+                        {s.eyebrow}
+                      </span>
                     </div>
                   )}
 
@@ -337,28 +351,13 @@ function ChevronRight() {
 }
 
 function HLButton({ children }: { children: React.ReactNode }) {
+  // Link içinde olduğu için <span> (anchor tıklanabilir öğedir). Stil + hover globals.css'te.
   return (
-    <button
-      style={{
-        padding: "16px 28px",
-        fontSize: 13,
-        background: "linear-gradient(180deg, var(--hl-bronze-400) 0%, var(--hl-bronze-500) 60%, var(--hl-bronze-700) 100%)",
-        color: "#1A1206",
-        border: "none",
-        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.22), 0 8px 24px -10px rgba(182,137,80,0.5)",
-        fontFamily: "var(--hl-font-ui)",
-        fontWeight: 600,
-        letterSpacing: "0.06em",
-        textTransform: "uppercase",
-        borderRadius: "var(--hl-r-sm)",
-        cursor: "pointer",
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 8,
-        transition: "all 200ms var(--hl-ease)",
-      }}
-    >
+    <span className="hl-hero-cta">
       {children}
-    </button>
+      <svg className="hl-hero-cta-arrow" width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M5 12h14m-6-6 6 6-6 6" />
+      </svg>
+    </span>
   );
 }

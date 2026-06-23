@@ -11,6 +11,7 @@ const UpdateSchema = z.object({
   ctaLabel:   z.string().trim().min(1).optional(),
   ctaHref:    z.string().trim().min(1).optional(),
   image:      z.string().trim().nullable().optional(),
+  mobileImage: z.string().trim().nullable().optional(),
   sortOrder:  z.number().int().min(0).optional(),
   isActive:   z.boolean().optional(),
   startsAt:   z.string().nullable().optional(),
