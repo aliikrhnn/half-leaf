@@ -20,7 +20,7 @@ export default function KVKKPage() {
         </p>
         <section>
           <h2 className="text-base font-semibold text-ink mb-2">1. Veri Sorumlusu</h2>
-          <p>Half Leaf (bundan sonra &quot;Şirket&quot; olarak anılacaktır) veri sorumlusu sıfatıyla hareket etmektedir.</p>
+          <p>Half Leaf — Akdaş Ticaret (Vergi No: 0200526472; bundan sonra &quot;Şirket&quot; olarak anılacaktır) veri sorumlusu sıfatıyla hareket etmektedir.</p>
         </section>
         <section>
           <h2 className="text-base font-semibold text-ink mb-2">2. İşlenen Kişisel Veriler</h2>

@@ -60,8 +60,7 @@ export default async function MesafeliSatisSozlesmesiPage() {
             <strong className="text-ink">SATICI:</strong> Half Leaf
             <br />
             <span className="text-ink-dim">
-              Ticari Unvan: [şirketin tam ticari unvanı] · MERSIS No: [MERSIS] · Vergi Dairesi/No:
-              [vergi dairesi / numarası]
+              Ticari Unvan: Akdaş Ticaret · Vergi No: 0200526472
             </span>
             <br />
             Adres: {address}
@@ -201,9 +200,8 @@ export default async function MesafeliSatisSozlesmesiPage() {
         </Section>
 
         <p className="text-xs text-ink-dim border-t border-border-default pt-4 mt-2">
-          Bu metin yürürlükteki mevzuata uygun olarak hazırlanmıştır. Köşeli parantez [ ] içindeki
-          şirket tescil bilgileri (ticari unvan, MERSIS, vergi dairesi/numarası) faaliyet öncesinde
-          tamamlanmalı ve metin bir hukuk danışmanına teyit ettirilmelidir.
+          Bu metin yürürlükteki mevzuata uygun olarak hazırlanmıştır ve yürürlüğe girmeden önce bir
+          hukuk danışmanına teyit ettirilmesi önerilir.
         </p>
       </div>
     </div>

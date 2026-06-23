@@ -56,15 +56,13 @@ export default async function OnBilgilendirmeFormuPage() {
 
         <Section title="1. Satıcı Bilgileri">
           <p>
-            <strong className="text-ink">Unvan:</strong> Half Leaf{" "}
-            <span className="text-ink-dim">[şirketin tam ticari unvanı]</span>
+            <strong className="text-ink">Unvan:</strong> Half Leaf — Akdaş Ticaret
             <br />
             <strong className="text-ink">Adres:</strong> {address}
             <br />
             <strong className="text-ink">Telefon:</strong> {phone} · <strong className="text-ink">E-posta:</strong> {email}
             <br />
-            <strong className="text-ink">MERSIS / Vergi No:</strong>{" "}
-            <span className="text-ink-dim">[MERSIS / vergi dairesi ve numarası]</span>
+            <strong className="text-ink">Vergi No:</strong> 0200526472
           </p>
         </Section>
 
@@ -131,8 +129,8 @@ export default async function OnBilgilendirmeFormuPage() {
         </Section>
 
         <p className="text-xs text-ink-dim border-t border-border-default pt-4 mt-2">
-          Bu form bilgilendirme amaçlıdır; köşeli parantez [ ] içindeki tescil bilgileri faaliyet
-          öncesinde tamamlanmalı ve metin bir hukuk danışmanına teyit ettirilmelidir.
+          Bu form bilgilendirme amaçlıdır ve yürürlüğe girmeden önce bir hukuk danışmanına teyit
+          ettirilmesi önerilir.
         </p>
       </div>
     </div>
