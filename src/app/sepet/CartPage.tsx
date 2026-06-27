@@ -6,6 +6,9 @@ import Link from "next/link";
 import { ShoppingBag, Package, X, Check, Lock } from "lucide-react";
 import { useCartStore } from "@/store/cart";
 import { useSiteFlags } from "@/components/layout/SiteFlags";
+import { type StockNotice } from "@/lib/cart/reconcile";
+import { useCartStockReconcile } from "@/hooks/useCartStockReconcile";
+import StockNoticeBanner from "@/components/cart/StockNoticeBanner";
 import { formatPrice } from "@/lib/utils";
 import { FREE_SHIPPING_THRESHOLD, SHIPPING_COST } from "@/lib/constants";
 
@@ -137,6 +140,7 @@ export default function CartPage() {
   const [couponError, setCouponError] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
   const [giftBox, setGiftBox] = useState(false);
+  const [stockNotice, setStockNotice] = useState<StockNotice | null>(null);
   const couponRef = useRef<HTMLInputElement>(null);
 
   const { items, removeItem, updateQuantity, note, setNote } = useCartStore();
@@ -147,6 +151,10 @@ export default function CartPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- hydration guard: must run after SSR mount
     setMounted(true);
   }, []);
+
+  // Hidrasyon bitince sepeti güncel stoğa göre düzelt (stoğu biten ürünleri
+  // çıkar, adetleri kalan stoğa indir) ve değişiklik olursa bandı göster.
+  useCartStockReconcile(setStockNotice);
 
   if (!mounted) {
     return (
@@ -208,6 +216,11 @@ export default function CartPage() {
         display: "flex", flexDirection: "column", alignItems: "center",
         textAlign: "center", gap: 20,
       }}>
+        {stockNotice && (
+          <div style={{ width: "100%", maxWidth: 520, textAlign: "left" }}>
+            <StockNoticeBanner notice={stockNotice} onDismiss={() => setStockNotice(null)} />
+          </div>
+        )}
         <ShoppingBag size={56} style={{ color: "var(--hl-text-mute)", marginBottom: 8 }} />
         <h1 style={{
           fontFamily: "var(--hl-font-display)", fontSize: "clamp(28px, 4vw, 44px)",
@@ -250,6 +263,13 @@ export default function CartPage() {
       maxWidth: 1280, margin: "0 auto",
       padding: "calc(var(--hl-bar-h) + var(--hl-header-h) + 32px) 24px 80px",
     }}>
+      {/* ── Stok bildirimi ── */}
+      {stockNotice && (
+        <div style={{ marginBottom: 24 }}>
+          <StockNoticeBanner notice={stockNotice} onDismiss={() => setStockNotice(null)} />
+        </div>
+      )}
+
       {/* ── Top: label + title + steps ── */}
       <div style={{ marginBottom: 36, display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
         <div>

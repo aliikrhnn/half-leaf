@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Lock, Check, Shield, Truck, X, ChevronDown, ChevronLeft, MapPin, User, ArrowRight, RotateCcw } from "lucide-react";
 import { useCartStore } from "@/store/cart";
+import { reconcileCartStock, type StockNotice } from "@/lib/cart/reconcile";
+import { useCartStockReconcile } from "@/hooks/useCartStockReconcile";
+import StockNoticeBanner from "@/components/cart/StockNoticeBanner";
 import { formatPrice } from "@/lib/utils";
 import HalfLeafLogo from "@/components/brand/HalfLeafLogo";
 import { IL_NAMES, getIlceler } from "@/data/turkey-locations";
@@ -34,6 +37,12 @@ const PAYMENT_OPTIONS: Array<{ id: PaymentMethod; label: string }> = [
   { id: "KREDI_KARTI", label: "Kredi / Banka Kartı" },
   { id: "HAVALE_EFT",  label: "Havale / EFT"        },
 ];
+
+/* ─── prefers-reduced-motion'a saygılı kaydırma davranışı ─── */
+function scrollBehavior(): ScrollBehavior {
+  if (typeof window === "undefined") return "auto";
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+}
 
 /* ─── CheckoutHeader ─── */
 function CheckoutHeader({ step }: { step: 1 | 2 }) {
@@ -98,12 +107,12 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
 }
 
 /* ─── Field ─── */
-function Field({ label, value, onChange, error, type = "text", placeholder = "", prefix }: {
+function Field({ label, value, onChange, error, type = "text", placeholder = "", prefix, id }: {
   label: string; value: string; onChange: (v: string) => void;
-  error?: string; type?: string; placeholder?: string; prefix?: string;
+  error?: string; type?: string; placeholder?: string; prefix?: string; id?: string;
 }) {
   return (
-    <div>
+    <div id={id} style={{ scrollMarginTop: 90 }}>
       <label style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--hl-text-mute)", fontWeight: 600, display: "block", marginBottom: 6, fontFamily: "var(--hl-font-ui)" }}>
         {label}
       </label>
@@ -127,12 +136,12 @@ function Field({ label, value, onChange, error, type = "text", placeholder = "",
 }
 
 /* ─── SelectField ─── */
-function SelectField({ label, value, onChange, options, error, placeholder }: {
+function SelectField({ label, value, onChange, options, error, placeholder, id }: {
   label: string; value: string; onChange: (v: string) => void;
-  options: string[]; error?: string; placeholder?: string;
+  options: string[]; error?: string; placeholder?: string; id?: string;
 }) {
   return (
-    <div>
+    <div id={id} style={{ scrollMarginTop: 90 }}>
       <label style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--hl-text-mute)", fontWeight: 600, display: "block", marginBottom: 6, fontFamily: "var(--hl-font-ui)" }}>
         {label}
       </label>
@@ -227,6 +236,11 @@ export default function CheckoutClient({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
+  /* Stock reconcile + scroll-to-error refs */
+  const [stockNotice, setStockNotice] = useState<StockNotice | null>(null);
+  const consentRef = useRef<HTMLDivElement>(null);
+  const submitErrorRef = useRef<HTMLDivElement>(null);
+
   const { items, clearCart } = useCartStore();
   const customerNote = useCartStore((s) => s.note);
   const setCustomerNote = useCartStore((s) => s.setNote);
@@ -274,6 +288,27 @@ export default function CheckoutClient({
       .catch(() => setAuthStep("selection"));
   }, []);
 
+  // Stok düzeltmesi olduğunda: bandı göster ve uygulanmış kuponu temizle.
+  // Sepet küçüldüyse kupon alt-limiti artık sağlanmıyor olabilir; sunucu kuponu
+  // iptal edip daha yüksek tutarı çekebilir. Kuponu temizleyip kullanıcıdan
+  // yeniden uygulamasını isteyerek gösterilen tutar ile çekilen tutarı eşleriz.
+  const handleStockNotice = useCallback((notice: StockNotice) => {
+    setStockNotice(notice);
+    setAppliedCoupon((c) => (c ? null : c));
+  }, []);
+
+  // Hidrasyon bitince + sekme tekrar öne geldiğinde sepeti güncel stoğa göre düzelt.
+  useCartStockReconcile(handleStockNotice);
+
+  // Sunucu/gönderim hatası belirince hata kutusuna kaydır (özellikle mobilde
+  // özet alt tarafta olduğundan kullanıcı uyarıyı görsün).
+  useEffect(() => {
+    if (!submitError) return;
+    requestAnimationFrame(() => {
+      submitErrorRef.current?.scrollIntoView({ behavior: scrollBehavior(), block: "center" });
+    });
+  }, [submitError]);
+
   const handleIlChange = (v: string) => { setSelectedIl(v); setSelectedIlce(""); };
 
   const handleAddressSelect = (addr: SavedAddress) => {
@@ -294,8 +329,15 @@ export default function CheckoutClient({
   );
 
   if (items.length === 0) return (
-    <div style={{ minHeight: "100vh", background: "var(--hl-bg)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, fontFamily: "var(--hl-font-ui)" }}>
-      <p style={{ fontSize: 14, color: "var(--hl-text-mute)" }}>Sepetiniz boş.</p>
+    <div style={{ minHeight: "100vh", background: "var(--hl-bg)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, fontFamily: "var(--hl-font-ui)", padding: "24px" }}>
+      {stockNotice && (
+        <div style={{ width: "100%", maxWidth: 520 }}>
+          <StockNoticeBanner notice={stockNotice} onDismiss={() => setStockNotice(null)} />
+        </div>
+      )}
+      <p style={{ fontSize: 14, color: "var(--hl-text-mute)" }}>
+        {stockNotice ? "Stok durumu nedeniyle sepetiniz boşaldı." : "Sepetiniz boş."}
+      </p>
       <Link href="/urunler" style={{ padding: "11px 28px", borderRadius: "var(--hl-r-pill)", background: "var(--hl-bronze-400)", color: "#0A0B09", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", textDecoration: "none" }}>
         Alışverişe Dön
       </Link>
@@ -407,6 +449,16 @@ export default function CheckoutClient({
 
   const removeCoupon = () => { setAppliedCoupon(null); setCouponInput(""); setCouponError(""); setTimeout(() => couponRef.current?.focus(), 50); };
 
+  /* ── Eksik/hatalı ilk alana kaydır + odakla ── */
+  const scrollToField = (elementId: string) => {
+    if (typeof document === "undefined") return;
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    el.scrollIntoView({ behavior: scrollBehavior(), block: "center" });
+    const focusable = el.querySelector("input, select, textarea") as HTMLElement | null;
+    focusable?.focus({ preventScroll: true });
+  };
+
   /* ── Step 1 continue ── */
   const handleContinueToPayment = () => {
     const errors: FieldErrors = {};
@@ -419,17 +471,63 @@ export default function CheckoutClient({
       if (!selectedIl) errors.il = "İl seçin";
       if (!selectedIlce) errors.ilce = "İlçe seçin";
     }
-    if (Object.keys(errors).length > 0) { setFieldErrors(errors); return; }
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      // Sayfayı ilk eksik alana kaydır (görünüm sırasına göre).
+      const order: [keyof FieldErrors, string][] = [
+        ["email", "f-email"], ["phone", "f-phone"], ["ad", "f-ad"], ["soyad", "f-soyad"],
+        ["adres", "f-adres"], ["il", "f-il"], ["ilce", "f-ilce"],
+      ];
+      const first = order.find(([key]) => errors[key]);
+      if (first) {
+        const [key, elId] = first;
+        const addressKeys: (keyof FieldErrors)[] = ["adres", "il", "ilce"];
+        // Kayıtlı adres modunda adres alanları gizli olabilir → önce "Yeni Adres"
+        // formunu aç ki kaydırılacak alan DOM'da bulunsun.
+        if (addressKeys.includes(key) && !document.getElementById(elId) && selectedAddressId !== "new") {
+          setSelectedAddressId("new");
+          setTimeout(() => scrollToField(elId), 80);
+        } else {
+          requestAnimationFrame(() => scrollToField(elId));
+        }
+      }
+      return;
+    }
     setFieldErrors({});
     setStep(2);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: scrollBehavior() });
   };
 
   /* ── Submit ── */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!consentChecked) { setFieldErrors({ consent: "Devam etmek için onay gereklidir" }); return; }
+    if (!consentChecked) {
+      setFieldErrors({ consent: "Devam etmek için 18 yaş ve sözleşmeleri onaylamanız gerekir." });
+      // Onay kutusuna kaydır + dikkat çekmek için titret.
+      requestAnimationFrame(() => {
+        consentRef.current?.scrollIntoView({ behavior: scrollBehavior(), block: "center" });
+        const node = consentRef.current;
+        if (node) {
+          node.classList.remove("hl-shake");
+          // reflow ile animasyonu yeniden tetikle
+          void node.offsetWidth;
+          node.classList.add("hl-shake");
+        }
+      });
+      return;
+    }
     setIsSubmitting(true); setSubmitError("");
+
+    // Son bir stok doğrulaması — form doldurulurken başka biri son ürünü almış
+    // olabilir. Değişiklik varsa siparişe gitme; kullanıcı güncel sepeti görsün.
+    const stockCheck = await reconcileCartStock();
+    if (stockCheck) {
+      handleStockNotice(stockCheck);
+      setIsSubmitting(false);
+      requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: scrollBehavior() }));
+      return;
+    }
+
     try {
       const res = await fetch("/api/siparis", {
         method: "POST",
@@ -475,6 +573,12 @@ export default function CheckoutClient({
     <div style={{ background: "var(--hl-bg)", minHeight: "100vh", color: "var(--hl-text)", fontFamily: "var(--hl-font-ui)" }}>
       <CheckoutHeader step={step} />
 
+      {stockNotice && (
+        <div style={{ maxWidth: 1240, margin: "0 auto", padding: "20px 40px 0" }} className="hl-checkout-notice">
+          <StockNoticeBanner notice={stockNotice} onDismiss={() => setStockNotice(null)} />
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} noValidate>
         <div style={{ maxWidth: 1240, margin: "0 auto", padding: "36px 40px 72px", display: "grid", gridTemplateColumns: "1.35fr 1fr", gap: 32, alignItems: "start" }} className="hl-checkout-grid">
 
@@ -487,8 +591,8 @@ export default function CheckoutClient({
                 {/* 01 · İletişim */}
                 <Panel title="01 · İletişim">
                   <div className="hl-form-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-                    <Field label="E-posta" value={email} onChange={setEmail} error={fieldErrors.email} type="email" placeholder="ornek@eposta.com" />
-                    <Field label="Telefon" value={phoneSuffix} onChange={setPhoneSuffix} error={fieldErrors.phone} placeholder="532 000 00 00" prefix="+90" />
+                    <Field id="f-email" label="E-posta" value={email} onChange={setEmail} error={fieldErrors.email} type="email" placeholder="ornek@eposta.com" />
+                    <Field id="f-phone" label="Telefon" value={phoneSuffix} onChange={setPhoneSuffix} error={fieldErrors.phone} placeholder="532 000 00 00" prefix="+90" />
                   </div>
                   <label style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14, fontSize: 12, color: "var(--hl-text-soft)", cursor: "pointer" }}>
                     <CheckBox checked={smsConsent} onChange={() => setSmsConsent(v => !v)} />
@@ -503,8 +607,8 @@ export default function CheckoutClient({
                 {/* 02 · Teslimat Adresi */}
                 <Panel title="02 · Teslimat Adresi">
                   <div className="hl-form-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-                    <Field label="Ad" value={ad} onChange={setAd} error={fieldErrors.ad} />
-                    <Field label="Soyad" value={soyad} onChange={setSoyad} error={fieldErrors.soyad} />
+                    <Field id="f-ad" label="Ad" value={ad} onChange={setAd} error={fieldErrors.ad} />
+                    <Field id="f-soyad" label="Soyad" value={soyad} onChange={setSoyad} error={fieldErrors.soyad} />
                   </div>
 
                   {isPickup ? (
@@ -569,11 +673,11 @@ export default function CheckoutClient({
                       {selectedAddressId === "new" && (
                         <>
                           <div style={{ marginTop: 14 }}>
-                            <Field label="Adres" value={adres} onChange={setAdres} error={fieldErrors.adres} placeholder="Mahalle, cadde, sokak, kapı no" />
+                            <Field id="f-adres" label="Adres" value={adres} onChange={setAdres} error={fieldErrors.adres} placeholder="Mahalle, cadde, sokak, kapı no" />
                           </div>
                           <div className="hl-form-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
-                            <SelectField label="İl" value={selectedIl} onChange={handleIlChange} options={IL_NAMES} error={fieldErrors.il} placeholder="İl seçin…" />
-                            <SelectField label="İlçe" value={selectedIlce} onChange={setSelectedIlce} options={ilceOptions} error={fieldErrors.ilce} placeholder={selectedIl ? "İlçe seçin…" : "Önce il seçin"} />
+                            <SelectField id="f-il" label="İl" value={selectedIl} onChange={handleIlChange} options={IL_NAMES} error={fieldErrors.il} placeholder="İl seçin…" />
+                            <SelectField id="f-ilce" label="İlçe" value={selectedIlce} onChange={setSelectedIlce} options={ilceOptions} error={fieldErrors.ilce} placeholder={selectedIl ? "İlçe seçin…" : "Önce il seçin"} />
                           </div>
                           <div style={{ marginTop: 14, maxWidth: 160 }}>
                             <Field label="Posta Kodu" value={postaKodu} onChange={setPostaKodu} placeholder="34000" />
@@ -584,11 +688,11 @@ export default function CheckoutClient({
                   ) : (
                     <>
                       <div style={{ marginTop: 14 }}>
-                        <Field label="Adres" value={adres} onChange={setAdres} error={fieldErrors.adres} placeholder="Mahalle, cadde, sokak, kapı no" />
+                        <Field id="f-adres" label="Adres" value={adres} onChange={setAdres} error={fieldErrors.adres} placeholder="Mahalle, cadde, sokak, kapı no" />
                       </div>
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
-                        <SelectField label="İl" value={selectedIl} onChange={handleIlChange} options={IL_NAMES} error={fieldErrors.il} placeholder="İl seçin…" />
-                        <SelectField label="İlçe" value={selectedIlce} onChange={setSelectedIlce} options={ilceOptions} error={fieldErrors.ilce} placeholder={selectedIl ? "İlçe seçin…" : "Önce il seçin"} />
+                        <SelectField id="f-il" label="İl" value={selectedIl} onChange={handleIlChange} options={IL_NAMES} error={fieldErrors.il} placeholder="İl seçin…" />
+                        <SelectField id="f-ilce" label="İlçe" value={selectedIlce} onChange={setSelectedIlce} options={ilceOptions} error={fieldErrors.ilce} placeholder={selectedIl ? "İlçe seçin…" : "Önce il seçin"} />
                       </div>
                       <div style={{ marginTop: 14, maxWidth: 160 }}>
                         <Field label="Posta Kodu" value={postaKodu} onChange={setPostaKodu} placeholder="34000" />
@@ -686,8 +790,8 @@ export default function CheckoutClient({
                 </div>
 
                 {/* Legal consent */}
-                <div style={{
-                  padding: "14px 16px", borderRadius: 10,
+                <div ref={consentRef} style={{
+                  padding: "14px 16px", borderRadius: 10, scrollMarginTop: 90,
                   background: "var(--hl-olive-900)", border: `1px solid ${fieldErrors.consent ? "#e05252" : "var(--hl-olive-700)"}`,
                 }}>
                   <label style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 12, color: "var(--hl-text-soft)", cursor: "pointer" }}>
@@ -724,7 +828,7 @@ export default function CheckoutClient({
               {/* Items */}
               <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 18 }}>
                 {items.map(item => (
-                  <div key={item.productId} style={{ display: "grid", gridTemplateColumns: "52px 1fr auto", gap: 10, alignItems: "center" }}>
+                  <div key={item.productId + (item.variantId ?? "")} style={{ display: "grid", gridTemplateColumns: "52px 1fr auto", gap: 10, alignItems: "center" }}>
                     <div style={{ position: "relative" }}>
                       <div style={{ width: 52, height: 52, borderRadius: 8, overflow: "hidden", background: "var(--hl-bg-elev-2)", position: "relative" }}>
                         {item.product.images?.[0] && (
@@ -794,7 +898,7 @@ export default function CheckoutClient({
               <p style={{ fontSize: 10, color: "var(--hl-text-mute)", textAlign: "right", marginBottom: 18 }}>KDV dahil</p>
 
               {submitError && (
-                <div style={{ padding: "9px 13px", borderRadius: 8, marginBottom: 12, background: "rgba(224,82,82,0.1)", border: "1px solid rgba(224,82,82,0.3)", fontSize: 12, color: "#e05252" }}>
+                <div ref={submitErrorRef} style={{ padding: "9px 13px", borderRadius: 8, marginBottom: 12, scrollMarginTop: 90, background: "rgba(224,82,82,0.1)", border: "1px solid rgba(224,82,82,0.3)", fontSize: 12, color: "#e05252" }}>
                   {submitError}
                 </div>
               )}
@@ -805,7 +909,7 @@ export default function CheckoutClient({
                   Ödemeye Devam Et →
                 </button>
               ) : (
-                <button type="submit" disabled={!consentChecked || isSubmitting} style={{ width: "100%", padding: "15px 0", borderRadius: 10, background: !consentChecked || isSubmitting ? "var(--hl-bg-elev-3)" : "var(--hl-bronze-400)", border: "none", color: !consentChecked || isSubmitting ? "var(--hl-text-mute)" : "#0A0B09", fontFamily: "var(--hl-font-ui)", fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", cursor: !consentChecked || isSubmitting ? "not-allowed" : "pointer", transition: "all 150ms ease" }}>
+                <button type="submit" disabled={isSubmitting} aria-disabled={!consentChecked} style={{ width: "100%", padding: "15px 0", borderRadius: 10, background: !consentChecked || isSubmitting ? "var(--hl-bg-elev-3)" : "var(--hl-bronze-400)", border: "none", color: !consentChecked || isSubmitting ? "var(--hl-text-mute)" : "#0A0B09", fontFamily: "var(--hl-font-ui)", fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", cursor: isSubmitting ? "not-allowed" : "pointer", transition: "all 150ms ease" }}>
                   {isSubmitting
                     ? "İşleniyor…"
                     : paymentMethod === "KREDI_KARTI"

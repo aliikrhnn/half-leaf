@@ -10,6 +10,7 @@ import Toaster from "@/components/ui/Toaster";
 import RegisterPrompt from "./RegisterPrompt";
 import WhatsAppFloat from "./WhatsAppFloat";
 import CartSync from "./CartSync";
+import StockReconciler from "./StockReconciler";
 import type { NavCategory } from "@/lib/types";
 
 interface Props {
@@ -54,6 +55,7 @@ export default function AppShell({ children, footer, navCategories = [], announc
       <RegisterPrompt />
       <WhatsAppFloat />
       <CartSync />
+      <StockReconciler />
     </>
   );
 }

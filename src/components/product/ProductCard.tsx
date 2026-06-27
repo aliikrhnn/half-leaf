@@ -59,6 +59,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               fill
               className="object-cover hl-card-img"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              style={isOutOfStock ? { filter: "grayscale(100%)", opacity: 0.65 } : undefined}
             />
           )}
 
@@ -135,7 +136,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         </div>
 
         {/* Info */}
-        <div style={{ padding: "0 2px" }}>
+        <div style={{ padding: "0 2px", opacity: isOutOfStock ? 0.5 : 1, transition: "opacity 150ms ease" }}>
           <p style={{
             fontFamily: "var(--hl-font-ui)", fontSize: 9, fontWeight: 700,
             letterSpacing: "0.12em", color: "var(--hl-text-mute)",
