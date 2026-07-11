@@ -10,6 +10,7 @@ import NewArrivalsSection from "@/components/sections/NewArrivalsSection";
 import FeaturedSection from "@/components/sections/FeaturedSection";
 import FlashProductsSection from "@/components/sections/FlashProductsSection";
 import BrandsSection from "@/components/sections/BrandsSection";
+import { getShowcaseBrands } from "@/lib/products/brands";
 import ContentCards from "@/components/sections/ContentCards";
 import SeoIntro from "@/components/sections/SeoIntro";
 import TrustBar from "@/components/sections/TrustBar";
@@ -147,13 +148,14 @@ async function getBestsellerProducts(rate: number): Promise<Product[]> {
 
 export default async function HomePage() {
   const usdTryRate = await getUsdTryRate();
-  const [heroSlides, newArrivals, featuredProducts, flashProducts, bestsellerProducts] =
+  const [heroSlides, newArrivals, featuredProducts, flashProducts, bestsellerProducts, brands] =
     await Promise.all([
       getHeroSlides(),
       getNewArrivals(usdTryRate),
       getFeaturedProducts(usdTryRate),
       getFlashProducts(usdTryRate),
       getBestsellerProducts(usdTryRate),
+      getShowcaseBrands(),
     ]);
 
   const websiteJsonLd = {
@@ -181,7 +183,7 @@ export default async function HomePage() {
       <BestsellersSection products={bestsellerProducts} />
       <FeaturedSection products={featuredProducts} />
       <FlashProductsSection products={flashProducts} />
-      <BrandsSection />
+      <BrandsSection brands={brands} />
       <ContentCards />
       <SeoIntro />
       <TrustBar />

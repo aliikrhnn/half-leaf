@@ -1,60 +1,19 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
+import type { ShowcaseBrand } from "@/lib/products/brands";
 
-const BRANDS = [
-  {
-    name: "HOOB",
-    tagline: "Alman Mühendisliği",
-    image: "/images/nargilestore/image/cache/catalog/HOOB/hoob-enzo-gold-black-1-550x550.jpg",
-    href: "/urunler?q=hoob",
-  },
-  {
-    name: "Alpha Hookah",
-    tagline: "İnce İşçilik",
-    image: "/images/nargilestore/image/cache/catalog/ALPHA-HOOKAH/SMART-EXZO-TRIBAL-GREEN-FRONT-550x550.jpg",
-    href: "/urunler?q=alpha",
-  },
-  {
-    name: "Mr. EDS",
-    tagline: "Yerli Premium",
-    image: "/images/nargilestore/image/cache/catalog/MR.EDS/E24-Big-Boss-Pro-X-4---Titanyum-Serisi-550x550.jpg",
-    href: "/urunler?q=mr+eds",
-  },
-  {
-    name: "MOZE",
-    tagline: "Avusturya Tasarımı",
-    image: "/images/nargilestore/image/cache/catalog/MOZE/moze-tradi-l-nargile-takimi-550x550.jpg",
-    href: "/urunler?q=moze",
-  },
-  {
-    name: "Amotion",
-    tagline: "Kompakt & Modern",
-    image: "/images/nargilestore/image/cache/catalog/AMOTION/Amotion-Flash-Bang-Teal-550x550.jpg",
-    href: "/urunler?q=amotion",
-  },
-  {
-    name: "Maxx",
-    tagline: "Royal Seri",
-    image: "/images/nargilestore/image/cache/catalog/Maxx/maxx-royal-hookah-emerald-gold-2-550x550.jpg",
-    href: "/urunler?q=maxx",
-  },
-  {
-    name: "Darkside",
-    tagline: "Rus Tasarımı",
-    image: "/images/nargilestore/image/cache/catalog/Darkside/dark-side-evo-550x550.jpg",
-    href: "/urunler?q=darkside",
-  },
-  {
-    name: "Oblako",
-    tagline: "Seramik Lüle",
-    image: "/images/nargilestore/image/cache/catalog/OBLAKO/Oblako-Phunnel-L-Sky-Blue-550x550.jpg",
-    href: "/urunler?q=oblako",
-  },
-];
+interface Props {
+  brands: ShowcaseBrand[];
+}
 
-export default function BrandsSection() {
+/**
+ * "Markalara göre keşfet" — yalnızca DB'de gerçekten bulunan küratörlü markalar
+ * ve her markanın öne çıkan ürünü. Veri kaynağı: getShowcaseBrands().
+ * Salt sunum: hover davranışları CSS ile (istemci JS gerektirmez).
+ */
+export default function BrandsSection({ brands }: Props) {
+  if (brands.length === 0) return null;
+
   return (
     <section
       style={{
@@ -84,33 +43,14 @@ export default function BrandsSection() {
               style={{
                 fontSize: "clamp(32px, 4vw, 56px)",
                 margin: 0,
-                letterSpacing: "-0.02em",
-                fontWeight: 400,
+                letterSpacing: "-0.03em",
+                fontWeight: 600,
                 color: "var(--hl-text)",
               }}
             >
               Markalara göre keşfet
             </h2>
-            <Link
-              href="/urunler"
-              style={{
-                fontFamily: "var(--hl-font-ui)",
-                fontSize: 13,
-                fontWeight: 600,
-                color: "var(--hl-bronze-400)",
-                textDecoration: "none",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                transition: "color 150ms ease",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.color = "var(--hl-bronze-300)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.color = "var(--hl-bronze-400)";
-              }}
-            >
+            <Link href="/urunler" className="hl-brand-all">
               Tüm markalar
               <svg
                 width={14}
@@ -133,89 +73,49 @@ export default function BrandsSection() {
         <div className="hl-rule-bronze" style={{ marginBottom: "2rem" }} />
 
         {/* Brand grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 lg:gap-5">
-          {BRANDS.map((brand) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-5">
+          {brands.map((brand) => (
             <Link
-              key={brand.name}
+              key={brand.key}
               href={brand.href}
-              style={{
-                display: "block",
-                position: "relative",
-                aspectRatio: "1/1",
-                borderRadius: 14,
-                overflow: "hidden",
-                background: "var(--hl-bg-elev-3)",
-                border: "1px solid var(--hl-line-strong)",
-                textDecoration: "none",
-                transition: "border-color 200ms ease, transform 200ms ease",
-              }}
-              onMouseEnter={(e) => {
-                const el = e.currentTarget as HTMLAnchorElement;
-                el.style.borderColor = "var(--hl-bronze-700)";
-                el.style.transform = "translateY(-3px)";
-              }}
-              onMouseLeave={(e) => {
-                const el = e.currentTarget as HTMLAnchorElement;
-                el.style.borderColor = "var(--hl-line-strong)";
-                el.style.transform = "translateY(0)";
-              }}
+              className="hl-brand-card"
+              aria-label={`${brand.name} — ${brand.productCount} ürün`}
             >
-              {/* Product image */}
-              <Image
-                src={brand.image}
-                alt={brand.name}
-                fill
-                className="object-contain"
-                sizes="(max-width: 640px) 50vw, 25vw"
-                style={{ padding: 16 }}
-              />
+              {/* Öne çıkan ürün görseli + spot ışığı */}
+              <div className="hl-brand-media">
+                <span aria-hidden className="hl-brand-spot" />
+                <Image
+                  src={brand.product.image}
+                  alt={brand.product.name}
+                  fill
+                  className="hl-brand-img object-contain"
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                />
+                <span aria-hidden className="hl-brand-scrim" />
+                {/* Ürün adedi rozeti */}
+                <span className="hl-brand-count">{brand.productCount} ürün</span>
+              </div>
 
-              {/* Gradient overlay */}
-              <div
-                aria-hidden
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background:
-                    "linear-gradient(180deg, transparent 40%, rgba(10,11,9,0.92) 100%)",
-                  transition: "opacity 200ms ease",
-                }}
-              />
-
-              {/* Text */}
-              <div
-                style={{
-                  position: "absolute",
-                  left: 14,
-                  right: 14,
-                  bottom: 14,
-                }}
-              >
-                <div
-                  style={{
-                    fontFamily: "var(--hl-font-display)",
-                    fontSize: "clamp(15px, 1.4vw, 19px)",
-                    fontWeight: 400,
-                    fontStyle: "italic",
-                    color: "var(--hl-text)",
-                    lineHeight: 1.1,
-                    marginBottom: 4,
-                  }}
-                >
+              {/* Marka bilgisi */}
+              <div className="hl-brand-info">
+                <div className="hl-brand-name">
                   {brand.name}
+                  <svg
+                    className="hl-brand-arrow"
+                    width={16}
+                    height={16}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.6}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden
+                  >
+                    <path d="M5 12h14m-5-5 5 5-5 5" />
+                  </svg>
                 </div>
-                <div
-                  style={{
-                    fontFamily: "var(--hl-font-ui)",
-                    fontSize: 9,
-                    color: "var(--hl-bronze-300)",
-                    letterSpacing: "0.1em",
-                    textTransform: "uppercase",
-                    fontWeight: 600,
-                  }}
-                >
-                  {brand.tagline}
-                </div>
+                <div className="hl-brand-tagline">{brand.tagline}</div>
               </div>
             </Link>
           ))}

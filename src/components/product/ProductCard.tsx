@@ -149,7 +149,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             className="hl-card-name"
             style={{
               fontFamily: "var(--hl-font-display)", fontSize: "clamp(14px, 1.3vw, 18px)",
-              fontWeight: 400, fontStyle: "italic", color: "var(--hl-text)",
+              fontWeight: 500, fontStyle: "normal", color: "var(--hl-text)",
               lineHeight: 1.2, marginBottom: 8,
             }}
           >

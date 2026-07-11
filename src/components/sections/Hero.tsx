@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import HookahScene from "./HookahScene";
 
 export interface HeroSlideData {
   id:          string;
@@ -17,9 +17,23 @@ export interface HeroSlideData {
 
 const AUTO_MS = 6500;
 
+/** Slayt yoksa hero yine de animasyonlu sahneyle görünsün. */
+const DEFAULT_SLIDE: HeroSlideData = {
+  id: "hl-default",
+  eyebrow: "Half Leaf",
+  title: "Dumanın ardındaki zanaat",
+  subtitle: "Özenle seçilmiş premium nargile takımları, lüleler ve aksesuarlar.",
+  ctaLabel: "Koleksiyonu Keşfet",
+  ctaHref: "/urunler",
+  image: null,
+  mobileImage: null,
+};
+
 interface Props { slides: HeroSlideData[]; }
 
 export default function Hero({ slides }: Props) {
+  const data = slides.length > 0 ? slides : [DEFAULT_SLIDE];
+
   const [idx,           setIdx]   = useState(0);
   const [enterCount,    setEnter] = useState(0);
   const [paused,        setPaused] = useState(false);
@@ -36,7 +50,7 @@ export default function Hero({ slides }: Props) {
     return () => mq.removeEventListener("change", cb);
   }, []);
 
-  const count  = slides.length;
+  const count  = data.length;
   const goNext = useCallback(() => { setIdx(i => (i + 1) % count); setEnter(c => c + 1); }, [count]);
   const goPrev = useCallback(() => { setIdx(i => (i - 1 + count) % count); setEnter(c => c + 1); }, [count]);
   const goTo   = useCallback((n: number) => { setIdx(n); setEnter(c => c + 1); }, []);
@@ -57,82 +71,30 @@ export default function Hero({ slides }: Props) {
     if (dx < 0) goNext(); else goPrev();
   };
 
-  if (count === 0) return null;
-  const cur = slides[idx];
+  const cur = data[idx];
 
   return (
     <section
-      aria-label="Ana sayfa slayt gösterisi"
+      aria-label="Ana sayfa tanıtımı"
       aria-roledescription="carousel"
       className="hl-hero-section"
       style={{ position: "relative", overflow: "hidden" }}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
+      onFocusCapture={() => setPaused(true)}
+      onBlurCapture={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setPaused(false); }}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
-      {/* ── Slide stack (images crossfade) ── */}
-      <div aria-live="polite" aria-atomic="true" style={{ position: "absolute", inset: 0 }}>
-        {slides.map((s, i) => {
-          const active = i === idx;
-          return (
-            <div
-              key={s.id}
-              role="group"
-              aria-roledescription="slide"
-              aria-label={`Slayt ${i + 1} / ${count}`}
-              aria-hidden={!active}
-              style={{
-                position: "absolute",
-                inset: 0,
-                opacity: active ? 1 : 0,
-                transition: reducedMotion ? "none" : "opacity 900ms cubic-bezier(0.22,0.61,0.36,1)",
-              }}
-            >
-              <div aria-hidden style={{ position: "absolute", inset: 0 }}>
-                {s.image || s.mobileImage ? (
-                  <>
-                    <Image
-                      src={s.image ?? s.mobileImage!}
-                      alt=""
-                      fill
-                      priority={i === 0}
-                      style={{ objectFit: "cover" }}
-                      className={`hl-hero-img${s.mobileImage ? " hidden sm:block" : ""}${!reducedMotion && active ? " hero-ken-burns" : ""}`}
-                      sizes="100vw"
-                    />
-                    {s.mobileImage && (
-                      <Image
-                        src={s.mobileImage}
-                        alt=""
-                        fill
-                        priority={i === 0}
-                        style={{ objectFit: "cover" }}
-                        className={`hl-hero-img block sm:hidden${!reducedMotion && active ? " hero-ken-burns" : ""}`}
-                        sizes="100vw"
-                      />
-                    )}
-                  </>
-                ) : (
-                  <div style={{
-                    position: "absolute", inset: 0,
-                    background:
-                      "radial-gradient(80% 70% at 65% 40%, rgba(110,122,85,0.10), transparent 60%)," +
-                      "radial-gradient(50% 50% at 20% 70%, rgba(182,137,80,0.07), transparent 50%)," +
-                      "var(--hl-bg)",
-                  }} />
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {/* ── Animasyonlu dumanlı nargile sahnesi (dekoratif arka plan) ── */}
+      <HookahScene animate={!reducedMotion} />
 
-      {/* ── Cinematic scrim (okunabilirlik + derinlik) ── */}
+      {/* ── Sinematik scrim (okunabilirlik + derinlik) ── */}
       <div aria-hidden className="hl-hero-scrim" />
 
-      {/* ── Content (aktif slayt) ── */}
-      <div className="hl-hero-content">
+      {/* ── İçerik (aktif slayt metni) ── */}
+      {/* Otomatik dönerken canlı bölge kapalı (SR'ı rahatsız etmesin); duraklayınca/tek slaytta açık. */}
+      <div className="hl-hero-content" aria-live={paused || reducedMotion || count < 2 ? "polite" : "off"} aria-atomic="true">
         <div
           key={`hero-text-${enterCount}`}
           style={{ animation: reducedMotion ? "none" : "hl-hero-text-enter 700ms cubic-bezier(0.22,0.61,0.36,1) both" }}
@@ -172,13 +134,12 @@ export default function Hero({ slides }: Props) {
             <span style={{ opacity: 0.4 }}> / {String(count).padStart(2, "0")}</span>
           </span>
           {count > 1 && (
-            <div role="tablist" aria-label="Slayt göstergeleri" style={{ display: "flex", gap: 7 }}>
-              {slides.map((s, i) => (
+            <div role="group" aria-label="Slayt seçici" style={{ display: "flex", gap: 7 }}>
+              {data.map((s, i) => (
                 <button
                   key={s.id}
-                  role="tab"
-                  aria-selected={i === idx}
                   aria-label={`Slayt ${i + 1}`}
+                  aria-current={i === idx ? "true" : undefined}
                   onClick={() => { setPaused(true); goTo(i); }}
                   className="hl-hero-dot"
                   style={{

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Cormorant_Garamond, Manrope } from "next/font/google";
+import { Manrope } from "next/font/google";
 import "./globals.css";
 import AppShell from "@/components/layout/AppShell";
 import { SiteFlagsProvider } from "@/components/layout/SiteFlags";
@@ -11,23 +11,11 @@ import { prisma } from "@/lib/db/prisma";
 import type { NavCategory, NavFeaturedProduct } from "@/lib/types";
 import { getUsdTryRate, toTRY, type PriceCurrency } from "@/lib/pricing";
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
-
-const cormorant = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
-  style: ["normal", "italic"],
-  variable: "--font-cormorant",
-  display: "swap",
-});
-
+// Tek tipografi ailesi — "Üye ol, fırsatları kaçırma" pop-up'ındaki fontla
+// (Manrope) tüm site birebir aynı. Başlıklar dahil her yer bu aileyi kullanır.
 const manrope = Manrope({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700", "800"],
   variable: "--font-manrope",
   display: "swap",
 });
@@ -194,7 +182,7 @@ export default async function RootLayout({
   const { announcementMessages, giftBoxEnabled, whatsappNumber } = siteData;
 
   return (
-    <html lang="tr" className={`scroll-smooth ${inter.variable} ${cormorant.variable} ${manrope.variable}`}>
+    <html lang="tr" className={`scroll-smooth ${manrope.variable}`}>
       <body className="bg-bg text-ink font-sans antialiased">
         <script
           type="application/ld+json"

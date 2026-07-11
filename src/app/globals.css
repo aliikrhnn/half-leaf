@@ -16,6 +16,7 @@
     --hl-olive-300:    #6E7A55;
     --hl-bronze-900:   #4A361E;
     --hl-bronze-700:   #8A6336;
+    --hl-bronze-600:   #9E7442;
     --hl-bronze-500:   #B68950;
     --hl-bronze-400:   #C9A06A;
     --hl-bronze-300:   #D9B988;
@@ -29,7 +30,8 @@
     --hl-line-bronze:  rgba(182,137,80,0.32);
     --hl-glass-bg:     rgba(22,24,21,0.55);
     --hl-glass-blur:   blur(18px) saturate(140%);
-    --hl-font-display: var(--font-cormorant, "Cormorant Garamond", serif);
+    /* Tek aile: başlık ("display") ve arayüz ("ui") fontu, pop-up ile aynı → Manrope */
+    --hl-font-display: var(--font-manrope, "Manrope", system-ui, sans-serif);
     --hl-font-ui:      var(--font-manrope, "Manrope", system-ui, sans-serif);
     --hl-r-xs: 4px; --hl-r-sm: 8px; --hl-r-md: 12px;
     --hl-r-lg: 18px; --hl-r-xl: 24px; --hl-r-pill: 999px;
@@ -78,7 +80,7 @@
   body {
     background-color: var(--bg);
     color: var(--ink);
-    font-family: "Inter", system-ui, sans-serif;
+    font-family: var(--hl-font-ui);
     line-height: 1.6;
   }
 
@@ -1098,10 +1100,15 @@
   .hl-account-grid { grid-template-columns: 1fr !important; }
 }
 
-/* ── Hero slider ── */
+/* ── Hero (animasyonlu nargile sahnesi) ── */
 .hl-hero-section {
   height: clamp(70vh, 88vh, 100vh);
   min-height: 560px;
+  background:
+    radial-gradient(120% 90% at 78% 26%, rgba(47, 56, 38, 0.5), transparent 58%),
+    radial-gradient(90% 80% at 88% 80%, rgba(74, 54, 30, 0.4), transparent 60%),
+    radial-gradient(80% 70% at 10% 18%, rgba(16, 20, 14, 0.7), transparent 72%),
+    linear-gradient(180deg, #0b0c0a 0%, #0a0b09 52%, #070806 100%);
 }
 .hl-hero-img {
   object-position: center 30%;
@@ -1130,10 +1137,10 @@
 }
 .hl-hero-title {
   font-size: clamp(40px, 5.4vw, 84px);
-  line-height: 1.02;
-  letter-spacing: -0.03em;
-  font-weight: 400;
-  font-style: italic;
+  line-height: 1.03;
+  letter-spacing: -0.035em;
+  font-weight: 600;
+  font-style: normal;
   margin: 0;
   color: #f2efe6;
   text-shadow: 0 2px 40px rgba(0, 0, 0, 0.35);
@@ -1280,6 +1287,293 @@
   .hl-hero-cta { padding: 13px 24px; font-size: 12px; }
   .hl-hero-bar { padding: 18px 20px; }
   .hl-hero-bar-arrows { display: none; }
+}
+
+/* ── Animasyonlu nargile sahnesi ── */
+.hl-hero-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.hl-hero-ambience {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(40% 44% at 74% 32%, rgba(110, 122, 85, 0.24), transparent 62%),
+    radial-gradient(38% 48% at 82% 70%, rgba(201, 160, 106, 0.16), transparent 64%);
+  animation: hl-ambience-drift 15s ease-in-out infinite;
+}
+.hl-hookah-wrap {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: clamp(2%, 8vw, 12%);
+  width: clamp(190px, 28vw, 340px);
+}
+.hl-hookah {
+  position: absolute;
+  bottom: 4%;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 90%;
+  width: auto;
+  filter: drop-shadow(0 34px 46px rgba(0, 0, 0, 0.55));
+  animation: hl-hookah-enter 1200ms var(--hl-ease) both;
+}
+
+/* Duman tütsüleri */
+.hl-smoke {
+  position: absolute;
+  left: 50%;
+  bottom: 60%;
+  transform: translateX(-50%);
+  width: 70%;
+  height: 52%;
+  --rise: -320px;
+}
+/* Sürekli, yumuşak duman kolonu (tütsülerin arasında boşluk bırakmaz) */
+.hl-smoke-column {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(to top, rgba(214, 208, 192, 0.28), rgba(200, 196, 182, 0.12) 42%, transparent 80%);
+  filter: blur(15px);
+  mix-blend-mode: screen;
+  opacity: 0.7;
+  animation: hl-smoke-column 7.5s ease-in-out infinite;
+}
+.hl-smoke-wisp {
+  position: absolute;
+  bottom: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, rgba(222, 214, 198, 0.95), rgba(160, 158, 146, 0.4) 46%, transparent 72%);
+  filter: blur(8px);
+  opacity: 0;
+  mix-blend-mode: screen;
+  transform: translateX(-50%);
+  animation-name: hl-smoke-rise;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.5, 1);
+  animation-iteration-count: infinite;
+}
+
+/* Duman içinde yükselen marka yaprakları */
+.hl-leaf-mote {
+  position: absolute;
+  bottom: 56%;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  filter: drop-shadow(0 0 6px rgba(201, 160, 106, 0.45));
+  animation-name: hl-leaf-rise;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.5, 1);
+  animation-iteration-count: infinite;
+}
+.hl-leaf-mote svg { display: block; }
+
+/* Kor — bowl üstünde parlayan half leaf ikonu */
+.hl-ember {
+  position: absolute;
+  left: 50%;
+  top: 33%;
+  transform: translateX(-50%);
+  display: grid;
+  place-items: center;
+}
+.hl-ember-glow {
+  position: absolute;
+  width: 74px;
+  height: 74px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(242, 172, 92, 0.55), rgba(228, 138, 58, 0.22) 42%, transparent 70%);
+  filter: blur(6px);
+  animation: hl-ember-pulse 3.4s ease-in-out infinite;
+}
+.hl-ember > svg {
+  position: relative;
+  filter: drop-shadow(0 0 8px rgba(242, 172, 92, 0.6));
+  animation: hl-ember-leaf 3.4s ease-in-out infinite;
+}
+
+@keyframes hl-smoke-rise {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(0) scale(0.5); }
+  14%  { opacity: var(--peak, 0.4); }
+  55%  { opacity: calc(var(--peak, 0.4) * 0.55); }
+  100% { opacity: 0; transform: translateX(calc(-50% + var(--dx, 20px))) translateY(var(--rise, -320px)) scale(2.4) rotate(var(--rot, 8deg)); }
+}
+@keyframes hl-smoke-column {
+  0%, 100% { opacity: 0.42; transform: translateX(-50%) scaleX(1) skewX(0deg); }
+  50%      { opacity: 0.72; transform: translateX(-52%) scaleX(1.12) skewX(-3deg); }
+}
+@keyframes hl-leaf-rise {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(0) scale(0.5) rotate(-6deg); }
+  16%  { opacity: 0.62; }
+  70%  { opacity: 0.28; }
+  100% { opacity: 0; transform: translateX(calc(-50% + var(--dx, 24px))) translateY(var(--rise-leaf, -330px)) scale(1) rotate(var(--rot, 18deg)); }
+}
+@keyframes hl-ember-pulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50%      { opacity: 1; transform: scale(1.08); }
+}
+@keyframes hl-ember-leaf {
+  0%, 100% { opacity: 0.82; transform: scale(1); }
+  50%      { opacity: 1; transform: scale(1.05); }
+}
+@keyframes hl-ambience-drift {
+  0%, 100% { opacity: 0.72; transform: scale(1) translateY(0); }
+  50%      { opacity: 1; transform: scale(1.07) translateY(-1.5%); }
+}
+@keyframes hl-hookah-enter {
+  from { opacity: 0; transform: translateX(-50%) translateY(26px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Reduced motion — sahneyi dondur */
+.hl-hero-stage--still .hl-hero-ambience,
+.hl-hero-stage--still .hl-hookah,
+.hl-hero-stage--still .hl-smoke-column,
+.hl-hero-stage--still .hl-ember-glow,
+.hl-hero-stage--still .hl-ember > svg { animation: none; }
+.hl-hero-stage--still .hl-smoke-column { opacity: 0.4; }
+.hl-hero-stage--still .hl-smoke-wisp {
+  animation: none;
+  opacity: 0.12;
+  transform: translateX(-50%) translateY(-70px) scale(1.6);
+}
+.hl-hero-stage--still .hl-leaf-mote { animation: none; opacity: 0.16; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hl-hero-ambience,
+  .hl-hookah,
+  .hl-smoke-column,
+  .hl-smoke-wisp,
+  .hl-leaf-mote,
+  .hl-ember-glow,
+  .hl-ember > svg { animation: none !important; }
+}
+
+@media (max-width: 767px) {
+  .hl-hookah-wrap {
+    right: 50%;
+    transform: translateX(50%);
+    width: min(62vw, 280px);
+    opacity: 0.42;
+  }
+  .hl-smoke { --rise: -220px; }
+  .hl-leaf-mote { --rise-leaf: -240px; }
+}
+
+/* ── Markalar vitrini ── */
+.hl-brand-all {
+  font-family: var(--hl-font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--hl-bronze-400);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 150ms ease;
+}
+.hl-brand-all svg { transition: transform 200ms var(--hl-ease); }
+.hl-brand-all:hover { color: var(--hl-bronze-300); }
+.hl-brand-all:hover svg { transform: translateX(4px); }
+
+.hl-brand-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--hl-bg-elev-3);
+  border: 1px solid var(--hl-line-strong);
+  text-decoration: none;
+  transition: border-color 220ms var(--hl-ease), transform 220ms var(--hl-ease), box-shadow 220ms ease;
+}
+.hl-brand-card:hover {
+  border-color: var(--hl-bronze-700);
+  transform: translateY(-4px);
+  box-shadow: 0 22px 48px -24px rgba(0, 0, 0, 0.7);
+}
+.hl-brand-media {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+}
+.hl-brand-spot {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(58% 52% at 50% 42%, rgba(201, 160, 106, 0.14), transparent 70%);
+  opacity: 0.8;
+  transition: opacity 260ms ease;
+}
+.hl-brand-card:hover .hl-brand-spot { opacity: 1; }
+.hl-brand-img {
+  padding: 20px;
+  transition: transform 420ms var(--hl-ease);
+}
+.hl-brand-card:hover .hl-brand-img { transform: scale(1.06); }
+.hl-brand-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 55%, rgba(10, 11, 9, 0.55) 100%);
+  pointer-events: none;
+}
+.hl-brand-count {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-family: var(--hl-font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--hl-text-soft);
+  background: rgba(8, 9, 7, 0.55);
+  border: 1px solid var(--hl-line-strong);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 4px 9px;
+  border-radius: 999px;
+}
+.hl-brand-info {
+  padding: 14px 16px 16px;
+  border-top: 1px solid var(--hl-line);
+}
+.hl-brand-name {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: var(--hl-font-display);
+  font-size: clamp(15px, 1.5vw, 19px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--hl-text);
+  line-height: 1.15;
+}
+.hl-brand-arrow {
+  color: var(--hl-bronze-400);
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: opacity 220ms ease, transform 220ms var(--hl-ease);
+  flex-shrink: 0;
+}
+.hl-brand-card:hover .hl-brand-arrow { opacity: 1; transform: translateX(0); }
+.hl-brand-tagline {
+  margin-top: 4px;
+  font-family: var(--hl-font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--hl-bronze-300);
+}
+@media (max-width: 640px) {
+  .hl-brand-arrow { display: none; }
+  .hl-brand-img { padding: 14px; }
 }
 
 /* ── WhatsApp kayan buton + balon ── */
