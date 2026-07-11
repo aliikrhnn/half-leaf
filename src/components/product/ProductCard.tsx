@@ -109,16 +109,18 @@ export default function ProductCard({ product }: ProductCardProps) {
             className="hl-card-heart"
             style={{
               position: "absolute", top: 10, right: 10,
-              width: 30, height: 30, borderRadius: "50%",
-              background: "rgba(255,255,255,0.9)", border: "1px solid #e5e5e5",
+              width: 32, height: 32, borderRadius: "50%",
+              background: "rgba(10,11,9,0.5)",
+              backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
+              border: `1px solid ${liked ? "var(--hl-bronze-500)" : "var(--hl-line-strong)"}`,
               display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer", color: liked ? "#e53e3e" : "var(--hl-text-mute)",
-              transition: "color 150ms ease",
+              cursor: "pointer", color: liked ? "var(--hl-bronze-300)" : "var(--hl-text-soft)",
+              transition: "color 150ms ease, border-color 150ms ease, background 150ms ease",
             }}
             aria-label={liked ? "Favorilerden çıkar" : "Favorilere ekle"}
             aria-pressed={liked}
           >
-            <Heart size={12} fill={liked ? "#e53e3e" : "none"} />
+            <Heart size={14} fill={liked ? "#C9A06A" : "none"} />
           </button>
 
           {/* Out of stock overlay */}

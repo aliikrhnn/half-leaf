@@ -10,6 +10,7 @@ import NewArrivalsSection from "@/components/sections/NewArrivalsSection";
 import FeaturedSection from "@/components/sections/FeaturedSection";
 import FlashProductsSection from "@/components/sections/FlashProductsSection";
 import BrandsSection from "@/components/sections/BrandsSection";
+import AllProductsSection from "@/components/sections/AllProductsSection";
 import { getShowcaseBrands } from "@/lib/products/brands";
 import ContentCards from "@/components/sections/ContentCards";
 import SeoIntro from "@/components/sections/SeoIntro";
@@ -127,6 +128,23 @@ async function getHeroSlides(): Promise<HeroSlideData[]> {
   }
 }
 
+async function getAllProducts(rate: number): Promise<Product[]> {
+  try {
+    const rows = await prisma.product.findMany({
+      where: { isActive: true },
+      include: {
+        Category: { select: { id: true, slug: true, name: true } },
+        ProductImage: { orderBy: { sortOrder: "asc" }, take: 1 },
+        Inventory: { select: { quantity: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    return rows.map(p => mapProduct(p, rate));
+  } catch {
+    return [];
+  }
+}
+
 async function getBestsellerProducts(rate: number): Promise<Product[]> {
   try {
     const rows = await prisma.product.findMany({
@@ -148,7 +166,7 @@ async function getBestsellerProducts(rate: number): Promise<Product[]> {
 
 export default async function HomePage() {
   const usdTryRate = await getUsdTryRate();
-  const [heroSlides, newArrivals, featuredProducts, flashProducts, bestsellerProducts, brands] =
+  const [heroSlides, newArrivals, featuredProducts, flashProducts, bestsellerProducts, brands, allProducts] =
     await Promise.all([
       getHeroSlides(),
       getNewArrivals(usdTryRate),
@@ -156,7 +174,20 @@ export default async function HomePage() {
       getFlashProducts(usdTryRate),
       getBestsellerProducts(usdTryRate),
       getShowcaseBrands(),
+      getAllProducts(usdTryRate),
     ]);
+
+  // "Tüm ürünler" grid'i: küratörlü bölümlerde (yeni gelenler / öne çıkanlar /
+  // çok satanlar) zaten gösterilen ürünler çıkarılır ki aynı ürün sayfada
+  // tekrarlanmasın. Performans için makul bir sayıyla sınırlanır; kalanı
+  // "Tümünü gör" ile /urunler'e gider.
+  const shownIds = new Set(
+    [...newArrivals, ...featuredProducts, ...bestsellerProducts].map(p => p.id)
+  );
+  const restProducts = allProducts.filter(p => !shownIds.has(p.id)).slice(0, 60);
+  const allChunk1 = restProducts.slice(0, 16);
+  const allChunk2 = restProducts.slice(16, 40);
+  const allChunk3 = restProducts.slice(40);
 
   const websiteJsonLd = {
     "@context": "https://schema.org",
@@ -180,8 +211,11 @@ export default async function HomePage() {
       />
       <Hero slides={heroSlides} />
       <NewArrivalsSection products={newArrivals} />
-      <BestsellersSection products={bestsellerProducts} />
+      <AllProductsSection products={allChunk1} eyebrow="Tüm Koleksiyon" title="Tüm ürünler" href="/urunler" />
       <FeaturedSection products={featuredProducts} />
+      <AllProductsSection products={allChunk2} />
+      <BestsellersSection products={bestsellerProducts} />
+      <AllProductsSection products={allChunk3} href="/urunler" />
       <FlashProductsSection products={flashProducts} />
       <BrandsSection brands={brands} />
       <ContentCards />

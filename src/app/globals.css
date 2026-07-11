@@ -1022,7 +1022,7 @@
 .hl-card-img { transition: transform 500ms ease; }
 .hl-product-card:hover .hl-card-name { color: var(--hl-bronze-400); transition: color 150ms ease; }
 .hl-card-name { transition: color 150ms ease; }
-.hl-product-card:hover .hl-card-heart { color: var(--hl-text-soft) !important; }
+.hl-card-heart:hover { border-color: var(--hl-bronze-500) !important; color: var(--hl-bronze-300) !important; background: rgba(10, 11, 9, 0.7) !important; }
 
 /* Load more hover */
 .hl-load-more:hover {
@@ -1323,59 +1323,18 @@
   animation: hl-hookah-enter 1200ms var(--hl-ease) both;
 }
 
-/* Duman tütsüleri */
-.hl-smoke {
+/* Gerçekçi duman (canvas) + sahne katman sırası */
+.hl-hookah-wrap { z-index: 1; }
+.hl-smoke-canvas {
   position: absolute;
-  left: 50%;
-  bottom: 60%;
-  transform: translateX(-50%);
-  width: 70%;
-  height: 52%;
-  --rise: -320px;
-}
-/* Sürekli, yumuşak duman kolonu (tütsülerin arasında boşluk bırakmaz) */
-.hl-smoke-column {
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 40%;
+  inset: 0;
+  width: 100%;
   height: 100%;
-  background: linear-gradient(to top, rgba(214, 208, 192, 0.28), rgba(200, 196, 182, 0.12) 42%, transparent 80%);
-  filter: blur(15px);
-  mix-blend-mode: screen;
-  opacity: 0.7;
-  animation: hl-smoke-column 7.5s ease-in-out infinite;
-}
-.hl-smoke-wisp {
-  position: absolute;
-  bottom: 0;
-  border-radius: 50%;
-  background: radial-gradient(circle at 50% 50%, rgba(222, 214, 198, 0.95), rgba(160, 158, 146, 0.4) 46%, transparent 72%);
-  filter: blur(8px);
-  opacity: 0;
-  mix-blend-mode: screen;
-  transform: translateX(-50%);
-  animation-name: hl-smoke-rise;
-  animation-timing-function: cubic-bezier(0.4, 0, 0.5, 1);
-  animation-iteration-count: infinite;
+  z-index: 2;
+  pointer-events: none;
 }
 
-/* Duman içinde yükselen marka yaprakları */
-.hl-leaf-mote {
-  position: absolute;
-  bottom: 56%;
-  left: 50%;
-  transform: translateX(-50%);
-  opacity: 0;
-  filter: drop-shadow(0 0 6px rgba(201, 160, 106, 0.45));
-  animation-name: hl-leaf-rise;
-  animation-timing-function: cubic-bezier(0.4, 0, 0.5, 1);
-  animation-iteration-count: infinite;
-}
-.hl-leaf-mote svg { display: block; }
-
-/* Kor — bowl üstünde parlayan half leaf ikonu */
+/* Kor — lülenin üstünde parlayan half leaf ikonu */
 .hl-ember {
   position: absolute;
   left: 50%;
@@ -1383,6 +1342,7 @@
   transform: translateX(-50%);
   display: grid;
   place-items: center;
+  z-index: 2;
 }
 .hl-ember-glow {
   position: absolute;
@@ -1399,22 +1359,6 @@
   animation: hl-ember-leaf 3.4s ease-in-out infinite;
 }
 
-@keyframes hl-smoke-rise {
-  0%   { opacity: 0; transform: translateX(-50%) translateY(0) scale(0.5); }
-  14%  { opacity: var(--peak, 0.4); }
-  55%  { opacity: calc(var(--peak, 0.4) * 0.55); }
-  100% { opacity: 0; transform: translateX(calc(-50% + var(--dx, 20px))) translateY(var(--rise, -320px)) scale(2.4) rotate(var(--rot, 8deg)); }
-}
-@keyframes hl-smoke-column {
-  0%, 100% { opacity: 0.42; transform: translateX(-50%) scaleX(1) skewX(0deg); }
-  50%      { opacity: 0.72; transform: translateX(-52%) scaleX(1.12) skewX(-3deg); }
-}
-@keyframes hl-leaf-rise {
-  0%   { opacity: 0; transform: translateX(-50%) translateY(0) scale(0.5) rotate(-6deg); }
-  16%  { opacity: 0.62; }
-  70%  { opacity: 0.28; }
-  100% { opacity: 0; transform: translateX(calc(-50% + var(--dx, 24px))) translateY(var(--rise-leaf, -330px)) scale(1) rotate(var(--rot, 18deg)); }
-}
 @keyframes hl-ember-pulse {
   0%, 100% { opacity: 0.7; transform: scale(1); }
   50%      { opacity: 1; transform: scale(1.08); }
@@ -1432,26 +1376,10 @@
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
-/* Reduced motion — sahneyi dondur */
-.hl-hero-stage--still .hl-hero-ambience,
-.hl-hero-stage--still .hl-hookah,
-.hl-hero-stage--still .hl-smoke-column,
-.hl-hero-stage--still .hl-ember-glow,
-.hl-hero-stage--still .hl-ember > svg { animation: none; }
-.hl-hero-stage--still .hl-smoke-column { opacity: 0.4; }
-.hl-hero-stage--still .hl-smoke-wisp {
-  animation: none;
-  opacity: 0.12;
-  transform: translateX(-50%) translateY(-70px) scale(1.6);
-}
-.hl-hero-stage--still .hl-leaf-mote { animation: none; opacity: 0.16; }
-
+/* Reduced motion — CSS animasyonlarını durdur (duman canvas'ı JS'te statik çizer) */
 @media (prefers-reduced-motion: reduce) {
   .hl-hero-ambience,
   .hl-hookah,
-  .hl-smoke-column,
-  .hl-smoke-wisp,
-  .hl-leaf-mote,
   .hl-ember-glow,
   .hl-ember > svg { animation: none !important; }
 }
@@ -1461,10 +1389,8 @@
     right: 50%;
     transform: translateX(50%);
     width: min(62vw, 280px);
-    opacity: 0.42;
+    opacity: 0.55;
   }
-  .hl-smoke { --rise: -220px; }
-  .hl-leaf-mote { --rise-leaf: -240px; }
 }
 
 /* ── Markalar vitrini ── */
