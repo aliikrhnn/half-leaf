@@ -8,32 +8,36 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      // Renkler CSS değişkenlerine bağlıdır; böylece koyu/açık tema geçişi
+      // tek bir data-theme özniteliğiyle tüm Tailwind sınıflarına yansır.
+      // "<alpha-value>" sayesinde bg-bg-surface/95 gibi opaklık kısayolları
+      // çalışmaya devam eder.
       colors: {
         bg: {
-          DEFAULT: "#0d0d0d",
-          surface: "#141414",
-          elevated: "#1e1e1e",
-          card: "#191919",
+          DEFAULT: "rgb(var(--bg-rgb) / <alpha-value>)",
+          surface: "rgb(var(--bg-surface-rgb) / <alpha-value>)",
+          elevated: "rgb(var(--bg-elevated-rgb) / <alpha-value>)",
+          card: "rgb(var(--bg-card-rgb) / <alpha-value>)",
         },
         accent: {
-          DEFAULT: "#4a7c59",
-          light: "#5a9668",
-          dark: "#35573e",
-          muted: "#2a4a33",
+          DEFAULT: "rgb(var(--accent-rgb) / <alpha-value>)",
+          light: "rgb(var(--accent-light-rgb) / <alpha-value>)",
+          dark: "rgb(var(--accent-dark-rgb) / <alpha-value>)",
+          muted: "rgb(var(--accent-muted-rgb) / <alpha-value>)",
         },
         gold: {
-          DEFAULT: "#c9a96e",
-          light: "#dfc087",
-          dark: "#a88a4e",
-          muted: "#3d2e15",
+          DEFAULT: "rgb(var(--gold-rgb) / <alpha-value>)",
+          light: "rgb(var(--gold-light-rgb) / <alpha-value>)",
+          dark: "rgb(var(--gold-dark-rgb) / <alpha-value>)",
+          muted: "rgb(var(--gold-muted-rgb) / <alpha-value>)",
         },
         ink: {
-          DEFAULT: "#f5f0e8",
-          muted: "#9a9480",
-          dim: "#6a6459",
+          DEFAULT: "rgb(var(--ink-rgb) / <alpha-value>)",
+          muted: "rgb(var(--ink-muted-rgb) / <alpha-value>)",
+          dim: "rgb(var(--ink-dim-rgb) / <alpha-value>)",
         },
-        "border-default": "#252525",
-        "border-light": "#333333",
+        "border-default": "rgb(var(--border-rgb) / <alpha-value>)",
+        "border-light": "rgb(var(--border-light-rgb) / <alpha-value>)",
       },
       fontFamily: {
         sans: ["var(--font-manrope)", "Manrope", "system-ui", "sans-serif"],

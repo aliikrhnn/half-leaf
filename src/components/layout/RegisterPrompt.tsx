@@ -46,6 +46,7 @@ export default function RegisterPrompt() {
     <div
       role="complementary"
       aria-label="Üye ol"
+      className="hl-join-card"
       style={{
         position: "fixed",
         left: 12,
@@ -56,8 +57,6 @@ export default function RegisterPrompt() {
         margin: "0 auto",
         borderRadius: 16,
         padding: "14px 16px",
-        background: "linear-gradient(135deg, var(--hl-bronze-400), var(--hl-bronze-700))",
-        boxShadow: "0 12px 36px rgba(0,0,0,0.45)",
         display: "flex",
         alignItems: "center",
         gap: 12,
@@ -65,17 +64,18 @@ export default function RegisterPrompt() {
       }}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: "var(--hl-font-ui)", fontSize: 14, fontWeight: 800, color: "#1A1206" }}>
+        <div className="hl-join-title" style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: "var(--hl-font-ui)", fontSize: 14, fontWeight: 800 }}>
           <Sparkles size={15} /> Üye ol, fırsatları kaçırma
         </div>
-        <div style={{ fontFamily: "var(--hl-font-ui)", fontSize: 11, color: "rgba(26,18,6,0.8)", marginTop: 2, lineHeight: 1.4 }}>
+        <div className="hl-join-sub" style={{ fontFamily: "var(--hl-font-ui)", fontSize: 11, marginTop: 2, lineHeight: 1.4 }}>
           Özel kampanyalar, sipariş takibi ve favoriler seni bekliyor.
         </div>
       </div>
       <Link
         href="/kayit"
         onClick={dismiss}
-        style={{ flexShrink: 0, padding: "9px 16px", borderRadius: 999, background: "#1A1206", color: "var(--hl-bronze-300)", fontFamily: "var(--hl-font-ui)", fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", textDecoration: "none" }}
+        className="hl-join-btn"
+        style={{ flexShrink: 0, padding: "9px 16px", borderRadius: 999, fontFamily: "var(--hl-font-ui)", fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", textDecoration: "none" }}
       >
         Üye Ol
       </Link>
@@ -83,7 +83,8 @@ export default function RegisterPrompt() {
         type="button"
         onClick={dismiss}
         aria-label="Kapat"
-        style={{ flexShrink: 0, width: 28, height: 28, borderRadius: 999, background: "rgba(26,18,6,0.15)", border: "none", color: "#1A1206", display: "grid", placeItems: "center", cursor: "pointer" }}
+        className="hl-join-close"
+        style={{ flexShrink: 0, width: 28, height: 28, borderRadius: 999, border: "none", display: "grid", placeItems: "center", cursor: "pointer" }}
       >
         <X size={15} />
       </button>

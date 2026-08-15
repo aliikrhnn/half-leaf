@@ -72,13 +72,19 @@ async function getNavCategories(): Promise<NavCategory[]> {
 
     const rootIds = new Set(catRows.filter(c => !c.parentId).map(c => c.id));
 
-    // Build categoryId → rootCategoryId map
+    // Build categoryId → rootCategoryId map.
+    // Yönetim panelinden yanlışlıkla döngüsel bir ebeveyn zinciri kurulursa
+    // (A→B→A) burası sonsuz döngüye girip TÜM siteyi kilitler; ziyaret edilen
+    // id'ler takip edilerek döngü kırılır.
     const catIdToRoot = new Map<string, string>();
     for (const cat of catRows) {
       let cur: typeof cat | undefined = cat;
-      while (cur.parentId) {
-        cur = catRows.find(c => c.id === cur!.parentId);
-        if (!cur) break;
+      const seen = new Set<string>([cat.id]);
+      while (cur?.parentId) {
+        const next = catRows.find(c => c.id === cur!.parentId);
+        if (!next || seen.has(next.id)) break;
+        seen.add(next.id);
+        cur = next;
       }
       if (cur) catIdToRoot.set(cat.id, cur.id);
     }
@@ -129,11 +135,15 @@ async function getNavCategories(): Promise<NavCategory[]> {
     // navigasyondan gizle (silme değil — ürün eklenince yeniden görünür).
     const directCount = new Map(catRows.map(c => [c.id, c._count.Product]));
     const subtreeCache = new Map<string, number>();
-    const subtreeCount = (catId: string): number => {
+    // `visiting` döngüsel ebeveynlikte sonsuz özyinelemeyi (stack overflow) önler.
+    const subtreeCount = (catId: string, visiting = new Set<string>()): number => {
       const cached = subtreeCache.get(catId);
       if (cached !== undefined) return cached;
+      if (visiting.has(catId)) return 0;
+      visiting.add(catId);
       let sum = directCount.get(catId) ?? 0;
-      for (const c of catRows) if (c.parentId === catId) sum += subtreeCount(c.id);
+      for (const c of catRows) if (c.parentId === catId) sum += subtreeCount(c.id, visiting);
+      visiting.delete(catId);
       subtreeCache.set(catId, sum);
       return sum;
     };
@@ -182,7 +192,24 @@ export default async function RootLayout({
   const { announcementMessages, giftBoxEnabled, whatsappNumber } = siteData;
 
   return (
-    <html lang="tr" className={`scroll-smooth ${manrope.variable}`}>
+    <html
+      lang="tr"
+      data-theme="dark"
+      className={`scroll-smooth ${manrope.variable}`}
+      suppressHydrationWarning
+    >
+      <head>
+        {/*
+          Tema, ilk boyamadan ÖNCE uygulanır — aksi hâlde açık tema seçen
+          kullanıcı her sayfa yüklemesinde koyu bir yanıp sönme görür.
+          Varsayılan koyu temadır; açık tema açık bir tercihtir.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("hl-theme");if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t);}}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body className="bg-bg text-ink font-sans antialiased">
         <script
           type="application/ld+json"

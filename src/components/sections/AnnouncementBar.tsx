@@ -18,29 +18,13 @@ export default function AnnouncementBar({ messages }: Props) {
     <div
       role="marquee"
       aria-live="off"
-      className="fixed top-0 left-0 right-0 z-50 overflow-hidden flex items-center"
-      style={{
-        height: "var(--hl-bar-h)",
-        background: "var(--hl-olive-800)",
-        borderBottom: "1px solid var(--hl-olive-700)",
-      }}
+      className="hl-announce fixed top-0 left-0 right-0 z-50 overflow-hidden flex items-center"
     >
       <div className="hl-marquee-track" aria-hidden="true">
         {ALL.map((msg, i) => (
-          <span
-            key={i}
-            className="inline-flex items-center gap-2 px-10"
-            style={{
-              fontFamily: "var(--hl-font-ui)",
-              fontSize: 11,
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
-              fontWeight: 600,
-              color: "var(--hl-bronze-100)",
-            }}
-          >
+          <span key={i} className="hl-announce-item inline-flex items-center gap-2 px-10">
             {msg}
-            <span style={{ color: "var(--hl-bronze-500)", opacity: 0.6 }}>·</span>
+            <span className="hl-announce-sep">·</span>
           </span>
         ))}
       </div>

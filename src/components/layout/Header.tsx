@@ -12,6 +12,7 @@ import HalfLeafLogo from "@/components/brand/HalfLeafLogo";
 import MobileNav from "./MobileNav";
 import CartDrawer from "@/components/cart/CartDrawer";
 import MegaMenu from "./MegaMenu";
+import ThemeToggle from "./ThemeToggle";
 import type { NavCategory } from "@/lib/types";
 
 interface Props {
@@ -130,14 +131,12 @@ export default function Header({ navCategories = [] }: Props) {
   return (
     <>
       <header
-        className={`fixed top-10 left-0 right-0 z-40 transition-all duration-300 ${
-          scrolled
-            ? "bg-bg-surface/95 backdrop-blur-md border-b border-border-default shadow-lg"
-            : "bg-transparent"
+        className={`hl-header fixed top-10 left-0 right-0 z-40 transition-all duration-300${
+          scrolled ? " hl-header--scrolled" : ""
         }`}
       >
         {/* ── Row 1: Logo + Actions ── */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="hl-page-shell">
           <div className="flex items-center justify-between h-16">
             {/* Mobile menu button */}
             <button
@@ -161,6 +160,8 @@ export default function Header({ navCategories = [] }: Props) {
 
             {/* Actions */}
             <div className="flex items-center gap-1">
+              <ThemeToggle />
+
               <button
                 onClick={() => setSearchOpen(v => !v)}
                 className={`min-h-[44px] min-w-[44px] inline-flex items-center justify-center transition-colors rounded-lg hover:bg-bg-elevated ${searchOpen ? "text-ink bg-bg-elevated" : "text-ink-muted hover:text-ink"}`}
@@ -363,7 +364,7 @@ export default function Header({ navCategories = [] }: Props) {
           <MegaMenu
             key={activeKey}
             activeKey={activeKey}
-            allHref={`/urunler?kategori=${activeKey}`}
+            allHref={`/kategori/${activeKey}`}
             label={activeCatObj?.name ?? ""}
             categories={navCategories}
             featuredProduct={activeCatObj?.featuredProduct ?? null}

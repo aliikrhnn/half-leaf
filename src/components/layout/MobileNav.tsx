@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { X, ChevronRight, ChevronDown, Search, User, Heart, LogIn, Sparkles, Package } from "lucide-react";
 import { SITE_NAME } from "@/lib/constants";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
+import ThemeToggle from "./ThemeToggle";
 import type { NavCategory } from "@/lib/types";
 
 interface MobileNavProps {
@@ -19,6 +21,9 @@ export default function MobileNav({ isOpen, onClose, navCategories = [], isAuthe
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  // aria-modal="true" sözünü tutar: odak panelin içinde kalır, kapanışta
+  // menü butonuna geri döner, ESC kapatır.
+  const panelRef = useFocusTrap<HTMLElement>(isOpen, onClose);
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -62,6 +67,8 @@ export default function MobileNav({ isOpen, onClose, navCategories = [], isAuthe
         aria-hidden="true"
       />
       <nav
+        ref={panelRef}
+        tabIndex={-1}
         className="fixed inset-y-0 left-0 z-50 w-80 max-w-[90vw] bg-bg-surface border-r border-border-default overflow-y-auto animate-slide-in-left"
         aria-label="Mobil menü"
         role="dialog"
@@ -70,13 +77,16 @@ export default function MobileNav({ isOpen, onClose, navCategories = [], isAuthe
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border-default">
           <span className="text-lg font-bold text-gold">{SITE_NAME}</span>
-          <button
-            onClick={onClose}
-            className="p-2 text-ink-muted hover:text-ink transition-colors rounded-lg hover:bg-bg-elevated"
-            aria-label="Menüyü kapat"
-          >
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-1">
+            <ThemeToggle />
+            <button
+              onClick={onClose}
+              className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-ink-muted hover:text-ink transition-colors rounded-lg hover:bg-bg-elevated"
+              aria-label="Menüyü kapat"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Search */}
@@ -120,13 +130,12 @@ export default function MobileNav({ isOpen, onClose, navCategories = [], isAuthe
               <Link
                 href="/kayit"
                 onClick={onClose}
-                className="block rounded-xl p-4 text-center"
-                style={{ background: "linear-gradient(135deg, var(--hl-bronze-400), var(--hl-bronze-700))" }}
+                className="hl-join-card block rounded-xl p-4 text-center"
               >
-                <span className="inline-flex items-center gap-1.5 text-[15px] font-bold" style={{ color: "#1A1206" }}>
+                <span className="hl-join-title inline-flex items-center gap-1.5 text-[15px] font-bold">
                   <Sparkles size={16} /> Üye Ol
                 </span>
-                <span className="block text-[11px] mt-1 leading-snug" style={{ color: "rgba(26,18,6,0.78)" }}>
+                <span className="hl-join-sub block text-[11px] mt-1 leading-snug">
                   Fırsatlardan ilk sen haberdar ol, siparişlerini takip et, favorilerini kaydet.
                 </span>
               </Link>
