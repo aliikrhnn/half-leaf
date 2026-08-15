@@ -8,34 +8,24 @@ export const SHIPPING_COST = 150;
 
 export const CONTACT_EMAIL = "info@halfleafstore.com";
 export const CONTACT_PHONE = "+90 543 533 2998";
-export const CONTACT_ADDRESS = "Isparta, Türkiye";
+/**
+ * Mağaza adresi — yönetim panelinde ayarlanmamışsa kullanılan yedek değer.
+ * İlk satır sokak/cadde, son satır şehir/ülke olacak şekilde yazılır;
+ * footer ve iletişim sayfası satırları bu sırayla gösterir.
+ */
+export const CONTACT_ADDRESS =
+  "Süleyman Demirel 102. Cadde No: 86-88/2 Dükkan 2\nIsparta, Türkiye";
 
 export const SOCIAL_LINKS = {
   instagram: "https://instagram.com/halfleafstore",
   facebook: "https://facebook.com/halfleafstore",
 };
 
-export const NAV_LINKS: Array<{ label: string; href: string; megaKey?: string; accent?: boolean }> = [
-  { label: "Koleksiyon", href: "/urunler", megaKey: "all" },
-  { label: "Aksesuarlar", href: "/urunler?kategori=aksesuarlar", megaKey: "aksesuar" },
-  { label: "Tablalar & Yedek Parçalar", href: "/urunler?kategori=tablalar", megaKey: "tabla" },
-  { label: "Hediye Setleri", href: "/urunler?kategori=hediye-setleri", megaKey: "hediye" },
-  { label: "İndirimli Ürünler", href: "/urunler?indirim=1", accent: true },
-];
-
-export const MEGA_MENU_DESCRIPTIONS: Record<string, string> = {
-  all:              "Özenle seçilmiş pirinç ve cam koleksiyonumuzu keşfedin.",
-  "nargile-takimlari": "Dünyanın en prestijli markalarından özenle seçilmiş premium koleksiyon.",
-  luler:            "38 farklı marka, her seçeneğe uygun profesyonel lüle koleksiyonu.",
-  siseler:          "Kesme, rus tipi ve özel tasarım şişe seçenekleri.",
-  komurler:         "Kaliteli nargile kömürleri — her kullanım için doğru seçenek.",
-  marpuclar:        "Buzlu, silikon ve tek kullanımlık marpuç seçenekleri.",
-  aksesuarlar:      "Sipsi, çatal, folyo ve tüm sarf malzemeleri.",
-  "isi-yonetimi":   "HMD cihazları, közlükler ve rüzgarlıklar — tam kontrol, eşit ısı dağılımı.",
-  "koz-ocaklari":   "Elektrikli ve gazlı köz ocakları, kömür ısıtma ekipmanları.",
-  "ithal-muadil":   "Orijinal yedek parçalar ve muadil aksesuar seçenekleri.",
-  "aroma-mela":     "Tütünsüz, nikotinsiz bitkisel aroma ürünleri.",
-};
+/*
+ * Not: Gezinme kategorileri ve açıklamaları veritabanından gelir
+ * (app/layout.tsx → getNavCategories). Burada ayrıca sabit bir kategori
+ * listesi tutulmaz; aksi hâlde iki kaynak birbirinden kayar.
+ */
 
 export const FOOTER_LINKS = {
   kurumsallar: [

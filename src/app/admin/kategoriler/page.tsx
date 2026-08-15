@@ -8,15 +8,20 @@ import AdminHeader from "@/components/admin/layout/AdminHeader";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 
+// Alan adları Prisma'nın döndürdüğü şekilde olmalı: imageUrl ve _count.Product.
+// (Önceden "image" / "_count.products" okunuyordu; ikisi de undefined geldiği
+// için kategori görselleri hiç görünmüyor, "ürün içeren kategori silinemez"
+// koruması da hiç devreye girmiyordu.)
 interface Category {
   id: string;
   name: string;
   slug: string;
   description?: string;
-  image?: string;
+  imageUrl?: string;
+  parentId?: string | null;
   isActive: boolean;
   sortOrder: number;
-  _count: { products: number };
+  _count: { Product: number };
 }
 
 export default function AdminKategorilerPage() {
@@ -93,9 +98,9 @@ export default function AdminKategorilerPage() {
           ) : (
             categories.map((cat) => (
               <div key={cat.id} className="bg-bg-surface border border-border-default rounded-xl p-3 flex items-center gap-3">
-                {cat.image ? (
+                {cat.imageUrl ? (
                   <div className="relative w-11 h-11 rounded-lg overflow-hidden bg-bg-elevated flex-shrink-0">
-                    <Image src={cat.image} alt={cat.name} fill className="object-cover" sizes="44px" />
+                    <Image src={cat.imageUrl} alt={cat.name} fill className="object-cover" sizes="44px" />
                   </div>
                 ) : (
                   <div className="w-11 h-11 rounded-lg bg-bg-elevated flex-shrink-0 flex items-center justify-center">
@@ -108,7 +113,7 @@ export default function AdminKategorilerPage() {
                     {cat.isActive ? <Badge variant="success">Aktif</Badge> : <Badge variant="default">Pasif</Badge>}
                   </div>
                   <div className="text-xs text-ink-dim font-mono truncate">{cat.slug}</div>
-                  <div className="text-xs text-ink-muted mt-0.5">{cat._count.products} ürün · sıra {cat.sortOrder}</div>
+                  <div className="text-xs text-ink-muted mt-0.5">{cat._count.Product} ürün · sıra {cat.sortOrder}</div>
                 </div>
                 <div className="flex flex-col gap-1.5 flex-shrink-0">
                   <Link href={`/admin/kategoriler/${cat.id}`}>
@@ -118,9 +123,9 @@ export default function AdminKategorilerPage() {
                   </Link>
                   <button
                     onClick={() => setDeleteId(cat.id)}
-                    disabled={cat._count.products > 0}
+                    disabled={cat._count.Product > 0}
                     className="p-2 text-ink-muted hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                    title={cat._count.products > 0 ? "Ürün içeren kategori silinemez" : "Sil"}
+                    title={cat._count.Product > 0 ? "Ürün içeren kategori silinemez" : "Sil"}
                     aria-label="Sil"
                   >
                     <Trash2 size={16} />
@@ -164,9 +169,9 @@ export default function AdminKategorilerPage() {
                   <tr key={cat.id} className="hover:bg-bg-elevated/50 transition-colors">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        {cat.image ? (
+                        {cat.imageUrl ? (
                           <div className="relative w-9 h-9 rounded-lg overflow-hidden bg-bg-elevated flex-shrink-0">
-                            <Image src={cat.image} alt={cat.name} fill className="object-cover" sizes="36px" />
+                            <Image src={cat.imageUrl} alt={cat.name} fill className="object-cover" sizes="36px" />
                           </div>
                         ) : (
                           <div className="w-9 h-9 rounded-lg bg-bg-elevated flex-shrink-0 flex items-center justify-center">
@@ -185,7 +190,7 @@ export default function AdminKategorilerPage() {
                       {cat.slug}
                     </td>
                     <td className="px-4 py-3 text-ink-muted">
-                      {cat._count.products}
+                      {cat._count.Product}
                     </td>
                     <td className="px-4 py-3 text-ink-dim hidden md:table-cell">
                       {cat.sortOrder}
@@ -206,9 +211,9 @@ export default function AdminKategorilerPage() {
                         </Link>
                         <button
                           onClick={() => setDeleteId(cat.id)}
-                          disabled={cat._count.products > 0}
+                          disabled={cat._count.Product > 0}
                           className="p-1.5 text-ink-muted hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                          title={cat._count.products > 0 ? "Ürün içeren kategori silinemez" : "Sil"}
+                          title={cat._count.Product > 0 ? "Ürün içeren kategori silinemez" : "Sil"}
                         >
                           <Trash2 size={15} />
                         </button>

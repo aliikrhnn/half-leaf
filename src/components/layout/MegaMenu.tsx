@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { MEGA_MENU_DESCRIPTIONS } from "@/lib/constants";
 import type { NavCategory, NavFeaturedProduct } from "@/lib/types";
 
 interface NavGroup extends NavCategory {
@@ -61,7 +60,9 @@ export default function MegaMenu({
 }: Props) {
   const groups = getCategoryGroups(activeKey, categories);
   const activeCat = categories.find(c => c.slug === activeKey);
-  const description = MEGA_MENU_DESCRIPTIONS[activeKey] ?? activeCat?.description ?? "";
+  // Açıklamanın tek kaynağı veritabanıdır — yönetim panelinden değiştirilebilsin
+  // diye kodda ayrıca bir metin listesi tutulmaz.
+  const description = activeCat?.description ?? "";
 
   return (
     <>

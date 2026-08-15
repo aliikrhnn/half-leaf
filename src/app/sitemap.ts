@@ -31,8 +31,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         where: { isActive: true },
         select: { slug: true, updatedAt: true },
       }),
+      // Yalnızca alt ağacında aktif ürünü olan kategoriler indekslenir.
+      // Boş kategori sayfaları "thin content" sayılır ve navigasyonda da
+      // zaten gizleniyorlar (bkz. app/layout.tsx → getNavCategories).
       prisma.category.findMany({
-        where: { isActive: true },
+        where: {
+          isActive: true,
+          OR: [
+            { Product: { some: { isActive: true } } },
+            { other_Category: { some: { Product: { some: { isActive: true } } } } },
+          ],
+        },
         select: { slug: true, updatedAt: true },
       }),
     ]);

@@ -4,14 +4,18 @@ import Link from "next/link";
  * Ana sayfa SEO içerik bölümü — doğal anahtar kelime kullanımı + kategori iç-linkleri.
  * Hedef aramalar: nargile, nargile takımı, lüle, ithal/yerli takım, cam şişe, kömür, aksesuar.
  */
+// Yalnızca veritabanında GERÇEKTEN var olan slug'lar. (Önceden burada
+// /kategori/ithal-takimlar ve /kategori/yerli-takimlar vardı; ikisi de
+// veritabanında yok, yani ana sayfadan 404'e giden kırık linklerdi.)
 const CATEGORY_LINKS: { label: string; href: string }[] = [
   { label: "Nargile Takımları", href: "/kategori/nargile-takimlari" },
-  { label: "İthal Takımlar", href: "/kategori/ithal-takimlar" },
-  { label: "Yerli Takımlar", href: "/kategori/yerli-takimlar" },
   { label: "Lüleler", href: "/kategori/luler" },
-  { label: "Cam Şişeler", href: "/kategori/siseler" },
+  { label: "Marpuçlar", href: "/kategori/marpuclar" },
   { label: "Kömürler", href: "/kategori/komurler" },
+  { label: "Köz Ocakları", href: "/kategori/koz-ocaklari" },
+  { label: "HMD & Közlük", href: "/kategori/aks-kozluk-hmd" },
   { label: "Aksesuarlar", href: "/kategori/aksesuarlar" },
+  { label: "Bitkisel Aroma", href: "/kategori/fumara-bitkisel-aroma" },
 ];
 
 export default function SeoIntro() {
@@ -60,15 +64,7 @@ export default function SeoIntro() {
         </p>
         <nav aria-label="Kategoriler" style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 10 }}>
           {CATEGORY_LINKS.map((c) => (
-            <Link
-              key={c.href}
-              href={c.href}
-              style={{
-                display: "inline-block", fontFamily: "var(--hl-font-ui)", fontSize: 12, fontWeight: 600,
-                color: "var(--hl-text-soft)", textDecoration: "none", padding: "8px 16px",
-                borderRadius: "var(--hl-r-pill)", border: "1px solid var(--hl-line-strong)",
-              }}
-            >
+            <Link key={c.href} href={c.href} className="hl-seo-chip">
               {c.label}
             </Link>
           ))}
