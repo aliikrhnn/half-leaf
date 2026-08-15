@@ -1,14 +1,28 @@
 import Link from "next/link";
 import { Instagram, Facebook } from "lucide-react";
-import { SITE_NAME, FOOTER_LINKS } from "@/lib/constants";
+import { SITE_NAME, FOOTER_LINKS, CONTACT_ADDRESS } from "@/lib/constants";
 import { prisma } from "@/lib/db/prisma";
+import { jsonLd } from "@/lib/utils";
+import { buildStoreLocation } from "@/lib/store-location";
 import HalfLeafLogo from "@/components/brand/HalfLeafLogo";
+import StoreLocation from "./StoreLocation";
+import PayTrLogo from "./PayTrLogo";
+
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://halfleafstore.com";
 
 async function getSiteSettings() {
   try {
     return await prisma.siteSettings.findUnique({
-      where:  { id: "site" },
-      select: { contactEmail: true, contactPhone: true, instagramUrl: true, facebookUrl: true },
+      where: { id: "site" },
+      select: {
+        contactEmail: true,
+        contactPhone: true,
+        contactAddress: true,
+        mapsUrl: true,
+        mapEmbedUrl: true,
+        instagramUrl: true,
+        facebookUrl: true,
+      },
     });
   } catch {
     return null;
@@ -20,88 +34,77 @@ export default async function Footer() {
 
   const contactPhone   = s?.contactPhone   ?? "+90 543 533 2998";
   const contactEmail   = s?.contactEmail   ?? "info@halfleafstore.com";
+  const contactAddress = s?.contactAddress || CONTACT_ADDRESS;
   const instagramUrl   = s?.instagramUrl   ?? "https://instagram.com/halfleafstore";
   const facebookUrl    = s?.facebookUrl    ?? "https://facebook.com/halfleafstore";
 
+  const loc = buildStoreLocation(contactAddress, s?.mapsUrl, s?.mapEmbedUrl);
+
+  // Google'ın mağazayı haritalarda/yerel sonuçlarda tanıyabilmesi için
+  // yapısal veri (schema.org Store).
+  const storeJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Store",
+    "@id": `${siteUrl}/#store`,
+    name: SITE_NAME,
+    url: siteUrl,
+    image: `${siteUrl}/brand/half_leaf_logo.svg`,
+    telephone: contactPhone,
+    email: contactEmail,
+    priceRange: "₺₺",
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: loc.lines[0] ?? "",
+      addressLocality: loc.locality || "Isparta",
+      addressCountry: "TR",
+    },
+    hasMap: loc.mapsUrl,
+    sameAs: [instagramUrl, facebookUrl],
+  };
+
   return (
-    <footer
-      style={{
-        background: "var(--hl-bg-elev-1)",
-        borderTop: "1px solid var(--hl-line)",
-      }}
-    >
-      <div
-        className="max-w-[1440px] mx-auto px-4 sm:px-10 xl:px-14"
-        style={{ paddingTop: 24, paddingBottom: 16 }}
-      >
+    <footer className="hl-footer">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLd(storeJsonLd) }}
+      />
+
+      <div className="hl-footer-inner hl-page-shell">
         {/* Main grid */}
-        <div
-          className="grid grid-cols-2 md:grid-cols-5 gap-6 lg:gap-8"
-          style={{ marginBottom: 14 }}
-        >
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-6 lg:gap-8 hl-footer-grid">
           {/* Brand column */}
           <div className="col-span-2 md:col-span-2">
-            <div style={{ marginBottom: 8 }}>
+            <div style={{ marginBottom: 10 }}>
               <span className="hl-logo-hover">
                 <HalfLeafLogo full width={70} height={58} />
               </span>
             </div>
-            <p
-              style={{
-                fontFamily: "var(--hl-font-ui)",
-                fontSize: 12,
-                color: "var(--hl-text-mute)",
-                lineHeight: 1.5,
-                maxWidth: 200,
-                marginBottom: 10,
-              }}
-            >
+            <p className="hl-footer-tagline">
               Modern nargile ekipmanları için seçilmiş premium koleksiyon.
             </p>
-            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+            <div className="hl-footer-social">
               <a
                 href={instagramUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="Instagram"
-                className="hover:text-[var(--hl-bronze-400)] transition-colors"
-                style={{ color: "var(--hl-text-mute)" }}
+                aria-label="Instagram sayfamız"
+                className="hl-footer-social-btn"
               >
-                <Instagram size={15} />
+                <Instagram size={16} />
               </a>
               <a
                 href={facebookUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="Facebook"
-                className="hover:text-[var(--hl-bronze-400)] transition-colors"
-                style={{ color: "var(--hl-text-mute)" }}
+                aria-label="Facebook sayfamız"
+                className="hl-footer-social-btn"
               >
-                <Facebook size={15} />
+                <Facebook size={16} />
               </a>
             </div>
-            <div
-              style={{
-                fontFamily: "var(--hl-font-ui)",
-                fontSize: 11,
-                color: "var(--hl-text-faint)",
-                lineHeight: 1.7,
-              }}
-            >
-              <a
-                href={`tel:${contactPhone}`}
-                className="hover:text-[var(--hl-text-mute)] transition-colors"
-                style={{ color: "var(--hl-text-faint)", textDecoration: "none", display: "block" }}
-              >
-                {contactPhone}
-              </a>
-              <a
-                href={`mailto:${contactEmail}`}
-                className="hover:text-[var(--hl-text-mute)] transition-colors"
-                style={{ color: "var(--hl-text-faint)", textDecoration: "none", display: "block" }}
-              >
-                {contactEmail}
-              </a>
+            <div className="hl-footer-contact">
+              <a href={`tel:${contactPhone.replace(/\s/g, "")}`}>{contactPhone}</a>
+              <a href={`mailto:${contactEmail}`}>{contactEmail}</a>
             </div>
           </div>
 
@@ -114,32 +117,11 @@ export default async function Footer() {
             ] as const
           ).map((col) => (
             <div key={col.title}>
-              <h3
-                style={{
-                  fontFamily: "var(--hl-font-ui)",
-                  fontSize: 9,
-                  fontWeight: 700,
-                  letterSpacing: "0.12em",
-                  textTransform: "uppercase" as const,
-                  color: "var(--hl-bronze-400)",
-                  marginBottom: 8,
-                }}
-              >
-                {col.title}
-              </h3>
-              <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+              <h3 className="hl-footer-col-title">{col.title}</h3>
+              <ul className="hl-footer-list">
                 {col.links.map((link) => (
-                  <li key={link.href} style={{ marginBottom: 5 }}>
-                    <Link
-                      href={link.href}
-                      className="hover:text-[var(--hl-text)] transition-colors"
-                      style={{
-                        fontFamily: "var(--hl-font-ui)",
-                        fontSize: 12,
-                        color: "var(--hl-text-mute)",
-                        textDecoration: "none",
-                      }}
-                    >
+                  <li key={link.href}>
+                    <Link href={link.href} className="hl-footer-link">
                       {link.label}
                     </Link>
                   </li>
@@ -149,109 +131,36 @@ export default async function Footer() {
           ))}
         </div>
 
+        {/* Mağaza konumu + Google Haritalar */}
+        <StoreLocation
+          address={contactAddress}
+          phone={contactPhone}
+          mapsUrl={s?.mapsUrl}
+          mapEmbedUrl={s?.mapEmbedUrl}
+        />
+
         {/* Payment trust strip */}
-        <div
-          style={{
-            paddingTop: 14,
-            paddingBottom: 12,
-            borderTop: "1px solid var(--hl-line)",
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "center",
-            gap: 14,
-          }}
-        >
-          <span
-            style={{
-              fontFamily: "var(--hl-font-ui)",
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
-              color: "var(--hl-bronze-400)",
-            }}
-          >
+        <div className="hl-footer-pay">
+          <span className="hl-footer-col-title" style={{ marginBottom: 0 }}>
             Güvenli Ödeme
           </span>
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              padding: "5px 10px",
-              borderRadius: 7,
-              background: "var(--hl-bg)",
-              border: "1px solid var(--hl-line-strong)",
-            }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/payment/paytr-logo-white.svg" alt="PayTR ile güvenli ödeme" height={15} style={{ height: 15, width: "auto" }} />
+          <span className="hl-footer-pay-logo">
+            <PayTrLogo />
           </span>
-          <span
-            style={{
-              fontFamily: "var(--hl-font-ui)",
-              fontSize: 11,
-              color: "var(--hl-text-mute)",
-            }}
-          >
+          <span className="hl-footer-pay-text">
             256-bit SSL · 3D Secure · Kredi / Banka Kartı · Havale / EFT
           </span>
         </div>
 
         {/* Bottom bar */}
-        <div
-          style={{
-            paddingTop: 12,
-            borderTop: "1px solid var(--hl-line)",
-            display: "flex",
-            flexWrap: "wrap",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 8,
-          }}
-        >
-          <p
-            style={{
-              fontFamily: "var(--hl-font-ui)",
-              fontSize: 11,
-              color: "var(--hl-text-faint)",
-            }}
-          >
-            © {new Date().getFullYear()} {SITE_NAME}. Tüm hakları saklıdır.
-          </p>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span
-              style={{
-                fontFamily: "var(--hl-font-ui)",
-                fontSize: 10,
-                color: "var(--hl-text-faint)",
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
-              }}
-            >
-              <span
-                style={{
-                  width: 5,
-                  height: 5,
-                  borderRadius: "50%",
-                  background: "var(--hl-success)",
-                  flexShrink: 0,
-                }}
-              />
+        <div className="hl-footer-bottom">
+          <p>© {new Date().getFullYear()} {SITE_NAME}. Tüm hakları saklıdır.</p>
+          <div className="hl-footer-bottom-right">
+            <span className="hl-footer-ssl">
+              <span className="hl-footer-dot" aria-hidden />
               SSL Güvenli Alışveriş
             </span>
-            <span
-              style={{
-                fontFamily: "var(--hl-font-ui)",
-                fontSize: 10,
-                color: "var(--hl-text-faint)",
-                border: "1px solid var(--hl-line-strong)",
-                borderRadius: 4,
-                padding: "1px 6px",
-              }}
-            >
-              +18
-            </span>
+            <span className="hl-footer-age">+18</span>
           </div>
         </div>
       </div>

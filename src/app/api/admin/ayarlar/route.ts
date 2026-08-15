@@ -14,6 +14,9 @@ const UpdateSchema = z.object({
   contactEmail:          z.string().email("Geçerli bir e-posta girin.").optional(),
   contactPhone:          z.string().min(1).optional(),
   contactAddress:        z.string().optional(),
+  // Mağaza konumu — boş bırakılırsa adres metninden otomatik üretilir.
+  mapsUrl:               z.union([z.string().url(), z.literal("")]).nullable().optional(),
+  mapEmbedUrl:           z.union([z.string().url(), z.literal("")]).nullable().optional(),
   instagramUrl:          z.string().url().nullable().optional(),
   facebookUrl:           z.string().url().nullable().optional(),
   twitterUrl:            z.string().url().nullable().optional(),

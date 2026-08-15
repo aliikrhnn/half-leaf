@@ -243,6 +243,9 @@ model Material {
 model Order {
   id              String          @id @default(cuid())
   orderNumber     String          @unique
+  /// Sipariş durum sayfaları için gizli erişim anahtarı. Sipariş numarası
+  /// e-postada/destek yazışmasında dolaştığı için tek başına yetki sayılmaz.
+  accessToken     String?         @unique
   userId          String
   status          OrderStatus     @default(BEKLEMEDE)
   subtotal        Decimal         @db.Decimal(10, 2)
@@ -502,7 +505,11 @@ model User {
   lastLoginAt     DateTime?
   marketingOptIn  Boolean         @default(false)
   marketingOptInAt DateTime?
-  unsubscribeToken String?
+  unsubscribeToken String?         @unique
+  /// Oturum iptali. JWT içine gömülür; artırıldığında o kullanıcının
+  /// dolaşımdaki TÜM token'ları anında geçersizleşir (pasifleştirme,
+  /// rol değişimi, "tüm cihazlardan çık").
+  tokenVersion    Int             @default(0)
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   Account              Account[]
@@ -551,6 +558,10 @@ model SiteSettings {
   contactEmail          String   @default("info@halfleafstore.com")
   contactPhone          String   @default("+90 212 000 00 00")
   contactAddress        String   @default("")
+  /// Mağazanın Google Haritalar bağlantısı ("Paylaş" → bağlantı). Boşsa adresten üretilir.
+  mapsUrl               String?
+  /// Google Haritalar "Haritayı yerleştir" iframe src'si. Boşsa adresten üretilir.
+  mapEmbedUrl           String?
   instagramUrl          String?
   facebookUrl           String?
   twitterUrl            String?
@@ -642,6 +653,8 @@ enum ConsentType {
   CEREZ
   MESAFELI_SATIS
   ON_BILGILENDIRME
+  /// 18+ yaş beyanı — sunucuda IP ve zaman damgasıyla kayıt altına alınır.
+  YAS_DOGRULAMA
 }
 
 enum DiscountType {

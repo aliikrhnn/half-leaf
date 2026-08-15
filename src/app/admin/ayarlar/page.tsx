@@ -15,6 +15,8 @@ type SiteSettings = {
   contactEmail: string;
   contactPhone: string;
   contactAddress: string;
+  mapsUrl: string | null;
+  mapEmbedUrl: string | null;
   instagramUrl: string | null;
   facebookUrl: string | null;
   twitterUrl: string | null;
@@ -677,11 +679,40 @@ export default function AdminAyarlarPage() {
                     value={settings.contactAddress}
                     onChange={e => update("contactAddress", e.target.value)}
                     rows={3}
-                    placeholder="Şehir, ülke veya tam adres"
+                    placeholder={"Cadde, no, dükkan\nŞehir, Ülke"}
                     className="w-full bg-bg-elevated border border-border-default text-ink rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-accent transition-colors placeholder:text-ink-dim resize-none"
                   />
+                  <p className="text-[11px] text-ink-dim mt-1.5">
+                    İlk satır cadde/sokak, son satır şehir/ülke olacak şekilde yazın — footer ve
+                    iletişim sayfası bu sırayla gösterir.
+                  </p>
                 </div>
               </div>
+
+              <div className="bg-bg-surface border border-border-default rounded-xl p-5 space-y-4">
+                <div>
+                  <h2 className="text-sm font-semibold text-ink">Mağaza Konumu (Google Haritalar)</h2>
+                  <p className="text-xs text-ink-dim mt-1">
+                    Boş bırakılırsa yukarıdaki adres metninden otomatik üretilir. Tam konumu
+                    göstermek için Google Haritalar&apos;da mağazanızı bulun → <b>Paylaş</b> sekmesinden
+                    bağlantıyı, <b>Haritayı yerleştir</b> sekmesinden iframe içindeki <code>src</code>
+                    {" "}adresini kopyalayın.
+                  </p>
+                </div>
+                <Field
+                  label="Harita bağlantısı (Yol tarifi)"
+                  value={settings.mapsUrl ?? ""}
+                  onChange={v => update("mapsUrl", v || null)}
+                  placeholder="https://maps.app.goo.gl/..."
+                />
+                <Field
+                  label="Gömülü harita src"
+                  value={settings.mapEmbedUrl ?? ""}
+                  onChange={v => update("mapEmbedUrl", v || null)}
+                  placeholder="https://www.google.com/maps/embed?pb=..."
+                />
+              </div>
+
               <SaveBar saving={saving} saved={saved} error={saveErr} onSave={handleSave} />
             </div>
           )}

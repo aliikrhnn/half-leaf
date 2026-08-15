@@ -17,10 +17,15 @@ export default function IletisimClient({
   contactEmail,
   contactPhone,
   contactAddress,
+  mapsUrl,
+  storeMap,
 }: {
   contactEmail:   string;
   contactPhone:   string;
   contactAddress: string;
+  mapsUrl:        string;
+  /** Sunucuda render edilen mağaza konumu + harita bloğu. */
+  storeMap:       React.ReactNode;
 }) {
   const [form, setForm]       = useState<FormState>(EMPTY);
   const [sending, setSending] = useState(false);
@@ -67,7 +72,7 @@ export default function IletisimClient({
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-36 pb-20">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-36 pb-20">
       <div className="mb-10">
         <p className="text-xs font-medium uppercase tracking-widest text-accent mb-2">İletişim</p>
         <h1 className="text-4xl font-bold text-ink mb-2">Bize Ulaşın</h1>
@@ -76,13 +81,14 @@ export default function IletisimClient({
 
       <div className="grid sm:grid-cols-3 gap-4 mb-12">
         {[
-          { icon: Mail,   label: "E-Posta", value: contactEmail,   href: `mailto:${contactEmail}` },
-          { icon: Phone,  label: "Telefon", value: contactPhone,   href: `tel:${contactPhone}` },
-          { icon: MapPin, label: "Adres",   value: contactAddress || "Isparta, Türkiye", href: "#" },
-        ].map(({ icon: Icon, label, value, href }) => (
+          { icon: Mail,   label: "E-Posta", value: contactEmail, href: `mailto:${contactEmail}`, external: false },
+          { icon: Phone,  label: "Telefon", value: contactPhone, href: `tel:${contactPhone.replace(/\s/g, "")}`, external: false },
+          { icon: MapPin, label: "Adres",   value: contactAddress, href: mapsUrl, external: true },
+        ].map(({ icon: Icon, label, value, href, external }) => (
           <a
             key={label}
             href={href}
+            {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
             className="flex flex-col gap-3 p-5 rounded-xl bg-bg-card border border-border-default hover:border-border-light transition-colors group"
           >
             <div className="p-2.5 rounded-lg bg-bg-elevated border border-border-default w-fit">
@@ -96,7 +102,8 @@ export default function IletisimClient({
         ))}
       </div>
 
-      <div className="bg-bg-card border border-border-default rounded-2xl p-6 sm:p-8 max-w-lg">
+      <div className="grid lg:grid-cols-2 gap-6 items-start">
+      <div className="bg-bg-card border border-border-default rounded-2xl p-6 sm:p-8">
         <h2 className="text-xl font-semibold text-ink mb-6">İletişim Formu</h2>
 
         {success ? (
@@ -210,6 +217,13 @@ export default function IletisimClient({
           Mesajınız en geç 2 iş günü içinde yanıtlanır. Kişisel verileriniz{" "}
           <a href="/yasal/kvkk" className="underline hover:text-ink-muted">KVKK kapsamında</a> işlenir.
         </p>
+      </div>
+
+        {/* Mağaza konumu + Google Haritalar */}
+        <div className="bg-bg-card border border-border-default rounded-2xl p-6 sm:p-8">
+          <h2 className="text-xl font-semibold text-ink mb-6">Mağazamıza Gelin</h2>
+          {storeMap}
+        </div>
       </div>
     </div>
   );
