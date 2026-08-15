@@ -12,6 +12,7 @@ import StockNoticeBanner from "@/components/cart/StockNoticeBanner";
 import { formatPrice } from "@/lib/utils";
 import HalfLeafLogo from "@/components/brand/HalfLeafLogo";
 import { IL_NAMES, getIlceler } from "@/data/turkey-locations";
+import PayTrLogo from "@/components/layout/PayTrLogo";
 
 type ShippingMethod = "AYNI_GUN" | "YURT_ICI" | "DUKKAN_TESLIM" | string;
 type PaymentMethod = "KREDI_KARTI" | "HAVALE_EFT";
@@ -338,7 +339,7 @@ export default function CheckoutClient({
       <p style={{ fontSize: 14, color: "var(--hl-text-mute)" }}>
         {stockNotice ? "Stok durumu nedeniyle sepetiniz boşaldı." : "Sepetiniz boş."}
       </p>
-      <Link href="/urunler" style={{ padding: "11px 28px", borderRadius: "var(--hl-r-pill)", background: "var(--hl-bronze-400)", color: "#0A0B09", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", textDecoration: "none" }}>
+      <Link href="/urunler" style={{ padding: "11px 28px", borderRadius: "var(--hl-r-pill)", background: "var(--hl-bronze-400)", color: "var(--hl-on-bronze)", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", textDecoration: "none" }}>
         Alışverişe Dön
       </Link>
     </div>
@@ -352,7 +353,7 @@ export default function CheckoutClient({
         <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--hl-text-mute)", marginBottom: 10 }}>
           Ödeme
         </p>
-        <h1 style={{ fontFamily: "var(--hl-font-display)", fontSize: "clamp(26px, 4vw, 38px)", fontWeight: 400, fontStyle: "italic", color: "var(--hl-text)", lineHeight: 1.1, margin: "0 0 10px" }}>
+        <h1 style={{ fontFamily: "var(--hl-font-display)", fontSize: "clamp(26px, 4vw, 38px)", fontWeight: 400, fontStyle: "normal", color: "var(--hl-text)", lineHeight: 1.1, margin: "0 0 10px" }}>
           Nasıl devam etmek istersiniz?
         </h1>
         <p style={{ fontSize: 12, color: "var(--hl-text-mute)", marginBottom: 36, lineHeight: 1.6 }}>
@@ -542,7 +543,7 @@ export default function CheckoutClient({
           customerNote: customerNote.trim() || undefined,
         }),
       });
-      const data = await res.json() as { orderNumber?: string; paymentMethod?: PaymentMethod; error?: string };
+      const data = await res.json() as { orderNumber?: string; orderToken?: string; paymentMethod?: PaymentMethod; error?: string };
       if (!res.ok) {
         if (res.status === 429) {
           setSubmitError(data.error ?? "Çok fazla sipariş denemesi yapıldı. Lütfen bir süre sonra tekrar deneyin.");
@@ -554,14 +555,17 @@ export default function CheckoutClient({
         return;
       }
 
+      // orderToken: sipariş durum sayfalarının gizli erişim anahtarı — sipariş
+      // numarası tek başına o sayfaları açmaya yetmez.
+      const tokenQuery = data.orderToken ? `t=${encodeURIComponent(data.orderToken)}` : "";
       if (data.paymentMethod === "KREDI_KARTI") {
         // Kart ödemesi: PayTR güvenli ödeme sayfasına yönlendir.
         // Sepet, ödeme onaylanana kadar TEMİZLENMEZ (başarısızlıkta tekrar denenebilsin).
-        router.push(`/odeme/paytr/${data.orderNumber}`);
+        router.push(`/odeme/paytr/${data.orderNumber}${tokenQuery ? `?${tokenQuery}` : ""}`);
       } else {
         // Havale/EFT: sipariş alındı, sepeti temizle ve onay sayfasına git.
         clearCart();
-        router.push(`/siparis-tamamlandi?no=${data.orderNumber}`);
+        router.push(`/siparis-tamamlandi?no=${encodeURIComponent(data.orderNumber ?? "")}${tokenQuery ? `&${tokenQuery}` : ""}`);
       }
     } catch { setSubmitError("Bir hata oluştu. Lütfen tekrar deneyin."); }
     finally { setIsSubmitting(false); }
@@ -746,8 +750,7 @@ export default function CheckoutClient({
                     <>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
                         <span style={{ fontWeight: 600, color: "var(--hl-text)" }}>Kredi / Banka Kartı ile Ödeme</span>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src="/payment/paytr-logo-white.svg" alt="PayTR güvenli ödeme" height={16} style={{ height: 16, width: "auto", opacity: 0.9 }} />
+                        <PayTrLogo />
                       </div>
                       Siparişi onayladıktan sonra <strong style={{ color: "var(--hl-text-soft)" }}>PayTR</strong> güvenli ödeme ekranına yönlendirileceksiniz.
                       Kart bilgileriniz 256-bit SSL ve 3D Secure ile şifrelenir; tek çekim veya taksit seçenekleri ödeme ekranında sunulur.
@@ -905,11 +908,11 @@ export default function CheckoutClient({
 
               {/* CTA */}
               {step === 1 ? (
-                <button type="button" onClick={handleContinueToPayment} style={{ width: "100%", padding: "15px 0", borderRadius: 10, background: "var(--hl-bronze-400)", border: "none", color: "#0A0B09", fontFamily: "var(--hl-font-ui)", fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer", transition: "opacity 150ms ease" }}>
+                <button type="button" onClick={handleContinueToPayment} style={{ width: "100%", padding: "15px 0", borderRadius: 10, background: "var(--hl-bronze-400)", border: "none", color: "var(--hl-on-bronze)", fontFamily: "var(--hl-font-ui)", fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer", transition: "opacity 150ms ease" }}>
                   Ödemeye Devam Et →
                 </button>
               ) : (
-                <button type="submit" disabled={isSubmitting} aria-disabled={!consentChecked} style={{ width: "100%", padding: "15px 0", borderRadius: 10, background: !consentChecked || isSubmitting ? "var(--hl-bg-elev-3)" : "var(--hl-bronze-400)", border: "none", color: !consentChecked || isSubmitting ? "var(--hl-text-mute)" : "#0A0B09", fontFamily: "var(--hl-font-ui)", fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", cursor: isSubmitting ? "not-allowed" : "pointer", transition: "all 150ms ease" }}>
+                <button type="submit" disabled={isSubmitting} aria-disabled={!consentChecked} style={{ width: "100%", padding: "15px 0", borderRadius: 10, background: !consentChecked || isSubmitting ? "var(--hl-bg-elev-3)" : "var(--hl-bronze-400)", border: "none", color: !consentChecked || isSubmitting ? "var(--hl-text-mute)" : "var(--hl-on-bronze)", fontFamily: "var(--hl-font-ui)", fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", cursor: isSubmitting ? "not-allowed" : "pointer", transition: "all 150ms ease" }}>
                   {isSubmitting
                     ? "İşleniyor…"
                     : paymentMethod === "KREDI_KARTI"

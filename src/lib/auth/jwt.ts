@@ -19,6 +19,13 @@ export interface TokenPayload extends JWTPayload {
   userId: string;
   email: string;
   role: "MUSTERI" | "ADMIN";
+  /**
+   * Oturum sürümü. Kullanıcı pasifleştirildiğinde / rolü değiştiğinde /
+   * "tüm cihazlardan çık" denildiğinde `User.tokenVersion` artırılır ve
+   * eski token'lar `assertFreshSession` tarafından reddedilir.
+   * Eski (alan eklenmeden önce üretilmiş) token'larda tanımsız olabilir.
+   */
+  tv?: number;
 }
 
 export async function signToken(payload: TokenPayload): Promise<string> {

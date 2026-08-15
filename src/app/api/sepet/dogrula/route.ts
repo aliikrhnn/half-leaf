@@ -9,10 +9,11 @@
  * Yalnızca okuma yapar (DB'yi değiştirmez); auth gerektirmez.
  */
 
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
 import { ok, badRequest, serverError } from "@/lib/api/response";
+import { rateLimiter, getClientIp } from "@/lib/rate-limit/limiter";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,6 +39,20 @@ export interface StockLine {
 }
 
 export async function POST(req: NextRequest) {
+  // Auth gerektirmeyen tüm uçlar gibi bu da hız sınırlı olmalı: her istek
+  // 100 satıra kadar iki ayrı findMany çalıştırıyor.
+  const ip = getClientIp(req);
+  const limit = await rateLimiter.checkLimit(`sepet-dogrula:${ip}`, {
+    maxRequests: 60,
+    windowMs: 60_000,
+  });
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { success: false, error: "Çok fazla istek. Lütfen biraz bekleyin." },
+      { status: 429 },
+    );
+  }
+
   let body: unknown;
   try {
     body = await req.json();

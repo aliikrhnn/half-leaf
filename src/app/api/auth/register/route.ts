@@ -5,6 +5,15 @@ import { created, badRequest, conflict, serverError, tooManyRequests } from "@/l
 import { prisma } from "@/lib/db/prisma";
 import { rateLimiter, getClientIp } from "@/lib/rate-limit/limiter";
 
+/*
+ * Kullanıcı sayımı (enumeration) hakkında bilinçli karar:
+ * "Bu e-posta adresi zaten kayıtlı." yanıtı bir adresin sistemde olup
+ * olmadığını açık eder. Bunu tamamen gizlemenin standart yolu her durumda
+ * aynı "doğrulama e-postası gönderildi" yanıtını dönmektir; ancak bu, kayıt
+ * sonrası otomatik girişi ve mevcut akışı kırar (projede e-posta doğrulama
+ * adımı yok). Bunun yerine sayım, IP başına saatte 5 denemeyle sınırlandı;
+ * toplu tarama pratikte uygulanamaz hâle gelir.
+ */
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
 
@@ -30,10 +39,9 @@ export async function POST(req: NextRequest) {
 
     const { user, token } = await registerCustomer(parsed.data);
 
-    const ipAddress =
-      req.headers.get("x-forwarded-for") ??
-      req.headers.get("x-real-ip") ??
-      null;
+    // Onay kaydı hukuki bir belgedir: IP, istemcinin yazabildiği ham
+    // x-forwarded-for'dan değil doğrulanmış kaynaktan alınır.
+    const ipAddress = ip === "unknown" ? null : ip;
     const userAgent = req.headers.get("user-agent") ?? null;
     const now = new Date();
 

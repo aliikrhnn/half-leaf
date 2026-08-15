@@ -12,7 +12,56 @@ type Tx = Prisma.TransactionClient;
 
 export interface OrderItemRef {
   productId: string | null;
+  /**
+   * Varyantlı satışta sipariş HEM varyant envanterinden HEM de ürün-düzeyi
+   * envanterden düşüyor (bkz. api/siparis/route.ts adım 13). İptal/başarısızlık
+   * durumunda ikisinin de geri yüklenmesi gerekir; yoksa varyant stoğu kalıcı
+   * olarak sızar.
+   */
+  variantId?: string | null;
   quantity: number;
+}
+
+/**
+ * Sipariş kalemleri için ilgili envanter kayıtlarını (ürün + varyant) toplar.
+ * Dönen dizi, aynı envanterin birden çok kalemde geçmesi durumunda tekrar eder;
+ * bu kasıtlıdır — her kalem kendi adedince geri yüklenir.
+ */
+async function resolveInventoryTargets(
+  tx: Tx,
+  orderItems: ReadonlyArray<OrderItemRef>,
+): Promise<Array<{ inventoryId: string; quantity: number }>> {
+  const productIds = [...new Set(
+    orderItems.map((i) => i.productId).filter((id): id is string => Boolean(id)),
+  )];
+  const variantIds = [...new Set(
+    orderItems.map((i) => i.variantId).filter((id): id is string => Boolean(id)),
+  )];
+
+  const [productInvs, variantInvs] = await Promise.all([
+    productIds.length
+      ? tx.inventory.findMany({ where: { productId: { in: productIds } }, select: { id: true, productId: true } })
+      : Promise.resolve([]),
+    variantIds.length
+      ? tx.inventory.findMany({ where: { variantId: { in: variantIds } }, select: { id: true, variantId: true } })
+      : Promise.resolve([]),
+  ]);
+
+  const invByProduct = new Map(productInvs.map((inv) => [inv.productId!, inv.id]));
+  const invByVariant = new Map(variantInvs.map((inv) => [inv.variantId!, inv.id]));
+
+  const targets: Array<{ inventoryId: string; quantity: number }> = [];
+  for (const item of orderItems) {
+    if (item.variantId) {
+      const vid = invByVariant.get(item.variantId);
+      if (vid) targets.push({ inventoryId: vid, quantity: item.quantity });
+    }
+    if (item.productId) {
+      const pid = invByProduct.get(item.productId);
+      if (pid) targets.push({ inventoryId: pid, quantity: item.quantity });
+    }
+  }
+  return targets;
 }
 
 /** Başarılı ödeme: Payment=ODENDI, Order=ONAYLANDI. */
@@ -65,37 +114,46 @@ export async function finalizeFailure(
     data: { status: "IPTAL_EDILDI" },
   });
 
-  // Stok iadesi: sipariş kalemlerinin envanterini geri artır.
-  const productIds = args.orderItems
-    .map((i) => i.productId)
-    .filter((id): id is string => Boolean(id));
+  await restoreOrderStock(tx, {
+    orderId: args.orderId,
+    couponId: args.couponId,
+    orderItems: args.orderItems,
+    reason,
+  });
+}
 
-  if (productIds.length > 0) {
-    const inventories = await tx.inventory.findMany({
-      where: { productId: { in: productIds } },
-      select: { id: true, productId: true },
+/**
+ * Rezerve stoğu (ürün + varyant) geri yükler ve kupon kullanım sayacını düşer.
+ * Hem ödeme başarısızlığında hem de yönetici siparişi iptal ettiğinde kullanılır —
+ * iki yolun da aynı davranması için tek doğruluk kaynağı.
+ */
+export async function restoreOrderStock(
+  tx: Tx,
+  args: {
+    orderId: string;
+    couponId: string | null;
+    orderItems: ReadonlyArray<OrderItemRef>;
+    reason: string;
+  },
+): Promise<void> {
+  const reason = args.reason.slice(0, 200);
+
+  const targets = await resolveInventoryTargets(tx, args.orderItems);
+  for (const t of targets) {
+    await tx.inventory.update({
+      where: { id: t.inventoryId },
+      data: { quantity: { increment: t.quantity } },
     });
-    const invByProduct = new Map(inventories.map((inv) => [inv.productId, inv.id]));
-
-    for (const item of args.orderItems) {
-      if (!item.productId) continue;
-      const inventoryId = invByProduct.get(item.productId);
-      if (!inventoryId) continue;
-      await tx.inventory.update({
-        where: { id: inventoryId },
-        data: { quantity: { increment: item.quantity } },
-      });
-      await tx.stockMovement.create({
-        data: {
-          inventoryId,
-          type: "IADE",
-          quantityChange: item.quantity,
-          reason: reason.slice(0, 200),
-          referenceType: "Order",
-          referenceId: args.orderId,
-        },
-      });
-    }
+    await tx.stockMovement.create({
+      data: {
+        inventoryId: t.inventoryId,
+        type: "IADE",
+        quantityChange: t.quantity,
+        reason,
+        referenceType: "Order",
+        referenceId: args.orderId,
+      },
+    });
   }
 
   // Kupon kullanım sayacını geri al.
@@ -119,30 +177,17 @@ export async function reReserveStock(
   orderId: string,
   reason: string,
 ): Promise<void> {
-  const productIds = orderItems
-    .map((i) => i.productId)
-    .filter((id): id is string => Boolean(id));
-  if (productIds.length === 0) return;
-
-  const inventories = await tx.inventory.findMany({
-    where: { productId: { in: productIds } },
-    select: { id: true, productId: true },
-  });
-  const invByProduct = new Map(inventories.map((inv) => [inv.productId, inv.id]));
-
-  for (const item of orderItems) {
-    if (!item.productId) continue;
-    const inventoryId = invByProduct.get(item.productId);
-    if (!inventoryId) continue;
+  const targets = await resolveInventoryTargets(tx, orderItems);
+  for (const t of targets) {
     await tx.inventory.update({
-      where: { id: inventoryId },
-      data: { quantity: { decrement: item.quantity } },
+      where: { id: t.inventoryId },
+      data: { quantity: { decrement: t.quantity } },
     });
     await tx.stockMovement.create({
       data: {
-        inventoryId,
+        inventoryId: t.inventoryId,
         type: "SATIS",
-        quantityChange: -item.quantity,
+        quantityChange: -t.quantity,
         reason: reason.slice(0, 200),
         referenceType: "Order",
         referenceId: orderId,

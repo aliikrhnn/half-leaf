@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CheckCircle, Package, Truck, ShoppingBag, Clock } from "lucide-react";
 import { prisma } from "@/lib/db/prisma";
+import { canViewOrder } from "@/lib/orders/access";
 import { formatPrice } from "@/lib/utils";
 import HalfLeafLogo from "@/components/brand/HalfLeafLogo";
 import SuccessClient from "./SuccessClient";
@@ -12,13 +13,13 @@ export const metadata: Metadata = { title: "Sipariş Alındı", robots: { index:
 export const dynamic = "force-dynamic";
 
 interface Props {
-  searchParams: Promise<{ no?: string }>;
+  searchParams: Promise<{ no?: string; t?: string }>;
 }
 
 export default async function SiparisTamamlandiPage({ searchParams }: Props) {
-  const { no } = await searchParams;
+  const { no, t } = await searchParams;
 
-  const order = no
+  const found = no
     ? await prisma.order.findUnique({
         where: { orderNumber: no },
         include: {
@@ -28,6 +29,11 @@ export default async function SiparisTamamlandiPage({ searchParams }: Props) {
         },
       })
     : null;
+
+  // Sipariş numarası tek başına yetki değildir: ya bağlantıdaki gizli anahtar
+  // doğru olmalı ya da siparişin sahibi giriş yapmış olmalı. Aksi hâlde sayfa
+  // "sipariş bulunamadı" gibi davranır (varlık bilgisi de sızmasın).
+  const order = found && (await canViewOrder(found, t)) ? found : null;
 
   const payment = order?.Payment[0] ?? null;
   const isPaytr = payment?.provider === "paytr";
@@ -39,7 +45,8 @@ export default async function SiparisTamamlandiPage({ searchParams }: Props) {
   // Ödeme başarısız/iptal olduysa bu sayfada "başarılı" gösterme — hata sayfasına yönlendir.
   // (Kullanıcı pending iken buraya gelip, callback sonradan failed işlerse bu yakalar.)
   if (order && (payment?.status === "BASARISIZ" || order.status === "IPTAL_EDILDI")) {
-    redirect(`/odeme/hata?no=${encodeURIComponent(order.orderNumber)}`);
+    const q = t ? `&t=${encodeURIComponent(t)}` : "";
+    redirect(`/odeme/hata?no=${encodeURIComponent(order.orderNumber)}${q}`);
   }
 
   return (
@@ -68,7 +75,7 @@ export default async function SiparisTamamlandiPage({ searchParams }: Props) {
             <ShoppingBag size={56} style={{ color: "var(--hl-text-mute)" }} />
             <h1 style={{
               fontFamily: "var(--hl-font-display)", fontSize: 36, fontWeight: 400,
-              fontStyle: "italic", color: "var(--hl-text)", margin: 0,
+              fontStyle: "normal", color: "var(--hl-text)", margin: 0,
             }}>
               Sipariş bulunamadı
             </h1>
@@ -77,7 +84,7 @@ export default async function SiparisTamamlandiPage({ searchParams }: Props) {
             </p>
             <Link href="/urunler" style={{
               padding: "12px 32px", borderRadius: "var(--hl-r-pill)",
-              background: "var(--hl-bronze-400)", color: "#0A0B09",
+              background: "var(--hl-bronze-400)", color: "var(--hl-on-bronze)",
               fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
               textTransform: "uppercase", textDecoration: "none",
             }}>
@@ -111,7 +118,7 @@ export default async function SiparisTamamlandiPage({ searchParams }: Props) {
 
             <h1 style={{
               fontFamily: "var(--hl-font-display)", fontSize: "clamp(32px, 5vw, 52px)",
-              fontWeight: 400, fontStyle: "italic", color: "var(--hl-text)",
+              fontWeight: 400, fontStyle: "normal", color: "var(--hl-text)",
               lineHeight: 1.1, margin: "0 0 16px 0",
             }}>
               {isPaytrPending ? "Ödemeniz işleniyor…" : "Teşekkürler!"}
@@ -235,7 +242,7 @@ export default async function SiparisTamamlandiPage({ searchParams }: Props) {
             <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
               <Link href="/urunler" style={{
                 padding: "13px 32px", borderRadius: "var(--hl-r-pill)",
-                background: "var(--hl-bronze-400)", color: "#0A0B09",
+                background: "var(--hl-bronze-400)", color: "var(--hl-on-bronze)",
                 fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
                 textTransform: "uppercase", textDecoration: "none",
               }}>

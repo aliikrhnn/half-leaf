@@ -12,6 +12,12 @@ import { rateLimiter, getClientIp } from "@/lib/rate-limit/limiter";
 export const runtime = "nodejs";
 
 const MIN_LEN = 2;
+/**
+ * Üst sınır: sorgu dört sütunda birden `ILIKE '%…%'` olarak çalışıyor ve ayrıca
+ * count() ile ikinci kez taranıyor. Sınırsız uzunlukta bir `q`, indeks
+ * kullanamayan çok pahalı taramalar tetikleyebilir.
+ */
+const MAX_LEN = 100;
 const LIMIT = 6;
 
 export async function GET(req: NextRequest) {
@@ -21,7 +27,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ items: [], total: 0 }, { status: 429 });
   }
 
-  const q = (req.nextUrl.searchParams.get("q") ?? "").trim();
+  const q = (req.nextUrl.searchParams.get("q") ?? "").trim().slice(0, MAX_LEN);
   if (q.length < MIN_LEN) {
     return NextResponse.json({ items: [], total: 0 });
   }

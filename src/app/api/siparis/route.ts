@@ -2,37 +2,52 @@ import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
-import { randomUUID } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { toTRY, DEFAULT_USD_TRY_RATE, type PriceCurrency } from "@/lib/pricing";
 import { rateLimiter, getClientIp } from "@/lib/rate-limit/limiter";
+import { getAuthUser } from "@/lib/auth/middleware";
+
+/**
+ * Müşteriye gösterilmesi güvenli olan (bilinçli olarak yazılmış) hata.
+ * Diğer tüm hatalar — özellikle Prisma hataları — tablo/kolon/kısıt adı gibi
+ * iç bilgi sızdırdığı için istemciye ham hâlde verilmez.
+ */
+class CheckoutError extends Error {}
 
 const bodySchema = z.object({
   contact: z.object({
-    email: z.string().email(),
-    phone: z.string().min(10),
+    email: z.string().trim().toLowerCase().email(),
+    phone: z.string().min(10).max(30),
     smsConsent: z.boolean(),
     emailMarketingConsent: z.boolean().optional(),
   }),
   address: z.object({
-    ad: z.string().min(1),
-    soyad: z.string().min(1),
-    adres: z.string().default(""),
-    ilce: z.string().default(""),
-    sehir: z.string().default(""),
-    postaKodu: z.string().optional(),
+    ad: z.string().min(1).max(80),
+    soyad: z.string().min(1).max(80),
+    adres: z.string().max(500).default(""),
+    ilce: z.string().max(80).default(""),
+    sehir: z.string().max(80).default(""),
+    postaKodu: z.string().max(20).optional(),
   }),
   shippingMethod: z.enum(["AYNI_GUN", "YURT_ICI", "DUKKAN_TESLIM"]),
   paymentMethod: z.enum(["KREDI_KARTI", "HAVALE_EFT"]),
+  // Üst sınırlar: tek istekle SERIALIZABLE transaction içinde binlerce yazma
+  // tetiklenmesini (DoS) engeller.
   items: z.array(z.object({
-    productId: z.string().min(1),
-    quantity: z.number().int().min(1),
-    variantId: z.string().optional(),
-  })).min(1),
-  couponCode: z.string().optional(),
+    productId: z.string().min(1).max(40),
+    quantity: z.number().int().min(1).max(99),
+    variantId: z.string().min(1).max(40).optional(),
+  })).min(1).max(50),
+  couponCode: z.string().trim().max(40).optional(),
   customerNote: z.string().trim().max(1000).optional(),
 });
+
+/** Aynı ürün/varyant birden fazla satırda gelebilir — stok kontrolü için toplanır. */
+function stockKey(productId: string, variantId?: string | null): string {
+  return `${productId}|${variantId ?? ""}`;
+}
 
 // ─── Stok race condition koruması ────────────────────────────────────────────
 
@@ -86,7 +101,8 @@ export async function POST(req: NextRequest) {
   }
 
   const hdrs = await headers();
-  const ipAddress = hdrs.get("x-forwarded-for") ?? hdrs.get("x-real-ip") ?? null;
+  // Onay kaydı (ConsentLog) hukuki bir belgedir; IP doğrulanmış kaynaktan alınır.
+  const ipAddress = ip === "unknown" ? null : ip;
   const userAgent = hdrs.get("user-agent") ?? null;
 
   let body: unknown;
@@ -103,25 +119,51 @@ export async function POST(req: NextRequest) {
 
   const { contact, address, shippingMethod, paymentMethod, items, couponCode, customerNote } = parsed.data;
 
+  // Oturum açıksa kimlik istemciden DEĞİL token'dan alınır: aksi hâlde giriş
+  // yapmış biri gövdeye başkasının e-postasını yazarak siparişi o hesaba
+  // bağlayabiliyordu.
+  const authUser = await getAuthUser(req);
+
   try {
     const result = await runWithRetry(() => prisma.$transaction(async (tx) => {
       /* ── 1. Find or create guest user ── */
-      let user = await tx.user.findFirst({
-        where: { email: { equals: contact.email, mode: "insensitive" } },
-      });
+      let user = authUser
+        ? await tx.user.findUnique({ where: { id: authUser.userId } })
+        : null;
+      // Oturumdaki kullanıcı silinmiş/pasifse siparişi kabul etme.
+      if (authUser && (!user || !user.isActive)) {
+        throw new CheckoutError("Oturumunuz geçersiz. Lütfen tekrar giriş yapın.");
+      }
 
+      // Misafir akışı: e-posta sahipliği doğrulanamadığı için yalnızca
+      // MEVCUT hesaba bağlanır ya da yeni bir hesap açılır.
+      const isNewGuestAccount = !user;
+      if (!user) {
+        user = await tx.user.findFirst({
+          where: { email: { equals: contact.email, mode: "insensitive" } },
+        });
+      }
+
+      let createdNow = false;
       if (!user) {
         const passwordHash = await bcrypt.hash(randomUUID(), 10);
         user = await tx.user.create({
           data: {
-            email: contact.email.toLowerCase(),
+            email: contact.email,
             passwordHash,
             fullName: `${address.ad} ${address.soyad}`,
             phone: contact.phone,
             ageVerified: true,
           },
         });
+        createdNow = true;
       }
+
+      // Ticari ileti onayı yalnızca e-posta sahipliği kanıtlanmışsa işlenir:
+      // ya oturum açık ya da hesap bu siparişle yeni oluşturuldu. Aksi hâlde
+      // birinin e-postasını yazan üçüncü kişi onu pazarlama listesine ekleyebilirdi.
+      const canRecordMarketingConsent =
+        Boolean(authUser) || (isNewGuestAccount && createdNow);
 
       /* ── 2. Fetch products + variants from DB ── */
       const uniqueProductIds = [...new Set(items.map(i => i.productId))];
@@ -131,62 +173,118 @@ export async function POST(req: NextRequest) {
       });
 
       if (dbProducts.length !== uniqueProductIds.length) {
-        throw new Error("Sepetteki bazı ürünler artık mevcut değil.");
+        throw new CheckoutError("Sepetteki bazı ürünler artık mevcut değil.");
       }
 
+      // Varyant sorgusu ürüne BAĞLANIR ve aktiflik filtrelenir. Aksi hâlde
+      // ucuz bir ürünün id'si + pahalı başka bir ürünün varyant id'si
+      // gönderilerek pahalı varyant ucuz fiyata satın alınabiliyordu.
       const variantIds = [...new Set(items.map(i => i.variantId).filter((v): v is string => !!v))];
       const dbVariants = variantIds.length > 0
-        ? await tx.productVariant.findMany({ where: { id: { in: variantIds } }, include: { Inventory: true } })
+        ? await tx.productVariant.findMany({
+            where: { id: { in: variantIds }, isActive: true, productId: { in: uniqueProductIds } },
+            include: { Inventory: true },
+          })
         : [];
       const variantById = new Map(dbVariants.map(v => [v.id, v]));
       for (const item of items) {
-        if (item.variantId && !variantById.has(item.variantId)) {
-          throw new Error("Seçilen renk/varyant artık mevcut değil.");
+        if (!item.variantId) continue;
+        const variant = variantById.get(item.variantId);
+        if (!variant || variant.productId !== item.productId) {
+          throw new CheckoutError("Seçilen renk/varyant artık mevcut değil.");
         }
       }
 
-      /* ── 3. Stock validation (varyant varsa varyant stoğu) ── */
+      /* ── 3. Stock validation ──
+         Aynı ürün/varyant birden fazla satırda gelebildiği için kontrol
+         SATIR bazında değil, ENVANTER bazında toplanarak yapılır; aksi hâlde
+         aynı ürünü 3 satıra bölerek stoğun 3 katı sipariş edilebiliyordu. */
+      const needByKey = new Map<string, number>();
       for (const item of items) {
-        const product = dbProducts.find(p => p.id === item.productId)!;
-        if (item.variantId) {
-          const variant = variantById.get(item.variantId)!;
+        const k = stockKey(item.productId, item.variantId);
+        needByKey.set(k, (needByKey.get(k) ?? 0) + item.quantity);
+      }
+      // Varyantlı satışta ürün-düzeyi toplam stok da düşülüyor → onu da topla.
+      const productLevelNeed = new Map<string, number>();
+      for (const item of items) {
+        productLevelNeed.set(
+          item.productId,
+          (productLevelNeed.get(item.productId) ?? 0) + item.quantity,
+        );
+      }
+
+      for (const [key, need] of needByKey) {
+        const [productId, variantId] = key.split("|");
+        const product = dbProducts.find(p => p.id === productId)!;
+        if (variantId) {
+          const variant = variantById.get(variantId)!;
           const available = variant.Inventory?.quantity ?? 0;
-          if (available < item.quantity) {
-            throw new Error(`"${product.name}" (${variant.name}) için yeterli stok yok. Kalan: ${available}`);
+          if (available < need) {
+            throw new CheckoutError(`"${product.name}" (${variant.name}) için yeterli stok yok. Kalan: ${available}`);
           }
         } else {
           const available = product.Inventory?.quantity ?? 0;
-          if (available < item.quantity) {
-            throw new Error(`"${product.name}" için yeterli stok yok. Kalan: ${available}`);
+          if (available < need) {
+            throw new CheckoutError(`"${product.name}" için yeterli stok yok. Kalan: ${available}`);
           }
+        }
+      }
+      // Ürün-düzeyi toplam stok, varyant toplamlarını da karşılamalı.
+      for (const [productId, need] of productLevelNeed) {
+        const product = dbProducts.find(p => p.id === productId)!;
+        const available = product.Inventory?.quantity ?? 0;
+        if (product.Inventory && available < need) {
+          throw new CheckoutError(`"${product.name}" için yeterli stok yok. Kalan: ${available}`);
         }
       }
 
       /* ── 4. Fetch siteSettings (rate + shipping config) ── */
       const siteSettings = await tx.siteSettings.findUnique({
         where:  { id: "site" },
-        select: { freeShippingThreshold: true, shippingCost: true, usdTryRate: true },
+        select: { freeShippingThreshold: true, shippingCost: true, usdTryRate: true, ecommerceEnabled: true },
       });
+      // "Satışı kapat" anahtarı panelde vardı ama sunucuda uygulanmıyordu.
+      if (siteSettings && siteSettings.ecommerceEnabled === false) {
+        throw new CheckoutError("Şu anda sipariş alınamıyor. Lütfen daha sonra tekrar deneyin.");
+      }
       const usdTryRate = siteSettings?.usdTryRate != null
         ? Number(siteSettings.usdTryRate)
         : DEFAULT_USD_TRY_RATE;
 
       /* ── 5. Compute prices from DB (convert USD → TRY if needed) ── */
-      // Item bazında topla — aynı ürünün farklı renk satırları ayrı sayılır.
-      const subtotal = items.reduce((sum, item) => {
+      // Birim fiyat: varyant seçiliyse varyantın kendi fiyatı geçerlidir
+      // (şemada tanımlı ama daha önce hiç okunmuyordu → farklı fiyatlı
+      // varyantlar taban fiyattan satılıyordu).
+      const unitPriceOf = (item: (typeof items)[number]): number => {
         const product = dbProducts.find(p => p.id === item.productId)!;
+        const variant = item.variantId ? variantById.get(item.variantId)! : null;
         const currency = (product.priceCurrency ?? "TRY") as PriceCurrency;
-        const priceInTRY = toTRY(Number(product.basePrice), currency, usdTryRate);
-        return sum + priceInTRY * item.quantity;
-      }, 0);
+        const raw = variant ? Number(variant.price) : Number(product.basePrice);
+        return toTRY(raw, currency, usdTryRate);
+      };
+
+      const subtotal = items.reduce(
+        (sum, item) => sum + unitPriceOf(item) * item.quantity,
+        0,
+      );
 
       /* ── 6. Coupon validation ── */
       let discountTotal = 0;
       let coupon = null;
 
       if (couponCode) {
-        coupon = await tx.coupon.findUnique({ where: { code: couponCode } });
+        // Kod normalize edilir — sepet önizlemesi (/api/kupon) de öyle yapıyor;
+        // aksi hâlde "yaz25" sepette indirimli görünüp siparişte sessizce düşüyordu.
+        coupon = await tx.coupon.findUnique({ where: { code: couponCode.toUpperCase() } });
         const now = new Date();
+
+        // Kullanıcı başına kullanım limiti — şemada ve admin panelinde var,
+        // ama sipariş akışında hiç uygulanmıyordu (sınırsız tekrar kullanım).
+        const usedByUser = coupon?.maxUsesPerUser
+          ? await tx.order.count({
+              where: { couponId: coupon.id, userId: user.id, status: { not: "IPTAL_EDILDI" } },
+            })
+          : 0;
 
         if (
           coupon &&
@@ -194,6 +292,7 @@ export async function POST(req: NextRequest) {
           (!coupon.startsAt || coupon.startsAt <= now) &&
           (!coupon.expiresAt || coupon.expiresAt > now) &&
           (!coupon.maxUses || coupon.usedCount < coupon.maxUses) &&
+          (!coupon.maxUsesPerUser || usedByUser < coupon.maxUsesPerUser) &&
           (!coupon.minOrderAmount || subtotal >= Number(coupon.minOrderAmount))
         ) {
           if (coupon.discountType === "YUZDE") {
@@ -239,9 +338,14 @@ export async function POST(req: NextRequest) {
       // Çakışmaya dayanıklı, alfa-numerik sipariş no (PayTR merchant_oid kısıtına uygun).
       // Date.now() tek başına eşzamanlı isteklerde çakışabildiğinden rastgele sonek eklenir.
       const orderNumber = `HL${Date.now()}${randomUUID().replace(/-/g, "").slice(0, 6)}`;
+      // Sipariş numarası e-postada ve destek yazışmalarında dolaşır; durum
+      // sayfalarını açmak için tek başına yeterli SAYILMAZ. Gizli erişim
+      // anahtarı yalnızca yönlendirme bağlantılarında taşınır.
+      const accessToken = randomBytes(16).toString("base64url");
       const order = await tx.order.create({
         data: {
           orderNumber,
+          accessToken,
           userId: user.id,
           subtotal,
           discountTotal,
@@ -261,8 +365,7 @@ export async function POST(req: NextRequest) {
         const product = dbProducts.find(p => p.id === item.productId)!;
         const variant = item.variantId ? variantById.get(item.variantId)! : null;
         const colorName = variant ? (((variant.attributes as Record<string, string> | null)?.renk) ?? variant.name) : null;
-        const currency = (product.priceCurrency ?? "TRY") as PriceCurrency;
-        const unitPriceTRY = toTRY(Number(product.basePrice), currency, usdTryRate);
+        const unitPriceTRY = unitPriceOf(item);
         const lineTotal = unitPriceTRY * item.quantity;
         await tx.orderItem.create({
           data: {
@@ -351,8 +454,9 @@ export async function POST(req: NextRequest) {
           },
         });
       }
-      // Ticari ileti (pazarlama) onayı verildiyse ayrıca kaydet.
-      if (contact.emailMarketingConsent) {
+      // Ticari ileti (pazarlama) onayı verildiyse ayrıca kaydet — yalnızca
+      // e-posta sahipliği kanıtlanmışsa (bkz. canRecordMarketingConsent).
+      if (contact.emailMarketingConsent && canRecordMarketingConsent) {
         await tx.consentLog.create({
           data: {
             userId: user.id,
@@ -375,7 +479,15 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      return { orderNumber, customerEmail: contact.email, grandTotal, emailItems, userId: user.id };
+      return {
+        orderNumber,
+        accessToken,
+        customerEmail: user.email,
+        grandTotal,
+        emailItems,
+        userId: user.id,
+        marketingConsent: Boolean(contact.emailMarketingConsent) && canRecordMarketingConsent,
+      };
     }, {
       timeout: 15000,
       isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -394,8 +506,8 @@ export async function POST(req: NextRequest) {
       await sendEmail({ to: result.customerEmail, subject: mail.subject, html: mail.html });
     } catch { /* e-posta hatası yoksay */ }
 
-    // Pazarlama izni (checkout'ta onaylandıysa).
-    if (contact.emailMarketingConsent) {
+    // Pazarlama izni (checkout'ta onaylandıysa ve e-posta sahipliği kanıtlıysa).
+    if (result.marketingConsent) {
       try {
         const { optInUserToMarketing } = await import("@/lib/email/marketing");
         await optInUserToMarketing(result.userId);
@@ -412,7 +524,12 @@ export async function POST(req: NextRequest) {
     } catch { /* sepet işaretleme hatası siparişi etkilemez */ }
 
     // paymentMethod istemciye geri döner: kart ise PayTR iframe sayfasına yönlendirilir.
-    return NextResponse.json({ orderNumber: result.orderNumber, paymentMethod });
+    // orderToken, sipariş durum sayfalarını açmak için gereken gizli anahtardır.
+    return NextResponse.json({
+      orderNumber: result.orderNumber,
+      orderToken: result.accessToken,
+      paymentMethod,
+    });
   } catch (err) {
     if (isSerializationError(err)) {
       return NextResponse.json(
@@ -420,7 +537,16 @@ export async function POST(req: NextRequest) {
         { status: 503 },
       );
     }
-    const message = err instanceof Error ? err.message : "Sipariş oluşturulamadı.";
-    return NextResponse.json({ error: message }, { status: 422 });
+    // Yalnızca bilinçli olarak yazılmış (CheckoutError) mesajlar dışarı verilir.
+    // Prisma/altyapı hataları tablo, kolon ve kısıt adı sızdırdığı için
+    // istemciye genel bir mesaj döner; ayrıntı sunucu log'unda kalır.
+    if (err instanceof CheckoutError) {
+      return NextResponse.json({ error: err.message }, { status: 422 });
+    }
+    console.error("[siparis] beklenmeyen hata:", err);
+    return NextResponse.json(
+      { error: "Sipariş oluşturulamadı. Lütfen tekrar deneyin." },
+      { status: 500 },
+    );
   }
 }

@@ -4,8 +4,10 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { Lock, ShieldCheck, AlertTriangle } from "lucide-react";
 import { prisma } from "@/lib/db/prisma";
+import { canViewOrder } from "@/lib/orders/access";
 import { formatPrice } from "@/lib/utils";
 import HalfLeafLogo from "@/components/brand/HalfLeafLogo";
+import PayTrLogo from "@/components/layout/PayTrLogo";
 import {
   requestIframeToken,
   iframeUrl,
@@ -25,6 +27,7 @@ export const dynamic = "force-dynamic";
 
 interface Props {
   params: Promise<{ orderNumber: string }>;
+  searchParams: Promise<{ t?: string }>;
 }
 
 interface ShippingAddressShape {
@@ -69,8 +72,9 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default async function PaytrPaymentPage({ params }: Props) {
+export default async function PaytrPaymentPage({ params, searchParams }: Props) {
   const { orderNumber } = await params;
+  const { t } = await searchParams;
 
   const order = await prisma.order.findUnique({
     where: { orderNumber },
@@ -87,6 +91,12 @@ export default async function PaytrPaymentPage({ params }: Props) {
 
   if (!order) notFound();
 
+  // Ödeme sayfası müşterinin adını, adresini, telefonunu ve sepet içeriğini
+  // gösterir; sipariş numarasını bilen herkese açık olamaz.
+  if (!(await canViewOrder(order, t))) notFound();
+
+  const tokenQuery = t ? `&t=${encodeURIComponent(t)}` : "";
+
   const payment = order.Payment[0];
 
   // Kart ödemesi olmayan / PayTR kaydı bulunmayan sipariş → 404.
@@ -94,12 +104,12 @@ export default async function PaytrPaymentPage({ params }: Props) {
 
   // Zaten ödenmiş → onay sayfasına.
   if (payment.status === "ODENDI") {
-    redirect(`/siparis-tamamlandi?no=${encodeURIComponent(orderNumber)}`);
+    redirect(`/siparis-tamamlandi?no=${encodeURIComponent(orderNumber)}${tokenQuery}`);
   }
 
   // İptal / başarısız → hata sayfasına.
   if (payment.status === "BASARISIZ" || order.status === "IPTAL_EDILDI") {
-    redirect(`/odeme/hata?no=${encodeURIComponent(orderNumber)}`);
+    redirect(`/odeme/hata?no=${encodeURIComponent(orderNumber)}${tokenQuery}`);
   }
 
   /* ── Ödeme parametrelerini hazırla ── */
@@ -159,8 +169,8 @@ export default async function PaytrPaymentPage({ params }: Props) {
       userAddress: [addr.adres, addr.ilce, addr.sehir].filter(Boolean).join(" "),
       userPhone: addr.phone ?? "",
       basket,
-      okUrl: `${base}/siparis-tamamlandi?no=${encodeURIComponent(order.orderNumber)}`,
-      failUrl: `${base}/odeme/hata?no=${encodeURIComponent(order.orderNumber)}`,
+      okUrl: `${base}/siparis-tamamlandi?no=${encodeURIComponent(order.orderNumber)}${tokenQuery}`,
+      failUrl: `${base}/odeme/hata?no=${encodeURIComponent(order.orderNumber)}${tokenQuery}`,
       lang: "tr",
     });
   } catch (err) {
@@ -199,12 +209,12 @@ export default async function PaytrPaymentPage({ params }: Props) {
           </p>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center", marginTop: 6 }}>
             <Link
-              href={`/odeme/paytr/${encodeURIComponent(order.orderNumber)}`}
+              href={`/odeme/paytr/${encodeURIComponent(order.orderNumber)}${t ? `?t=${encodeURIComponent(t)}` : ""}`}
               style={{
                 padding: "12px 28px",
                 borderRadius: "var(--hl-r-pill)",
                 background: "var(--hl-bronze-400)",
-                color: "#0A0B09",
+                color: "var(--hl-on-bronze)",
                 fontSize: 11,
                 fontWeight: 700,
                 letterSpacing: "0.1em",
@@ -296,8 +306,7 @@ export default async function PaytrPaymentPage({ params }: Props) {
         <ShieldCheck size={13} color="var(--hl-bronze-400)" />
         <span>256-bit SSL ile şifrelenir · 3D Secure</span>
         <span style={{ opacity: 0.4 }}>·</span>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/payment/paytr-logo-white.svg" alt="PayTR" height={14} style={{ height: 14, width: "auto", opacity: 0.85 }} />
+        <PayTrLogo />
       </div>
 
       <p style={{ textAlign: "center", marginTop: 14, fontSize: 11 }}>

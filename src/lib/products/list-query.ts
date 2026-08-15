@@ -155,7 +155,11 @@ export async function fetchProductsPage(
 ): Promise<{ products: Product[]; total: number }> {
   const usdTryRate = await getUsdTryRate();
   const kategori = sp.kategori ?? "";
-  const sayfa = Math.max(1, parseInt(sp.sayfa ?? "1", 10));
+  // parseInt("abc") → NaN ve Math.max(1, NaN) → NaN; bu değer Prisma'ya
+  // geçersiz `skip` olarak gidip 500 üretiyordu. Üst sınır da derin offset
+  // taramalarını (DoS) engeller.
+  const rawPage = Number.parseInt(sp.sayfa ?? "1", 10);
+  const sayfa = Number.isFinite(rawPage) ? Math.min(Math.max(1, rawPage), 1000) : 1;
   const skip = (sayfa - 1) * PAGE_SIZE;
 
   const allCats = await getCachedCategories();

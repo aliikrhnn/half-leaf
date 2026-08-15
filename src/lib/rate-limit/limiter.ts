@@ -130,8 +130,17 @@ class UpstashRateLimiter implements RateLimiter {
 const memoryLimiter = new InMemoryRateLimiter();
 
 function createRateLimiter(): RateLimiter {
-  const url = process.env.UPSTASH_REDIS_REST_URL?.trim();
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
+  /*
+   * İki adlandırma da kabul edilir:
+   *  - UPSTASH_REDIS_REST_URL / _TOKEN → Upstash panelinden elle eklendiğinde
+   *  - KV_REST_API_URL / KV_REST_API_TOKEN → Vercel Marketplace entegrasyonu
+   *    bağlandığında otomatik enjekte edilen isimler
+   * Böylece "değişkenleri ekledim ama çalışmıyor" durumu oluşmaz.
+   */
+  const url =
+    process.env.UPSTASH_REDIS_REST_URL?.trim() || process.env.KV_REST_API_URL?.trim();
+  const token =
+    process.env.UPSTASH_REDIS_REST_TOKEN?.trim() || process.env.KV_REST_API_TOKEN?.trim();
 
   if (url && token) {
     const upstash = new UpstashRateLimiter(url, token);
@@ -147,6 +156,23 @@ function createRateLimiter(): RateLimiter {
     };
   }
 
+  /*
+   * Upstash yapılandırılmamış → bellek içi limiter.
+   *
+   * Sunucusuz ortamda (Vercel) her lambda örneğinin kendi Map'i olur; yani
+   * "dakikada 5 giriş" sınırı pratikte "örnek başına dakikada 5" olur ve
+   * eşzamanlı örnek sayısıyla çarpılır. Üretimde bu ciddi bir zayıflıktır,
+   * bu yüzden sessiz kalmak yerine açıkça uyarılır (siteyi kilitlememek için
+   * hata FIRLATILMAZ — limitsiz kalmak, kapalı olmaktan iyidir).
+   */
+  if (process.env.NODE_ENV === "production") {
+    console.error(
+      "[rate-limit] UPSTASH_REDIS_REST_URL/_TOKEN (veya KV_REST_API_URL/_TOKEN) tanımlı değil. " +
+        "Hız sınırları yalnızca bellek içinde tutuluyor ve sunucusuz ortamda örnek " +
+        "sayısıyla çarpılıyor. Vercel ortam değişkenlerine Upstash bilgilerini ekleyin.",
+    );
+  }
+
   return memoryLimiter;
 }
 
@@ -156,12 +182,29 @@ export const rateLimiter: RateLimiter = createRateLimiter();
 
 /**
  * İstemci IP adresini döndürür.
- * x-forwarded-for başlığında birden fazla IP varsa ilkini alır (gerçek istemci).
+ *
+ * ÖNEMLİ: `x-forwarded-for`'ın EN SOLDAKİ değeri istemcinin kendi yazdığı
+ * değerdir — saldırgan her istekte farklı bir IP uydurup tüm hız sınırlarını
+ * atlatabilir. Bu yüzden önce platformun kendi doğruladığı başlıklara bakılır
+ * (Vercel: `x-vercel-forwarded-for`, Cloudflare: `cf-connecting-ip`); yalnızca
+ * bunlar yoksa XFF zincirinin EN SAĞDAKİ (en yakın proxy'nin eklediği, yani
+ * sahtelenemeyen) değeri kullanılır.
  */
 export function getClientIp(req: NextRequest): string {
-  const forwarded = req.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0].trim();
+  const vercelIp = req.headers.get("x-vercel-forwarded-for");
+  if (vercelIp) return vercelIp.split(",")[0].trim();
+
+  const cfIp = req.headers.get("cf-connecting-ip");
+  if (cfIp) return cfIp.trim();
+
   const realIp = req.headers.get("x-real-ip");
   if (realIp) return realIp.trim();
+
+  const forwarded = req.headers.get("x-forwarded-for");
+  if (forwarded) {
+    const parts = forwarded.split(",").map((p) => p.trim()).filter(Boolean);
+    if (parts.length > 0) return parts[parts.length - 1];
+  }
+
   return "unknown";
 }

@@ -1,14 +1,19 @@
 /**
  * Ürün yorumu gönderme. Yorum moderasyon için isApproved=false oluşturulur;
  * onaylandıktan sonra ürün sayfasında yayınlanır. Rate-limitlidir.
- * E-posta verilirse ve bu e-postayla bu ürünü içeren bir sipariş varsa
- * "doğrulanmış alışveriş" (isVerified) işaretlenir.
+ *
+ * "Doğrulanmış alışveriş" (isVerified) rozeti ve yorumun bir kullanıcı
+ * hesabına bağlanması YALNIZCA giriş yapmış kullanıcılar için yapılır.
+ * Önceden istemcinin gönderdiği `email` alanına güveniliyordu: ürünü satın
+ * almış birinin e-postasını yazan herkes hem rozeti alıyor hem de yorumu
+ * o kişinin hesabına yazdırıyordu.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
 import { rateLimiter, getClientIp } from "@/lib/rate-limit/limiter";
+import { getAuthUser } from "@/lib/auth/middleware";
 
 export const runtime = "nodejs";
 
@@ -17,6 +22,7 @@ const BodySchema = z.object({
   authorName: z.string().trim().min(2).max(60),
   title: z.string().trim().max(120).optional(),
   body: z.string().trim().min(5).max(2000),
+  // Kabul edilir ama YOK SAYILIR — kimlik yalnızca oturumdan gelir.
   email: z.string().trim().email().optional(),
 });
 
@@ -44,22 +50,20 @@ export async function POST(
   const product = await prisma.product.findUnique({ where: { slug, isActive: true }, select: { id: true } });
   if (!product) return NextResponse.json({ error: "Ürün bulunamadı." }, { status: 404 });
 
-  // Doğrulanmış alışveriş kontrolü (opsiyonel).
+  // Doğrulanmış alışveriş kontrolü — kimlik YALNIZCA oturumdan alınır.
+  const authUser = await getAuthUser(req);
   let userId: string | null = null;
   let isVerified = false;
-  if (data.email) {
-    const user = await prisma.user.findFirst({
-      where: { email: { equals: data.email, mode: "insensitive" } },
+  if (authUser) {
+    userId = authUser.userId;
+    const purchased = await prisma.orderItem.findFirst({
+      where: {
+        productId: product.id,
+        Order: { userId: authUser.userId, status: { not: "IPTAL_EDILDI" } },
+      },
       select: { id: true },
     });
-    if (user) {
-      userId = user.id;
-      const purchased = await prisma.orderItem.findFirst({
-        where: { productId: product.id, Order: { userId: user.id } },
-        select: { id: true },
-      });
-      isVerified = Boolean(purchased);
-    }
+    isVerified = Boolean(purchased);
   }
 
   await prisma.review.create({

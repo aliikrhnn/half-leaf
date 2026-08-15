@@ -87,7 +87,7 @@ export async function POST(req: Request): Promise<Response> {
         orderBy: { createdAt: "desc" },
         take: 1,
       },
-      OrderItem: { select: { id: true, productId: true, quantity: true } },
+      OrderItem: { select: { id: true, productId: true, variantId: true, quantity: true } },
     },
   });
 

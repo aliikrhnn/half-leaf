@@ -139,8 +139,14 @@ export function shippingNotificationEmail(data: ShippingEmailData): { subject: s
   const trackingLine = data.trackingNumber
     ? `<p style="font-size:14px;color:${INK};margin:8px 0;">Takip No: <b>${escapeHtml(data.trackingNumber)}</b></p>`
     : "";
-  const carrierLink = data.trackingUrl
-    ? `<p style="margin:8px 0;"><a href="${escapeHtml(data.trackingUrl)}" style="color:${BRONZE};">Kargo firması takip sayfası →</a></p>`
+  // escapeHtml şema doğrulamaz: "javascript:" / "data:text/html" gibi bir
+  // trackingUrl e-postaya olduğu gibi basılırdı. Yalnızca http(s) kabul edilir.
+  const safeTrackingUrl =
+    data.trackingUrl && /^https?:\/\//i.test(data.trackingUrl.trim())
+      ? data.trackingUrl.trim()
+      : null;
+  const carrierLink = safeTrackingUrl
+    ? `<p style="margin:8px 0;"><a href="${escapeHtml(safeTrackingUrl)}" style="color:${BRONZE};">Kargo firması takip sayfası →</a></p>`
     : "";
 
   const body = `

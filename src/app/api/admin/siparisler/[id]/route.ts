@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
 import { ok, notFound, badRequest, serverError } from "@/lib/api/response";
 import { requireAdmin, isResponse } from "@/lib/auth/middleware";
+import { restoreOrderStock } from "@/lib/payment/fulfillment";
 
 const UpdateSchema = z.object({
   status: z.enum(["BEKLEMEDE", "ONAYLANDI", "HAZIRLANIYOR", "KARGODA", "TESLIM_EDILDI", "IPTAL_EDILDI"]).optional(),
@@ -101,9 +102,10 @@ export async function PATCH(
     const order = await prisma.order.findUnique({
       where: { id },
       include: {
-        User:     { select: { email: true } },
-        Payment:  { orderBy: { createdAt: "desc" }, take: 1 },
-        Shipment: { orderBy: { createdAt: "desc" }, take: 1 },
+        User:      { select: { email: true } },
+        Payment:   { orderBy: { createdAt: "desc" }, take: 1 },
+        Shipment:  { orderBy: { createdAt: "desc" }, take: 1 },
+        OrderItem: { select: { productId: true, variantId: true, quantity: true } },
       },
     });
     if (!order) return notFound("Sipariş bulunamadı.");
@@ -116,6 +118,18 @@ export async function PATCH(
         before.status = order.status;
         after.status  = status;
         await tx.order.update({ where: { id }, data: { status } });
+
+        // Panelden iptal edilen siparişte rezerve stok ve kupon kullanımı da
+        // geri alınmalı — ödeme akışındaki iptal (finalizeFailure) bunu yapıyor
+        // ama panel yalnızca durumu değiştiriyordu, ürünler stokta görünmüyordu.
+        if (status === "IPTAL_EDILDI" && order.status !== "IPTAL_EDILDI") {
+          await restoreOrderStock(tx, {
+            orderId: order.id,
+            couponId: order.couponId,
+            orderItems: order.OrderItem,
+            reason: "Yönetici tarafından iptal edildi",
+          });
+        }
       }
 
       const payment = order.Payment[0];

@@ -54,7 +54,16 @@ function Field({
 
 export default function GirisClient({ redirectTo }: { redirectTo: string }) {
   const router = useRouter();
-  const safeRedirect = redirectTo.startsWith("/") ? redirectTo : "/hesabim";
+  // "//evil.com" ve "/\evil.com" protokol-göreli URL'lerdir: startsWith("/")
+  // kontrolünü geçip tarayıcıyı dış siteye götürürler (açık yönlendirme →
+  // gerçek alan adında giriş yapan kullanıcı sahte siteye düşer).
+  const safeRedirect =
+    redirectTo.startsWith("/") &&
+    !redirectTo.startsWith("//") &&
+    !redirectTo.startsWith("/\\") &&
+    !redirectTo.includes("://")
+      ? redirectTo
+      : "/hesabim";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -134,7 +143,7 @@ export default function GirisClient({ redirectTo }: { redirectTo: string }) {
             <h1 style={{
               fontFamily: "var(--hl-font-display)",
               fontSize: "clamp(32px, 6vw, 44px)",
-              fontWeight: 400, fontStyle: "italic",
+              fontWeight: 400, fontStyle: "normal",
               color: "var(--hl-text)", lineHeight: 1.1, margin: 0,
             }}>
               Hoş geldiniz
@@ -203,7 +212,7 @@ export default function GirisClient({ redirectTo }: { redirectTo: string }) {
                   width: "100%", padding: "14px 0", borderRadius: 10,
                   background: loading ? "var(--hl-bg-elev-3)" : "var(--hl-bronze-400)",
                   border: "none",
-                  color: loading ? "var(--hl-text-mute)" : "#0A0B09",
+                  color: loading ? "var(--hl-text-mute)" : "var(--hl-on-bronze)",
                   fontFamily: "var(--hl-font-ui)", fontSize: 12, fontWeight: 700,
                   letterSpacing: "0.1em", textTransform: "uppercase",
                   cursor: loading ? "not-allowed" : "pointer",

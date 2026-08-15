@@ -27,6 +27,21 @@ export async function POST(req: NextRequest) {
       return badRequest(parsed.error.issues.map((e) => e.message).join(", "));
     }
 
+    // HESAP bazlı ikinci sınır: IP değiştirerek tek bir hesaba karşı yapılan
+    // parola denemelerini (credential stuffing) de yavaşlatır.
+    const accountKey = `login-account:${parsed.data.email.trim().toLowerCase()}`;
+    const accountLimit = await rateLimiter.checkLimit(accountKey, {
+      maxRequests: 10,
+      windowMs: 15 * 60_000,
+    });
+    if (!accountLimit.allowed) {
+      const retryAfter = Math.ceil((accountLimit.resetAt.getTime() - Date.now()) / 1000);
+      return tooManyRequests(
+        "Bu hesap için çok fazla giriş denemesi yapıldı. Lütfen bir süre sonra tekrar deneyin.",
+        retryAfter,
+      );
+    }
+
     const { user, token } = await loginUser(parsed.data);
 
     const res = ok({ user });

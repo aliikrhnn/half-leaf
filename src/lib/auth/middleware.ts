@@ -1,6 +1,12 @@
 import { NextRequest } from "next/server";
 import { verifyToken, extractBearerToken, type TokenPayload } from "./jwt";
+import { assertFreshSession } from "./session";
 
+/**
+ * İmzayı doğrular VE oturumun hâlâ geçerli olduğunu veritabanından teyit eder
+ * (kullanıcı pasifleştirilmiş mi, rolü değişmiş mi, token iptal edilmiş mi).
+ * Sonuç kısa süre önbelleklendiği için ek gecikme ihmal edilebilir.
+ */
 export async function getAuthUser(
   req: NextRequest
 ): Promise<TokenPayload | null> {
@@ -12,7 +18,8 @@ export async function getAuthUser(
   if (!token) return null;
 
   try {
-    return await verifyToken(token);
+    const payload = await verifyToken(token);
+    return await assertFreshSession(payload);
   } catch {
     return null;
   }

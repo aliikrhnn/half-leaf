@@ -27,6 +27,55 @@ export const dynamic = "force-dynamic";
 const RECONCILE_AFTER_MIN = 30;
 const BATCH = 50;
 
+/**
+ * Havale/EFT siparişlerinin son ödeme süresi (gün).
+ * Stok sipariş anında düşüldüğü için ödenmeyen havale siparişleri süresiz
+ * bekletilirse rezerve stok sonsuza dek kilitli kalır.
+ */
+const BANK_TRANSFER_EXPIRY_DAYS = 3;
+
+/** Ödenmemiş havale/EFT siparişlerini süresi dolunca iptal eder, stoğu iade eder. */
+async function expireBankTransferOrders(): Promise<number> {
+  const cutoff = new Date(Date.now() - BANK_TRANSFER_EXPIRY_DAYS * 24 * 60 * 60_000);
+
+  const orders = await prisma.order.findMany({
+    where: {
+      createdAt: { lt: cutoff },
+      status: { notIn: ["IPTAL_EDILDI", "TESLIM_EDILDI"] },
+      Payment: { some: { provider: "HAVALE_EFT", status: "BEKLIYOR" } },
+    },
+    include: {
+      Payment: { where: { provider: "HAVALE_EFT" }, orderBy: { createdAt: "desc" }, take: 1 },
+      OrderItem: { select: { productId: true, variantId: true, quantity: true } },
+    },
+    orderBy: { createdAt: "asc" },
+    take: BATCH,
+  });
+
+  let expired = 0;
+  for (const order of orders) {
+    const payment = order.Payment[0];
+    if (!payment || payment.status !== "BEKLIYOR") continue;
+    try {
+      await prisma.$transaction(
+        (tx) =>
+          finalizeFailure(tx, {
+            orderId: order.id,
+            paymentId: payment.id,
+            couponId: order.couponId,
+            orderItems: order.OrderItem,
+            reason: `Havale/EFT ödemesi ${BANK_TRANSFER_EXPIRY_DAYS} gün içinde alınmadı — otomatik iptal`,
+          }),
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+      expired++;
+    } catch {
+      /* sonraki turda tekrar denenir */
+    }
+  }
+  return expired;
+}
+
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
   const secret = process.env.CRON_SECRET;
@@ -34,8 +83,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Yetkisiz." }, { status: 401 });
   }
 
+  // Havale/EFT zaman aşımı PayTR yapılandırmasından bağımsız çalışır.
+  const bankExpired = await expireBankTransferOrders();
+
   if (!isPaytrConfigured()) {
-    return NextResponse.json({ skipped: "PayTR yapılandırılmamış." });
+    return NextResponse.json({ skipped: "PayTR yapılandırılmamış.", bankExpired });
   }
 
   const cutoff = new Date(Date.now() - RECONCILE_AFTER_MIN * 60_000);
@@ -48,7 +100,7 @@ export async function GET(req: NextRequest) {
     },
     include: {
       Payment: { where: { provider: "paytr" }, orderBy: { createdAt: "desc" }, take: 1 },
-      OrderItem: { select: { productId: true, quantity: true } },
+      OrderItem: { select: { productId: true, variantId: true, quantity: true } },
     },
     orderBy: { createdAt: "asc" },
     take: BATCH,
@@ -107,5 +159,5 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ checked: orders.length, paid, cancelled, skipped });
+  return NextResponse.json({ checked: orders.length, paid, cancelled, skipped, bankExpired });
 }

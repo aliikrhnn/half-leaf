@@ -8,7 +8,16 @@ import type { PriceCurrency } from "@/lib/pricing";
 
 type Params = { params: Promise<{ id: string }> };
 
-export async function GET(_req: NextRequest, { params }: Params) {
+/**
+ * Bu uç YALNIZCA yönetim panelinin ürün düzenleme formu içindir: ham
+ * (dönüştürülmemiş) fiyatları, para birimini ve pasif ürünleri döndürür.
+ * Herkese açık kalırsa yayınlanmamış ürünler ve iç fiyatlandırma sızar.
+ * Storefront için /api/urunler ve /api/products (isActive filtreli) vardır.
+ */
+export async function GET(req: NextRequest, { params }: Params) {
+  const auth = await requireAdmin(req);
+  if (isResponse(auth)) return auth;
+
   const { id } = await params;
   try {
     const product = await getProductById(id);

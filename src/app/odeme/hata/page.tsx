@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { XCircle, RefreshCw, ShoppingBag } from "lucide-react";
 import { prisma } from "@/lib/db/prisma";
+import { canViewOrder } from "@/lib/orders/access";
 import HalfLeafLogo from "@/components/brand/HalfLeafLogo";
 
 export const metadata: Metadata = {
@@ -12,19 +13,21 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 interface Props {
-  searchParams: Promise<{ no?: string }>;
+  searchParams: Promise<{ no?: string; t?: string }>;
 }
 
 export default async function OdemeHataPage({ searchParams }: Props) {
-  const { no } = await searchParams;
+  const { no, t } = await searchParams;
 
   // Sipariş hâlâ ödeme bekliyor olabilir (callback gecikmiş) → tekrar denemeye izin ver.
-  const order = no
+  const found = no
     ? await prisma.order.findUnique({
         where: { orderNumber: no },
         select: {
           orderNumber: true,
           status: true,
+          accessToken: true,
+          userId: true,
           Payment: {
             where: { provider: "paytr" },
             orderBy: { createdAt: "desc" },
@@ -34,6 +37,9 @@ export default async function OdemeHataPage({ searchParams }: Props) {
         },
       })
     : null;
+
+  // Sipariş numarası tek başına yetki değildir (bkz. lib/orders/access.ts).
+  const order = found && (await canViewOrder(found, t)) ? found : null;
 
   const payment = order?.Payment[0];
   // Ödeme hâlâ bekliyorsa kullanıcı aynı sipariş üzerinden tekrar deneyebilir.
@@ -92,7 +98,7 @@ export default async function OdemeHataPage({ searchParams }: Props) {
             fontFamily: "var(--hl-font-display)",
             fontSize: "clamp(28px, 5vw, 44px)",
             fontWeight: 400,
-            fontStyle: "italic",
+            fontStyle: "normal",
             color: "var(--hl-text)",
             lineHeight: 1.1,
             margin: "0 0 16px 0",
@@ -125,7 +131,7 @@ export default async function OdemeHataPage({ searchParams }: Props) {
         <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
           {canRetry ? (
             <Link
-              href={`/odeme/paytr/${encodeURIComponent(order!.orderNumber)}`}
+              href={`/odeme/paytr/${encodeURIComponent(order!.orderNumber)}${t ? `?t=${encodeURIComponent(t)}` : ""}`}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -133,7 +139,7 @@ export default async function OdemeHataPage({ searchParams }: Props) {
                 padding: "13px 30px",
                 borderRadius: "var(--hl-r-pill)",
                 background: "var(--hl-bronze-400)",
-                color: "#0A0B09",
+                color: "var(--hl-on-bronze)",
                 fontSize: 11,
                 fontWeight: 700,
                 letterSpacing: "0.1em",
@@ -153,7 +159,7 @@ export default async function OdemeHataPage({ searchParams }: Props) {
                 padding: "13px 30px",
                 borderRadius: "var(--hl-r-pill)",
                 background: "var(--hl-bronze-400)",
-                color: "#0A0B09",
+                color: "var(--hl-on-bronze)",
                 fontSize: 11,
                 fontWeight: 700,
                 letterSpacing: "0.1em",
