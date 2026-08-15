@@ -1897,6 +1897,138 @@
 }
 
 /* ══════════════════════════════════════════════════════════════
+   REHBER KARTLARI (footer üstü)
+   Görselsiz, tipografik/editoryal düzen: dev hayalet numara, bronz
+   saç teli ve hover'da yükselen yüzey. Kartın tamamı tek bir bağlantıdır.
+   ══════════════════════════════════════════════════════════════ */
+.hl-content-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 268px;
+  padding: 30px 28px 26px;
+  border-radius: 16px;
+  background: var(--hl-bg-elev-1);
+  border: 1px solid var(--hl-line);
+  text-decoration: none;
+  overflow: hidden;
+  isolation: isolate;
+  transition: border-color 260ms var(--hl-ease), transform 260ms var(--hl-ease),
+              box-shadow 260ms ease, background 260ms ease;
+}
+/* Sağ üstte yumuşak bronz ışık — hover'da güçlenir */
+.hl-content-card::before {
+  content: "";
+  position: absolute;
+  inset: -30% -30% auto auto;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--hl-line-bronze), transparent 68%);
+  opacity: 0.5;
+  transition: opacity 320ms ease;
+  pointer-events: none;
+  z-index: -1;
+}
+.hl-content-card:hover,
+.hl-content-card:focus-visible {
+  border-color: var(--hl-line-bronze);
+  background: var(--hl-bg-elev-3);
+  transform: translateY(-4px);
+  box-shadow: 0 24px 48px -28px var(--hl-shadow-color);
+}
+.hl-content-card:hover::before { opacity: 1; }
+
+.hl-content-card-index {
+  position: absolute;
+  top: 6px;
+  right: 18px;
+  font-family: var(--hl-font-display);
+  font-size: 104px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.06em;
+  color: var(--hl-text);
+  opacity: 0.05;
+  pointer-events: none;
+  user-select: none;
+  transition: opacity 320ms ease, transform 420ms var(--hl-ease);
+}
+.hl-content-card:hover .hl-content-card-index {
+  opacity: 0.1;
+  transform: translateY(-4px);
+}
+
+.hl-content-card-label {
+  font-family: var(--hl-font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--hl-bronze-400);
+}
+
+.hl-content-card-title {
+  font-family: var(--hl-font-display);
+  font-size: clamp(20px, 1.9vw, 26px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.18;
+  color: var(--hl-text);
+  margin-top: 12px;
+}
+
+.hl-content-card-rule {
+  display: block;
+  width: 36px;
+  height: 2px;
+  margin: 16px 0;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--hl-bronze-400), transparent);
+  transition: width 320ms var(--hl-ease);
+}
+.hl-content-card:hover .hl-content-card-rule { width: 64px; }
+
+.hl-content-card-desc {
+  font-family: var(--hl-font-ui);
+  font-size: 13.5px;
+  line-height: 1.68;
+  color: var(--hl-text-mute);
+  flex: 1;
+}
+
+.hl-content-card-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 22px;
+  font-family: var(--hl-font-ui);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--hl-bronze-400);
+  transition: color 200ms ease, gap 220ms var(--hl-ease);
+}
+.hl-content-card:hover .hl-content-card-cta {
+  color: var(--hl-bronze-300);
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .hl-content-card { min-height: 0; padding: 24px 22px; }
+  .hl-content-card-index { font-size: 80px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hl-content-card,
+  .hl-content-card-index,
+  .hl-content-card-rule,
+  .hl-content-card-cta { transition: none; }
+  .hl-content-card:hover { transform: none; }
+  .hl-content-card:hover .hl-content-card-index { transform: none; }
+}
+
+/* ══════════════════════════════════════════════════════════════
    BÖLÜM BAŞLIKLARI (ana sayfa) — tek tipografik ölçek
    ══════════════════════════════════════════════════════════════ */
 .hl-section-head {

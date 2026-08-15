@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import SectionHeading from "./SectionHeading";
 
 /*
  * Rehber kartları.
@@ -38,7 +39,14 @@ const CARDS = [
 
 export default function ContentCards() {
   return (
-    <section className="hl-page-shell" style={{ paddingBottom: "7.5rem" }}>
+    <section className="hl-page-shell" style={{ paddingTop: "1rem", paddingBottom: "7.5rem" }}>
+      <SectionHeading
+        eyebrow="Half Leaf Rehberi"
+        title="Nargile rehberi"
+        href="/yardim/secim-rehberi"
+        linkLabel="Tüm rehberler"
+      />
+
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 lg:gap-6">
         {CARDS.map((card) => (
           <Link key={card.title} href={card.href} className="hl-content-card">

@@ -26,6 +26,11 @@ export const metadata: Metadata = {
   openGraph: { url: siteUrl },
 };
 
+/**
+ * Yeni gelenler. Son 40 ürün çekilip kategoriye göre dağıtılır, sonra ilk 8
+ * alınır: hepsi gerçekten yeni ama tek bir kategoriden 8 ürün yerine farklı
+ * kategorilerden bir seçki çıkar (toplu ürün girişinde kümelenme oluyordu).
+ */
 async function getNewArrivals(rate: number): Promise<Product[]> {
   try {
     const rows = await prisma.product.findMany({
@@ -35,10 +40,10 @@ async function getNewArrivals(rate: number): Promise<Product[]> {
         ProductImage: { orderBy: { sortOrder: "asc" }, take: 1 },
         Inventory: { select: { quantity: true } },
       },
-      take: 8,
+      take: 40,
       orderBy: { createdAt: "desc" },
     });
-    return rows.map(p => mapProduct(p, rate));
+    return interleaveByCategory(rows.map(p => mapProduct(p, rate))).slice(0, 8);
   } catch {
     return [];
   }
@@ -164,6 +169,36 @@ async function getBestsellerProducts(rate: number): Promise<Product[]> {
 }
 
 
+/**
+ * Ürünleri kategorilerine göre sırayla dağıtır (round-robin).
+ * 1. tur: her kategoriden 1 ürün · 2. tur: her kategoriden 2. ürün …
+ * Kategori içindeki özgün sıra (en yeni önce) korunur.
+ */
+function interleaveByCategory(products: Product[]): Product[] {
+  const buckets = new Map<string, Product[]>();
+  for (const p of products) {
+    const key = p.categorySlug || "diger";
+    const bucket = buckets.get(key);
+    if (bucket) bucket.push(p);
+    else buckets.set(key, [p]);
+  }
+
+  const queues = [...buckets.values()];
+  const out: Product[] = [];
+  for (let round = 0; out.length < products.length; round++) {
+    let placedThisRound = false;
+    for (const queue of queues) {
+      const item = queue[round];
+      if (item) {
+        out.push(item);
+        placedThisRound = true;
+      }
+    }
+    if (!placedThisRound) break; // güvenlik ağı: sonsuz döngü olmasın
+  }
+  return out;
+}
+
 export default async function HomePage() {
   const usdTryRate = await getUsdTryRate();
   const [heroSlides, newArrivals, featuredProducts, flashProducts, bestsellerProducts, brands, allProducts] =
@@ -177,14 +212,20 @@ export default async function HomePage() {
       getAllProducts(usdTryRate),
     ]);
 
-  // "Tüm ürünler" grid'i: küratörlü bölümlerde (yeni gelenler / öne çıkanlar /
-  // çok satanlar) zaten gösterilen ürünler çıkarılır ki aynı ürün sayfada
-  // tekrarlanmasın. Performans için makul bir sayıyla sınırlanır; kalanı
-  // "Tümünü gör" ile /urunler'e gider.
+  // "Tüm ürünler" grid'i: küratörlü bölümlerde (flaş / yeni gelenler / öne
+  // çıkanlar / çok satanlar) zaten gösterilen ürünler çıkarılır ki aynı ürün
+  // sayfada tekrarlanmasın. Performans için makul bir sayıyla sınırlanır;
+  // kalanı "Tümünü gör" ile /urunler'e gider.
   const shownIds = new Set(
-    [...newArrivals, ...featuredProducts, ...bestsellerProducts].map(p => p.id)
+    [...flashProducts, ...newArrivals, ...featuredProducts, ...bestsellerProducts].map(p => p.id)
   );
-  const restProducts = allProducts.filter(p => !shownIds.has(p.id)).slice(0, 60);
+  // Kategorilere göre sıra sıra dağıt: ürünler createdAt'e göre geldiği için
+  // toplu eklenen bir kategori grid'de arka arkaya kümeleniyordu. Round-robin
+  // sayesinde ilk tur HER kategoriden bir ürün gösterir, sonraki turlar
+  // ikinciyi/üçüncüyü ekler — vitrin baştan sona çeşitli kalır.
+  const restProducts = interleaveByCategory(
+    allProducts.filter(p => !shownIds.has(p.id))
+  ).slice(0, 60);
   const allChunk1 = restProducts.slice(0, 16);
   const allChunk2 = restProducts.slice(16, 40);
   const allChunk3 = restProducts.slice(40);
@@ -210,13 +251,14 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: jsonLd(websiteJsonLd) }}
       />
       <Hero slides={heroSlides} />
+      {/* Fırsatlar hero'nun hemen altında: sayfaya giren ilk gördüğü şey olsun. */}
+      <FlashProductsSection products={flashProducts} />
       <NewArrivalsSection products={newArrivals} />
       <AllProductsSection products={allChunk1} eyebrow="Tüm Koleksiyon" title="Tüm ürünler" href="/urunler" />
       <FeaturedSection products={featuredProducts} />
       <AllProductsSection products={allChunk2} />
       <BestsellersSection products={bestsellerProducts} />
       <AllProductsSection products={allChunk3} href="/urunler" />
-      <FlashProductsSection products={flashProducts} />
       <BrandsSection brands={brands} />
       <ContentCards />
       <SeoIntro />
