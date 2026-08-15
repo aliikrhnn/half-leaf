@@ -132,7 +132,7 @@ export default function YeniIadeTalebiPage() {
           </Link>
           <h1 style={{
             fontFamily: "var(--hl-font-display)", fontSize: "clamp(20px, 3vw, 28px)",
-            fontWeight: 400, fontStyle: "italic", color: "var(--hl-text)", margin: 0,
+            fontWeight: 400, fontStyle: "normal", color: "var(--hl-text)", margin: 0,
           }}>
             İade Talebi Oluştur
           </h1>
@@ -252,7 +252,7 @@ export default function YeniIadeTalebiPage() {
             style={{
               padding: "13px 32px", borderRadius: "var(--hl-r-pill)",
               background: submitting ? "var(--hl-line-strong)" : "var(--hl-bronze-400)",
-              color: "#0A0B09", fontSize: 11, fontWeight: 700,
+              color: "var(--hl-on-bronze)", fontSize: 11, fontWeight: 700,
               letterSpacing: "0.1em", textTransform: "uppercase",
               border: "none", cursor: submitting ? "wait" : "pointer",
               transition: "background 0.15s",

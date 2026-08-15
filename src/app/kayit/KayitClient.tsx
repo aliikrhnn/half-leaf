@@ -178,7 +178,7 @@ export default function KayitClient() {
             <h1 style={{
               fontFamily: "var(--hl-font-display)",
               fontSize: "clamp(30px, 6vw, 44px)",
-              fontWeight: 400, fontStyle: "italic",
+              fontWeight: 400, fontStyle: "normal",
               color: "var(--hl-text)", lineHeight: 1.1, margin: 0,
             }}>
               Hesap oluşturun
@@ -279,7 +279,7 @@ export default function KayitClient() {
                   width: "100%", padding: "14px 0", borderRadius: 10, marginTop: 4,
                   background: loading || !kvkk ? "var(--hl-bg-elev-3)" : "var(--hl-bronze-400)",
                   border: "none",
-                  color: loading || !kvkk ? "var(--hl-text-mute)" : "#0A0B09",
+                  color: loading || !kvkk ? "var(--hl-text-mute)" : "var(--hl-on-bronze)",
                   fontFamily: "var(--hl-font-ui)", fontSize: 12, fontWeight: 700,
                   letterSpacing: "0.1em", textTransform: "uppercase",
                   cursor: loading || !kvkk ? "not-allowed" : "pointer",

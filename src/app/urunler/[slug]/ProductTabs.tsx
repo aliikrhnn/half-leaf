@@ -47,7 +47,7 @@ export default function ProductTabs({ product, materialName, careInfo, weightGra
               background: "none", border: "none", cursor: "pointer",
               fontFamily: "var(--hl-font-ui)", fontSize: 11, fontWeight: 700,
               letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap",
-              color: active === tab ? "var(--hl-text-main)" : "var(--hl-text-mute)",
+              color: active === tab ? "var(--hl-text)" : "var(--hl-text-mute)",
               borderBottom: active === tab
                 ? "2px solid var(--hl-bronze-400)"
                 : "2px solid transparent",
@@ -67,8 +67,8 @@ export default function ProductTabs({ product, materialName, careInfo, weightGra
             <h2 style={{
               fontFamily: "var(--hl-font-display)",
               fontSize: "clamp(20px, 2.2vw, 28px)",
-              fontWeight: 400, fontStyle: "italic",
-              color: "var(--hl-text-main)", lineHeight: 1.25, marginBottom: 18,
+              fontWeight: 400, fontStyle: "normal",
+              color: "var(--hl-text)", lineHeight: 1.25, marginBottom: 18,
             }}>
               {product.shortDescription}
             </h2>

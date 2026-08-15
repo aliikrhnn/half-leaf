@@ -178,7 +178,7 @@ export default function FlashProductsSection({ products }: Props) {
     >
       {/* Header */}
       <div
-        className="max-w-[1440px] mx-auto px-4 sm:px-10 xl:px-14"
+        className="hl-page-shell"
         style={{
           display: "flex",
           alignItems: "center",
@@ -261,7 +261,7 @@ export default function FlashProductsSection({ products }: Props) {
 
       {/* Bronze rule */}
       <div
-        className="max-w-[1440px] mx-auto px-4 sm:px-10 xl:px-14"
+        className="hl-page-shell"
         style={{ marginBottom: 20 }}
       >
         <div className="hl-rule-bronze" />

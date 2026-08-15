@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db/prisma";
 import { jsonLd } from "@/lib/utils";
 import { SITE_NAME } from "@/lib/constants";
 import ProductsClient from "@/app/urunler/ProductsClient";
+import ProductGridSkeleton from "@/components/product/ProductGridSkeleton";
 import { fetchAll, type SearchParams } from "@/app/urunler/page";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://halfleafstore.com";
@@ -79,21 +80,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbJsonLd) }} />
-      <Suspense
-        fallback={
-          <div
-            style={{
-              minHeight: "100vh",
-              padding: "120px 24px",
-              fontFamily: "var(--hl-font-ui)",
-              fontSize: 13,
-              color: "var(--hl-text-mute)",
-            }}
-          >
-            Yükleniyor…
-          </div>
-        }
-      >
+      <Suspense fallback={<ProductGridSkeleton />}>
         <ProductsClient {...data} />
       </Suspense>
     </>

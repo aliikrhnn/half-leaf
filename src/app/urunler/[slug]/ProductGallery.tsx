@@ -171,7 +171,7 @@ export default function ProductGallery({ images, name, isNew, selectedColor }: P
               <span style={{
                 fontFamily: "var(--hl-font-ui)", fontSize: 10, fontWeight: 700,
                 letterSpacing: "0.08em", background: "var(--hl-bronze-400)",
-                color: "#0A0B09", padding: "3px 8px", borderRadius: 4,
+                color: "var(--hl-on-bronze)", padding: "3px 8px", borderRadius: 4,
               }}>YENİ</span>
             )}
           </div>

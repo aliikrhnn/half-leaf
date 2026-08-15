@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ShoppingBag, Package, X, Check, Lock } from "lucide-react";
+import { ShoppingBag, Package, X, Check, Lock, Heart } from "lucide-react";
 import { useCartStore } from "@/store/cart";
+import { useWishlistStore } from "@/store/wishlist";
+import { toast } from "@/store/toast";
 import { useSiteFlags } from "@/components/layout/SiteFlags";
 import { type StockNotice } from "@/lib/cart/reconcile";
 import { useCartStockReconcile } from "@/hooks/useCartStockReconcile";
@@ -47,7 +49,7 @@ function StepIndicator({ active }: { active: 1 | 2 | 3 }) {
               }}>
                 <span style={{
                   fontFamily: "var(--hl-font-ui)", fontSize: 10, fontWeight: 700,
-                  color: isActive ? "#0A0B09" : "var(--hl-text-mute)",
+                  color: isActive ? "var(--hl-on-bronze)" : "var(--hl-text-mute)",
                   letterSpacing: "-0.01em",
                 }}>
                   {s.n}
@@ -144,7 +146,21 @@ export default function CartPage() {
   const couponRef = useRef<HTMLInputElement>(null);
 
   const { items, removeItem, updateQuantity, note, setNote } = useCartStore();
+  const addToWishlist = useWishlistStore((s) => s.add);
   const { giftBoxEnabled } = useSiteFlags();
+
+  /** Ürünü sepetten çıkarıp favorilere taşır. */
+  const saveForLater = (item: (typeof items)[number]) => {
+    addToWishlist({
+      id: item.product.id,
+      slug: item.product.slug,
+      name: item.product.name,
+      image: item.product.images?.[0]?.url ?? null,
+      price: item.product.price,
+    });
+    removeItem(item.productId, item.variantId);
+    toast("Favorilere taşındı", { label: "Favorilerim", href: "/favorilerim" });
+  };
 
   useEffect(() => {
     useCartStore.persist.rehydrate();
@@ -210,9 +226,9 @@ export default function CartPage() {
   /* ── Empty state ── */
   if (items.length === 0) {
     return (
-      <div style={{
-        maxWidth: 1280, margin: "0 auto",
-        padding: "calc(var(--hl-bar-h) + var(--hl-header-h) + 60px) 24px 80px",
+      <div className="hl-page-shell" style={{
+        paddingTop: "calc(var(--hl-bar-h) + var(--hl-header-h) + 60px)",
+        paddingBottom: 80,
         display: "flex", flexDirection: "column", alignItems: "center",
         textAlign: "center", gap: 20,
       }}>
@@ -224,7 +240,7 @@ export default function CartPage() {
         <ShoppingBag size={56} style={{ color: "var(--hl-text-mute)", marginBottom: 8 }} />
         <h1 style={{
           fontFamily: "var(--hl-font-display)", fontSize: "clamp(28px, 4vw, 44px)",
-          fontWeight: 400, fontStyle: "italic", color: "var(--hl-text)", margin: 0,
+          fontWeight: 400, fontStyle: "normal", color: "var(--hl-text)", margin: 0,
         }}>
           Sepetiniz henüz boş
         </h1>
@@ -235,7 +251,7 @@ export default function CartPage() {
           href="/urunler"
           style={{
             marginTop: 8, padding: "12px 32px", borderRadius: "var(--hl-r-pill)",
-            background: "var(--hl-bronze-400)", color: "#0A0B09",
+            background: "var(--hl-bronze-400)", color: "var(--hl-on-bronze)",
             fontFamily: "var(--hl-font-ui)", fontSize: 11, fontWeight: 700,
             letterSpacing: "0.1em", textTransform: "uppercase", textDecoration: "none",
           }}
@@ -259,9 +275,9 @@ export default function CartPage() {
   };
 
   return (
-    <div className="hl-page-pad" style={{
-      maxWidth: 1280, margin: "0 auto",
-      padding: "calc(var(--hl-bar-h) + var(--hl-header-h) + 32px) 24px 80px",
+    <div className="hl-page-pad hl-page-shell" style={{
+      paddingTop: "calc(var(--hl-bar-h) + var(--hl-header-h) + 32px)",
+      paddingBottom: 80,
     }}>
       {/* ── Stok bildirimi ── */}
       {stockNotice && (
@@ -278,7 +294,7 @@ export default function CartPage() {
           </p>
           <h1 style={{
             fontFamily: "var(--hl-font-display)", fontSize: "clamp(36px, 5vw, 60px)",
-            fontWeight: 400, fontStyle: "italic", color: "var(--hl-text)",
+            fontWeight: 400, fontStyle: "normal", color: "var(--hl-text)",
             lineHeight: 1.05, margin: 0,
           }}>
             Sepetiniz
@@ -340,7 +356,7 @@ export default function CartPage() {
                       <div>
                         <p style={{
                           fontFamily: "var(--hl-font-display)", fontSize: 16,
-                          fontWeight: 400, fontStyle: "italic", color: "var(--hl-text)",
+                          fontWeight: 400, fontStyle: "normal", color: "var(--hl-text)",
                           lineHeight: 1.2, marginBottom: 4,
                         }}>
                           {item.product.name}
@@ -396,25 +412,21 @@ export default function CartPage() {
                     </div>
                   </div>
 
-                  {/* Sub-actions */}
+                  {/* Sub-actions
+                      Not: "Hediye paketi ekle" satır-içi butonu kaldırıldı —
+                      hiçbir şey yapmıyordu ve zaten aşağıdaki tek hediye
+                      kutusu anahtarıyla çakışıyordu. "Daha sonra için kaydet"
+                      ise artık gerçekten çalışıyor: ürünü sepetten çıkarıp
+                      favorilere taşır. */}
                   <div className="hl-cart-sub-actions" style={{ marginTop: 10, paddingLeft: 86, display: "flex", gap: 16 }}>
-                    {giftBoxEnabled && (
-                      <button style={{
-                        fontFamily: "var(--hl-font-ui)", fontSize: 10, fontWeight: 600,
-                        color: "var(--hl-bronze-400)", background: "none", border: "none",
-                        cursor: "pointer", letterSpacing: "0.04em", padding: 0,
-                        textDecoration: "underline", textUnderlineOffset: 3,
-                      }}>
-                        Hediye paketi ekle
-                      </button>
-                    )}
-                    <span style={{
-                      fontFamily: "var(--hl-font-ui)", fontSize: 10, fontWeight: 600,
-                      color: "var(--hl-text-mute)", letterSpacing: "0.04em",
-                      cursor: "default", userSelect: "none",
-                    }}>
+                    <button
+                      type="button"
+                      className="hl-cart-saveforlater"
+                      onClick={() => saveForLater(item)}
+                    >
+                      <Heart size={12} aria-hidden />
                       Daha sonra için kaydet
-                    </span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -479,7 +491,7 @@ export default function CartPage() {
         }}>
           <h2 style={{
             fontFamily: "var(--hl-font-display)", fontSize: 22,
-            fontWeight: 400, fontStyle: "italic", color: "var(--hl-text)",
+            fontWeight: 400, fontStyle: "normal", color: "var(--hl-text)",
             marginBottom: 20,
           }}>
             Sipariş Özeti
@@ -642,7 +654,7 @@ export default function CartPage() {
             style={{
               display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
               width: "100%", padding: "15px 0", borderRadius: "var(--hl-r-md)",
-              background: "var(--hl-bronze-400)", color: "#0A0B09",
+              background: "var(--hl-bronze-400)", color: "var(--hl-on-bronze)",
               fontFamily: "var(--hl-font-ui)", fontSize: 12, fontWeight: 700,
               letterSpacing: "0.1em", textTransform: "uppercase", textDecoration: "none",
               transition: "opacity 150ms ease",

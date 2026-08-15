@@ -136,8 +136,12 @@ export default function ReviewsSection({ slug, reviews, ratingAvg, reviewCount }
             <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Başlık (opsiyonel)" style={fieldStyle} />
             <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Ürün hakkındaki düşünceleriniz…" rows={4} style={{ ...fieldStyle, height: "auto", padding: "10px 14px", resize: "vertical" }} />
             {error && <p style={{ fontSize: 12, color: "#e05252" }}>{error}</p>}
-            <p style={{ fontSize: 11, color: "var(--hl-text-mute)" }}>Yorumlar moderasyon sonrası yayınlanır. E-posta girerseniz, satın aldığınız doğrulanırsa &quot;Doğrulanmış Alışveriş&quot; rozeti eklenir.</p>
-            <button type="submit" disabled={submitting} style={{ alignSelf: "flex-start", padding: "11px 26px", borderRadius: 10, background: submitting ? "var(--hl-bg-elev-3)" : "var(--hl-bronze-400)", color: submitting ? "var(--hl-text-mute)" : "#0A0B09", border: "none", fontFamily: "var(--hl-font-ui)", fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", cursor: submitting ? "default" : "pointer" }}>
+            <p style={{ fontSize: 11, color: "var(--hl-text-mute)" }}>
+              Yorumlar moderasyon sonrası yayınlanır.{" "}
+              <a href="/giris" style={{ color: "var(--hl-bronze-400)" }}>Giriş yaparsanız</a>{" "}
+              ve bu ürünü satın aldıysanız yorumunuza &quot;Doğrulanmış Alışveriş&quot; rozeti eklenir.
+            </p>
+            <button type="submit" disabled={submitting} style={{ alignSelf: "flex-start", padding: "11px 26px", borderRadius: 10, background: submitting ? "var(--hl-bg-elev-3)" : "var(--hl-bronze-400)", color: submitting ? "var(--hl-text-mute)" : "var(--hl-on-bronze)", border: "none", fontFamily: "var(--hl-font-ui)", fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", cursor: submitting ? "default" : "pointer" }}>
               {submitting ? "Gönderiliyor…" : "Gönder"}
             </button>
           </form>

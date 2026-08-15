@@ -82,7 +82,7 @@ export default async function IadeTaleplerimPage() {
             <RotateCcw size={18} style={{ color: "var(--hl-bronze-400)" }} />
             <h1 style={{
               fontFamily: "var(--hl-font-display)", fontSize: "clamp(22px, 3vw, 32px)",
-              fontWeight: 400, fontStyle: "italic", color: "var(--hl-text)", margin: 0,
+              fontWeight: 400, fontStyle: "normal", color: "var(--hl-text)", margin: 0,
             }}>
               İade Taleplerim
             </h1>

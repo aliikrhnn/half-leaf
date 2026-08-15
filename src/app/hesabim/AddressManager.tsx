@@ -175,7 +175,7 @@ export default function AddressManager({ initial }: { initial: SavedAddress[] })
             </label>
             {error && <p style={{ fontSize: 12, color: "#e05252" }}>{error}</p>}
             <div style={{ display: "flex", gap: 8 }}>
-              <button type="button" onClick={save} disabled={busy} style={{ padding: "10px 22px", borderRadius: 8, background: "var(--hl-bronze-400)", color: "#0A0B09", border: "none", fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", cursor: busy ? "default" : "pointer" }}>
+              <button type="button" onClick={save} disabled={busy} style={{ padding: "10px 22px", borderRadius: 8, background: "var(--hl-bronze-400)", color: "var(--hl-on-bronze)", border: "none", fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", cursor: busy ? "default" : "pointer" }}>
                 {busy ? "Kaydediliyor…" : "Kaydet"}
               </button>
               <button type="button" onClick={close} style={{ padding: "10px 22px", borderRadius: 8, background: "transparent", color: "var(--hl-text-soft)", border: "1px solid var(--hl-line-strong)", fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", cursor: "pointer" }}>

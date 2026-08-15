@@ -117,7 +117,7 @@ export default async function IadeTalepDetayPage({ params }: Props) {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
             <h1 style={{
               fontFamily: "var(--hl-font-display)", fontSize: "clamp(20px, 3vw, 28px)",
-              fontWeight: 400, fontStyle: "italic", color: "var(--hl-text)", margin: 0,
+              fontWeight: 400, fontStyle: "normal", color: "var(--hl-text)", margin: 0,
             }}>
               İade Talebi Detayı
             </h1>

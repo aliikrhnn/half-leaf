@@ -40,7 +40,7 @@ const ITEMS = [
 export default function TrustBar() {
   return (
     <section
-      className="max-w-[1440px] mx-auto px-4 sm:px-10 xl:px-14"
+      className="hl-page-shell"
       style={{
         paddingTop: 48,
         paddingBottom: 48,

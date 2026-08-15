@@ -44,7 +44,7 @@ export default function SifremiUnuttumPage() {
           <h1 style={{
             fontFamily: "var(--hl-font-display)",
             fontSize: "clamp(28px, 5vw, 40px)",
-            fontWeight: 400, fontStyle: "italic",
+            fontWeight: 400, fontStyle: "normal",
             color: "var(--hl-text)", lineHeight: 1.1, margin: "0 0 16px",
           }}>
             Şifremi unuttum
@@ -56,7 +56,7 @@ export default function SifremiUnuttumPage() {
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
             <Link href="/giris" style={{
               padding: "12px 28px", borderRadius: "var(--hl-r-pill)",
-              background: "var(--hl-bronze-400)", color: "#0A0B09",
+              background: "var(--hl-bronze-400)", color: "var(--hl-on-bronze)",
               fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
               textTransform: "uppercase", textDecoration: "none",
             }}>

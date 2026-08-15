@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { SlidersHorizontal, X, LayoutGrid, Grid3X3 } from "lucide-react";
 import ProductCard from "@/components/product/ProductCard";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 import FilterPanel from "./FilterPanel";
 import { formatPrice } from "@/lib/utils";
 import type { Product, Category } from "@/lib/types";
@@ -65,8 +66,21 @@ function buildApiQuery(f: UrlState): string {
   return params.toString();
 }
 
-/** URL'i tam navigasyon olmadan günceller (paylaşılabilirlik için). */
+/**
+ * URL'i tam navigasyon olmadan günceller (paylaşılabilirlik için).
+ *
+ * Aynı bileşen hem /urunler hem de /kategori/[slug] altında çalışır.
+ * Yol sabit yazılırsa kategori sayfasında ilk filtre tıklamasında adres
+ * çubuğu sessizce /urunler'e döner ve kanonik kategori URL'i kaybolur —
+ * bu yüzden mevcut yol korunur, kategori sayfasında `kategori` parametresi
+ * de yola gömülü olduğu için sorgudan çıkarılır.
+ */
 function syncUrl(f: UrlState): void {
+  if (typeof window === "undefined") return;
+
+  const path = window.location.pathname;
+  const onCategoryPath = path.startsWith("/kategori/");
+
   const params = new URLSearchParams();
   (Object.keys(f) as (keyof UrlState)[]).forEach((k) => {
     const v = f[k];
@@ -74,12 +88,13 @@ function syncUrl(f: UrlState): void {
     if (k === "sayfa" && v === "1") return;
     if (k === "siralama" && v === "onerilen") return;
     if (k === "grid" && v === "3") return;
+    if (k === "kategori" && onCategoryPath) return;
     params.set(k, v);
   });
+
   const qs = params.toString();
-  if (typeof window !== "undefined") {
-    window.history.replaceState(null, "", `/urunler${qs ? "?" + qs : ""}`);
-  }
+  const base = onCategoryPath ? path : "/urunler";
+  window.history.replaceState(null, "", `${base}${qs ? "?" + qs : ""}`);
 }
 
 export default function ProductsClient({
@@ -99,6 +114,17 @@ export default function ProductsClient({
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+
+  const closeFilter = useCallback(() => setFilterOpen(false), []);
+  const filterPanelRef = useFocusTrap<HTMLDivElement>(filterOpen, closeFilter);
+
+  // Panel açıkken arka planın kaydırılmasını engelle.
+  useEffect(() => {
+    if (!filterOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [filterOpen]);
 
   const { materyal, marka, boy, renk, fiyat, indirim, cokSatanlar, grid: gridStr, arama } = filters;
   const grid = (parseInt(gridStr || "3", 10) === 2 ? 2 : 3) as 2 | 3;
@@ -188,9 +214,9 @@ export default function ProductsClient({
   };
 
   return (
-    <div className="hl-page-pad" style={{
-      maxWidth: 1280, margin: "0 auto",
-      padding: "calc(var(--hl-bar-h) + var(--hl-header-h) + 32px) 24px 80px",
+    <div className="hl-page-pad hl-page-shell" style={{
+      paddingTop: "calc(var(--hl-bar-h) + var(--hl-header-h) + 32px)",
+      paddingBottom: 80,
     }}>
       {/* Breadcrumb */}
       <nav style={{
@@ -214,7 +240,7 @@ export default function ProductsClient({
       <div style={{ marginBottom: 36 }}>
         <h1 style={{
           fontFamily: "var(--hl-font-display)", fontSize: "clamp(30px, 4vw, 52px)",
-          fontWeight: 400, fontStyle: "italic", color: "var(--hl-text)",
+          fontWeight: 400, fontStyle: "normal", color: "var(--hl-text)",
           lineHeight: 1.1, marginBottom: 10,
         }}>
           {categoryTitle}
@@ -381,7 +407,7 @@ export default function ProductsClient({
                 </p>
                 <h2 style={{
                   fontFamily: "var(--hl-font-display)", fontSize: "clamp(20px, 2.5vw, 30px)",
-                  fontWeight: 400, fontStyle: "italic", color: "var(--hl-text)",
+                  fontWeight: 400, fontStyle: "normal", color: "var(--hl-text)",
                   lineHeight: 1.15, marginBottom: 12,
                 }}>
                   {featuredProduct.name}
@@ -403,7 +429,7 @@ export default function ProductsClient({
                     href={`/urunler/${featuredProduct.slug}`}
                     style={{
                       padding: "9px 22px", borderRadius: "var(--hl-r-pill)",
-                      background: "var(--hl-bronze-400)", color: "#0A0B09",
+                      background: "var(--hl-bronze-400)", color: "var(--hl-on-bronze)",
                       fontFamily: "var(--hl-font-ui)", fontSize: 10, fontWeight: 700,
                       letterSpacing: "0.08em", textTransform: "uppercase",
                       textDecoration: "none", transition: "opacity 150ms ease",
@@ -429,10 +455,28 @@ export default function ProductsClient({
 
           {/* Product grid */}
           {!loading && items.length === 0 ? (
-            <div style={{ padding: "80px 0", textAlign: "center" }}>
-              <p style={{ fontFamily: "var(--hl-font-ui)", fontSize: 13, color: "var(--hl-text-mute)" }}>
-                Bu filtreyle eşleşen ürün bulunamadı.
+            <div className="hl-empty-state">
+              <SlidersHorizontal size={26} aria-hidden />
+              <p className="hl-empty-title">
+                {arama
+                  ? `"${arama}" için sonuç bulunamadı`
+                  : "Bu filtrelerle eşleşen ürün yok"}
               </p>
+              <p className="hl-empty-desc">
+                {hasFilters || arama
+                  ? "Filtreleri gevşetip tekrar deneyebilir ya da tüm koleksiyona göz atabilirsiniz."
+                  : "Bu kategoriye yakında ürün eklenecek."}
+              </p>
+              {(hasFilters || arama) && (
+                <div className="hl-empty-actions">
+                  <button type="button" onClick={clearAll} className="hl-empty-btn">
+                    Filtreleri temizle
+                  </button>
+                  <Link href="/urunler" className="hl-empty-link">
+                    Tüm ürünlere git
+                  </Link>
+                </div>
+              )}
             </div>
           ) : (
             <div
@@ -479,25 +523,40 @@ export default function ProductsClient({
         </div>
       </div>
 
-      {/* Mobile filter drawer */}
+      {/* Mobile filter drawer — ESC ile kapanır, odak içeride kalır,
+          açıkken arka plan kaydırması kilitlenir. */}
       {filterOpen && (
         <div style={{ position: "fixed", inset: 0, zIndex: 60 }}>
           <div
-            style={{ position: "absolute", inset: 0, background: "rgba(10,11,9,0.75)" }}
+            style={{ position: "absolute", inset: 0, background: "var(--hl-scrim)" }}
             onClick={() => setFilterOpen(false)}
+            aria-hidden="true"
           />
-          <div style={{
-            position: "absolute", top: 0, right: 0, bottom: 0, width: 300,
-            background: "var(--hl-bg-elev-1)", borderLeft: "1px solid var(--hl-line)",
-            padding: 24, overflowY: "auto",
-          }}>
+          <div
+            ref={filterPanelRef}
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Ürün filtreleri"
+            style={{
+              position: "absolute", top: 0, right: 0, bottom: 0, width: 300, maxWidth: "88vw",
+              background: "var(--hl-bg-elev-1)", borderLeft: "1px solid var(--hl-line)",
+              padding: 24, overflowY: "auto",
+            }}
+          >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
               <span style={{ fontFamily: "var(--hl-font-ui)", fontSize: 13, fontWeight: 700, color: "var(--hl-text)" }}>
                 Filtreler
               </span>
               <button
                 onClick={() => setFilterOpen(false)}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--hl-text-mute)" }}
+                aria-label="Filtreleri kapat"
+                style={{
+                  minWidth: 44, minHeight: 44, display: "inline-flex",
+                  alignItems: "center", justifyContent: "center",
+                  background: "none", border: "none", cursor: "pointer",
+                  color: "var(--hl-text-mute)",
+                }}
               >
                 <X size={18} />
               </button>

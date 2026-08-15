@@ -132,8 +132,8 @@ export default function ProductInfo({ product, categoryName, categorySlug, varia
           style={{
             fontFamily: "var(--hl-font-display)",
             fontSize: "clamp(26px, 2.8vw, 36px)",
-            fontWeight: 400, fontStyle: "italic",
-            lineHeight: 1.15, color: "var(--hl-text-main)", margin: 0,
+            fontWeight: 400, fontStyle: "normal",
+            lineHeight: 1.15, color: "var(--hl-text)", margin: 0,
           }}
         >
           {product.name}
@@ -286,7 +286,7 @@ export default function ProductInfo({ product, categoryName, categorySlug, varia
             <span style={{
               width: 36, textAlign: "center",
               fontFamily: "var(--hl-font-ui)", fontSize: 13, fontWeight: 600,
-              color: "var(--hl-text-main)",
+              color: "var(--hl-text)",
             }}>
               {qty}
             </span>
@@ -309,7 +309,7 @@ export default function ProductInfo({ product, categoryName, categorySlug, varia
             style={{
               flex: 1, height: 48, borderRadius: 9, border: "none",
               background: (needsColor || displayStock === 0) ? "var(--hl-line-strong)" : "var(--hl-bronze-400)",
-              color: (needsColor || displayStock === 0) ? "var(--hl-text-mute)" : "#0A0B09",
+              color: (needsColor || displayStock === 0) ? "var(--hl-text-mute)" : "var(--hl-on-bronze)",
               cursor: (needsColor || displayStock === 0) ? "not-allowed" : "pointer",
               fontFamily: "var(--hl-font-ui)", fontSize: 11, fontWeight: 700,
               letterSpacing: "0.1em", textTransform: "uppercase",
@@ -349,22 +349,26 @@ export default function ProductInfo({ product, categoryName, categorySlug, varia
           </button>
         </div>
 
-        {/* Gift button — admin'den açık/kapalı */}
+        {/* Hediye kutusu bilgisi — admin'den açık/kapalı.
+            Eskiden burada tıklanabilir görünen ama hiçbir şey yapmayan bir
+            buton vardı; hediye kutusu seçimi sepet adımında yapıldığı için
+            artık bilgilendirme satırı olarak duruyor. */}
         {giftBoxEnabled && (
-          <button
+          <div
             style={{
-              width: "100%", height: 44, borderRadius: 9,
+              width: "100%", minHeight: 44, borderRadius: 9,
               background: "var(--hl-olive-700)",
               border: "1px solid var(--hl-line)",
-              color: "var(--hl-text-soft)", cursor: "pointer",
-              fontFamily: "var(--hl-font-ui)", fontSize: 10, fontWeight: 700,
-              letterSpacing: "0.1em", textTransform: "uppercase",
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+              color: "var(--hl-text-soft)",
+              fontFamily: "var(--hl-font-ui)", fontSize: 11, fontWeight: 600,
+              letterSpacing: "0.02em",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              gap: 8, padding: "10px 14px", textAlign: "center",
             }}
           >
-            <Gift size={12} />
-            Hediye Paketi Olarak Gönder
-          </button>
+            <Gift size={13} aria-hidden />
+            Hediye paketi seçeneğini sepet adımında ekleyebilirsiniz.
+          </div>
         )}
       </div>
 

@@ -78,7 +78,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             {product.isNew && !product.compareAtPrice && (
               <span style={{
                 padding: "3px 9px", borderRadius: "var(--hl-r-pill)",
-                background: "var(--hl-bronze-400)", color: "#0A0B09",
+                background: "var(--hl-bronze-400)", color: "var(--hl-on-bronze)",
                 fontFamily: "var(--hl-font-ui)", fontSize: 9, fontWeight: 700,
                 letterSpacing: "0.09em", textTransform: "uppercase",
               }}>Yeni</span>
@@ -109,8 +109,8 @@ export default function ProductCard({ product }: ProductCardProps) {
             className="hl-card-heart"
             style={{
               position: "absolute", top: 10, right: 10,
-              width: 32, height: 32, borderRadius: "50%",
-              background: "rgba(10,11,9,0.5)",
+              width: 36, height: 36, borderRadius: "50%",
+              background: "var(--hl-overlay-chip)",
               backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
               border: `1px solid ${liked ? "var(--hl-bronze-500)" : "var(--hl-line-strong)"}`,
               display: "flex", alignItems: "center", justifyContent: "center",
@@ -120,18 +120,20 @@ export default function ProductCard({ product }: ProductCardProps) {
             aria-label={liked ? "Favorilerden çıkar" : "Favorilere ekle"}
             aria-pressed={liked}
           >
-            <Heart size={14} fill={liked ? "#C9A06A" : "none"} />
+            <Heart size={15} fill={liked ? "currentColor" : "none"} />
           </button>
 
           {/* Out of stock overlay */}
           {isOutOfStock && (
             <div style={{
-              position: "absolute", inset: 0, background: "rgba(10,11,9,0.55)",
+              position: "absolute", inset: 0, background: "var(--hl-media-scrim)",
               display: "flex", alignItems: "center", justifyContent: "center",
             }}>
               <span style={{
                 fontFamily: "var(--hl-font-ui)", fontSize: 10, fontWeight: 700,
-                color: "var(--hl-text-mute)", letterSpacing: "0.08em", textTransform: "uppercase",
+                color: "var(--hl-text)", letterSpacing: "0.08em", textTransform: "uppercase",
+                background: "var(--hl-overlay-chip)", padding: "5px 12px",
+                borderRadius: "var(--hl-r-pill)", border: "1px solid var(--hl-line-strong)",
               }}>Stokta Yok</span>
             </div>
           )}
@@ -140,7 +142,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Info */}
         <div style={{ padding: "0 2px", opacity: isOutOfStock ? 0.5 : 1, transition: "opacity 150ms ease" }}>
           <p style={{
-            fontFamily: "var(--hl-font-ui)", fontSize: 9, fontWeight: 700,
+            fontFamily: "var(--hl-font-ui)", fontSize: 10, fontWeight: 700,
             letterSpacing: "0.12em", color: "var(--hl-text-mute)",
             textTransform: "uppercase", marginBottom: 5,
           }}>
@@ -201,40 +203,9 @@ export default function ProductCard({ product }: ProductCardProps) {
         <button
           onClick={handleAddToCart}
           disabled={isOutOfStock}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 6,
-            width: "100%",
-            padding: "9px 0",
-            background: "transparent",
-            color: isOutOfStock ? "var(--hl-text-faint)" : "var(--hl-bronze-400)",
-            border: `1px solid ${isOutOfStock ? "var(--hl-line)" : "var(--hl-bronze-700)"}`,
-            borderRadius: 8,
-            fontFamily: "var(--hl-font-ui)",
-            fontWeight: 700,
-            fontSize: 11,
-            letterSpacing: "0.05em",
-            cursor: isOutOfStock ? "not-allowed" : "pointer",
-            transition: "all 150ms ease",
-          }}
-          onMouseEnter={(e) => {
-            if (!isOutOfStock) {
-              const b = e.currentTarget as HTMLButtonElement;
-              b.style.background = "var(--hl-bronze-700)";
-              b.style.color = "var(--hl-bronze-100)";
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!isOutOfStock) {
-              const b = e.currentTarget as HTMLButtonElement;
-              b.style.background = "transparent";
-              b.style.color = "var(--hl-bronze-400)";
-            }
-          }}
+          className={`hl-add-btn${added ? " hl-add-btn--added" : ""}`}
         >
-          {added ? <Check size={13} /> : <ShoppingCart size={13} />}
+          {added ? <Check size={14} /> : <ShoppingCart size={14} />}
           {isOutOfStock ? "Stokta Yok" : added ? "Eklendi" : "Sepete Ekle"}
         </button>
       </div>

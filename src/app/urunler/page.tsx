@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db/prisma";
 import { mapProduct, mapCategory } from "@/lib/db/mappers";
 import { getUsdTryRate } from "@/lib/pricing";
 import ProductsClient from "./ProductsClient";
+import ProductGridSkeleton from "@/components/product/ProductGridSkeleton";
 import type { Product } from "@/lib/types";
 import type { MaterialOption, BrandOption } from "./FilterPanel";
 
@@ -127,7 +128,9 @@ export async function fetchAll(sp: SearchParams) {
   const renk = sp.renk ?? "";
   const fiyat = sp.fiyat ?? "";
   const siralama = sp.siralama ?? "onerilen";
-  const sayfa = Math.max(1, parseInt(sp.sayfa ?? "1", 10));
+  // NaN koruması + derin offset sınırı (bkz. lib/products/list-query.ts).
+  const rawPage = Number.parseInt(sp.sayfa ?? "1", 10);
+  const sayfa = Number.isFinite(rawPage) ? Math.min(Math.max(1, rawPage), 1000) : 1;
   const skip = (sayfa - 1) * PAGE_SIZE;
   const indirim = sp.indirim === "1";
   const arama = (sp.arama ?? "").trim();
@@ -382,21 +385,7 @@ export default async function ProductsPage({ searchParams }: Props) {
   const data = await fetchAll(sp);
 
   return (
-    <Suspense
-      fallback={
-        <div
-          style={{
-            minHeight: "100vh",
-            padding: "120px 24px",
-            fontFamily: "var(--hl-font-ui)",
-            fontSize: 13,
-            color: "var(--hl-text-mute)",
-          }}
-        >
-          Yükleniyor…
-        </div>
-      }
-    >
+    <Suspense fallback={<ProductGridSkeleton />}>
       <ProductsClient {...data} />
     </Suspense>
   );

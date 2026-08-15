@@ -15,6 +15,8 @@ export interface WishlistItem {
 interface WishlistState {
   items: WishlistItem[];
   toggle: (item: WishlistItem) => void;
+  /** Zaten listedeyse tekrar eklemez (sepetten "daha sonra için kaydet"). */
+  add: (item: WishlistItem) => void;
   remove: (id: string) => void;
   clear: () => void;
 }
@@ -28,6 +30,10 @@ export const useWishlistStore = create<WishlistState>()(
           s.items.some((i) => i.id === item.id)
             ? { items: s.items.filter((i) => i.id !== item.id) }
             : { items: [...s.items, item] },
+        ),
+      add: (item) =>
+        set((s) =>
+          s.items.some((i) => i.id === item.id) ? s : { items: [...s.items, item] },
         ),
       remove: (id) => set((s) => ({ items: s.items.filter((i) => i.id !== id) })),
       clear: () => set({ items: [] }),

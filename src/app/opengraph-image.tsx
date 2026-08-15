@@ -45,7 +45,7 @@ export default function OpengraphImage() {
         <div
           style={{
             fontSize: 76,
-            fontStyle: "italic",
+            fontStyle: "normal",
             color: "#ECEAE2",
             textAlign: "center",
             lineHeight: 1.1,

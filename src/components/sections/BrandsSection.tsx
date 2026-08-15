@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import SectionHeading from "./SectionHeading";
 import type { ShowcaseBrand } from "@/lib/products/brands";
 
 interface Props {
@@ -23,54 +24,16 @@ export default function BrandsSection({ brands }: Props) {
         paddingBottom: "7.5rem",
       }}
     >
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-10 xl:px-14">
+      <div className="hl-page-shell">
         {/* Header */}
-        <div style={{ paddingTop: "4rem", paddingBottom: "2.5rem" }}>
-          <div className="hl-eyebrow" style={{ marginBottom: 8 }}>
-            Koleksiyonlar
-          </div>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "flex-end",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: 16,
-            }}
-          >
-            <h2
-              className="hl-display"
-              style={{
-                fontSize: "clamp(32px, 4vw, 56px)",
-                margin: 0,
-                letterSpacing: "-0.03em",
-                fontWeight: 600,
-                color: "var(--hl-text)",
-              }}
-            >
-              Markalara göre keşfet
-            </h2>
-            <Link href="/urunler" className="hl-brand-all">
-              Tüm markalar
-              <svg
-                width={14}
-                height={14}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.5}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden
-              >
-                <path d="M5 12h14m-5-5 5 5-5 5" />
-              </svg>
-            </Link>
-          </div>
+        <div style={{ paddingTop: "4rem" }}>
+          <SectionHeading
+            eyebrow="Koleksiyonlar"
+            title="Markalara göre keşfet"
+            href="/urunler"
+            linkLabel="Tüm markalar"
+          />
         </div>
-
-        {/* Bronze rule */}
-        <div className="hl-rule-bronze" style={{ marginBottom: "2rem" }} />
 
         {/* Brand grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-5">

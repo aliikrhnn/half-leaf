@@ -40,7 +40,7 @@ export default function BakimPage() {
         fontFamily: "var(--hl-font-display)",
         fontSize: "clamp(28px, 5vw, 48px)",
         fontWeight: 400,
-        fontStyle: "italic",
+        fontStyle: "normal",
         color: "var(--hl-text)",
         lineHeight: 1.15,
         margin: "0 0 18px",

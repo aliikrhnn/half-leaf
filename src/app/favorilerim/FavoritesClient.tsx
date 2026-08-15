@@ -26,7 +26,7 @@ export default function FavoritesClient() {
     <div className="hl-page-pad" style={{ maxWidth: 1200, margin: "0 auto", padding: "calc(var(--hl-bar-h) + var(--hl-header-h) + 40px) 24px 80px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 28 }}>
         <Heart size={20} color="#e53e3e" fill="#e53e3e" />
-        <h1 style={{ fontFamily: "var(--hl-font-display)", fontSize: "clamp(26px, 4vw, 38px)", fontWeight: 400, fontStyle: "italic", color: "var(--hl-text)", margin: 0 }}>
+        <h1 style={{ fontFamily: "var(--hl-font-display)", fontSize: "clamp(26px, 4vw, 38px)", fontWeight: 400, fontStyle: "normal", color: "var(--hl-text)", margin: 0 }}>
           Favorilerim
         </h1>
         <span style={{ fontSize: 13, color: "var(--hl-text-mute)" }}>({items.length})</span>
@@ -36,7 +36,7 @@ export default function FavoritesClient() {
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, padding: "64px 24px", textAlign: "center" }}>
           <Heart size={48} style={{ color: "var(--hl-text-faint)" }} />
           <p style={{ fontSize: 14, color: "var(--hl-text-mute)" }}>Henüz favori ürününüz yok.</p>
-          <Link href="/urunler" style={{ padding: "11px 28px", borderRadius: "var(--hl-r-pill)", background: "var(--hl-bronze-400)", color: "#0A0B09", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", textDecoration: "none", fontFamily: "var(--hl-font-ui)" }}>
+          <Link href="/urunler" style={{ padding: "11px 28px", borderRadius: "var(--hl-r-pill)", background: "var(--hl-bronze-400)", color: "var(--hl-on-bronze)", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", textDecoration: "none", fontFamily: "var(--hl-font-ui)" }}>
             Ürünleri Keşfet
           </Link>
         </div>

@@ -37,7 +37,7 @@ function SectionTitle({ icon, children }: { icon: React.ReactNode; children: Rea
       <span style={{ color: "var(--hl-bronze-400)" }}>{icon}</span>
       <h2 style={{
         fontFamily: "var(--hl-font-display)", fontSize: 22, fontWeight: 400,
-        fontStyle: "italic", color: "var(--hl-text)", margin: 0,
+        fontStyle: "normal", color: "var(--hl-text)", margin: 0,
       }}>
         {children}
       </h2>
@@ -116,7 +116,7 @@ export default async function HesabimPage() {
           <h1 style={{
             fontFamily: "var(--hl-font-display)",
             fontSize: "clamp(28px, 4vw, 42px)",
-            fontWeight: 400, fontStyle: "italic",
+            fontWeight: 400, fontStyle: "normal",
             color: "var(--hl-text)", lineHeight: 1.1, margin: 0,
           }}>
             Merhaba, {user.fullName?.split(" ")[0] ?? "Değerli Üyemiz"}
@@ -181,7 +181,7 @@ export default async function HesabimPage() {
                 </p>
                 <Link href="/urunler" style={{
                   display: "inline-block", padding: "11px 28px", borderRadius: "var(--hl-r-pill)",
-                  background: "var(--hl-bronze-400)", color: "#0A0B09",
+                  background: "var(--hl-bronze-400)", color: "var(--hl-on-bronze)",
                   fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
                   textTransform: "uppercase", textDecoration: "none",
                 }}>

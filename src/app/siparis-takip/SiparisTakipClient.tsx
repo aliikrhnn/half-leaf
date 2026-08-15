@@ -100,7 +100,7 @@ export default function SiparisTakipClient() {
     <div style={{ maxWidth: 680, margin: "0 auto", padding: "calc(var(--hl-bar-h) + var(--hl-header-h) + 40px) 20px 80px", fontFamily: "var(--hl-font-ui)" }}>
       <div style={{ marginBottom: 24 }}>
         <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--hl-bronze-400)", marginBottom: 8 }}>Sipariş Takibi</p>
-        <h1 style={{ fontFamily: "var(--hl-font-display)", fontSize: "clamp(28px, 5vw, 40px)", fontWeight: 400, fontStyle: "italic", color: "var(--hl-text)", margin: 0 }}>
+        <h1 style={{ fontFamily: "var(--hl-font-display)", fontSize: "clamp(28px, 5vw, 40px)", fontWeight: 400, fontStyle: "normal", color: "var(--hl-text)", margin: 0 }}>
           Siparişini takip et
         </h1>
         <p style={{ fontSize: 13, color: "var(--hl-text-mute)", marginTop: 8, lineHeight: 1.6 }}>
@@ -123,7 +123,7 @@ export default function SiparisTakipClient() {
         {error && (
           <div style={{ marginTop: 14, padding: "10px 13px", borderRadius: 8, background: "rgba(224,82,82,0.1)", border: "1px solid rgba(224,82,82,0.3)", fontSize: 12, color: "#e05252" }}>{error}</div>
         )}
-        <button type="submit" disabled={loading} style={{ marginTop: 16, width: "100%", padding: "13px 0", borderRadius: 10, background: loading ? "var(--hl-bg-elev-3)" : "var(--hl-bronze-400)", color: loading ? "var(--hl-text-mute)" : "#0A0B09", border: "none", fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", cursor: loading ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+        <button type="submit" disabled={loading} style={{ marginTop: 16, width: "100%", padding: "13px 0", borderRadius: 10, background: loading ? "var(--hl-bg-elev-3)" : "var(--hl-bronze-400)", color: loading ? "var(--hl-text-mute)" : "var(--hl-on-bronze)", border: "none", fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", cursor: loading ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
           <Search size={14} /> {loading ? "Sorgulanıyor…" : "Siparişi Sorgula"}
         </button>
       </form>
@@ -156,7 +156,7 @@ export default function SiparisTakipClient() {
                       <span style={{ position: "absolute", top: 9, right: "50%", width: "100%", height: 2, background: done ? "var(--hl-bronze-400)" : "var(--hl-line-strong)" }} />
                     )}
                     <span style={{ position: "relative", zIndex: 1, width: 20, height: 20, borderRadius: 999, background: done ? "var(--hl-bronze-400)" : "var(--hl-bg-elev-3)", border: done ? "none" : "1px solid var(--hl-line-strong)", display: "grid", placeItems: "center" }}>
-                      {done && <CheckCircle size={12} color="#0A0B09" />}
+                      {done && <CheckCircle size={12} color="var(--hl-on-bronze)" />}
                     </span>
                     <span style={{ fontSize: 9, color: done ? "var(--hl-text-soft)" : "var(--hl-text-mute)", marginTop: 6, textAlign: "center", letterSpacing: "0.02em" }}>{step.label}</span>
                   </div>

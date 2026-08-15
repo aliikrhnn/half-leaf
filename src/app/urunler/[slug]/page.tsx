@@ -197,11 +197,10 @@ export default async function ProductDetailPage({ params }: Props) {
 
   return (
     <div
-      className="hl-page-pad"
+      className="hl-page-pad hl-page-shell"
       style={{
-        maxWidth: 1280,
-        margin: "0 auto",
-        padding: "calc(var(--hl-bar-h) + var(--hl-header-h) + 32px) 24px 80px",
+        paddingTop: "calc(var(--hl-bar-h) + var(--hl-header-h) + 32px)",
+        paddingBottom: 80,
       }}
     >
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(productJsonLd) }} />
@@ -262,7 +261,7 @@ export default async function ProductDetailPage({ params }: Props) {
           }}>
             <h2 style={{
               fontFamily: "var(--hl-font-display)", fontSize: "clamp(20px, 2vw, 26px)",
-              fontWeight: 400, fontStyle: "italic", color: "var(--hl-text-main)", margin: 0,
+              fontWeight: 400, fontStyle: "normal", color: "var(--hl-text)", margin: 0,
             }}>
               Benzer parçalar
             </h2>
