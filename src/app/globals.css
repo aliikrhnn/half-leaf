@@ -45,6 +45,9 @@
     /* Tek aile: başlık ("display") ve arayüz ("ui") fontu, pop-up ile aynı → Manrope */
     --hl-font-display: var(--font-manrope, "Manrope", system-ui, sans-serif);
     --hl-font-ui:      var(--font-manrope, "Manrope", system-ui, sans-serif);
+    /* Video reel bölümünün başlığı için serif vurgu (yalnızca orada kullanılır).
+       Tek tipografiye dönmek için: --font-display: var(--hl-font-display); */
+    --font-display:    var(--font-fraunces, "Fraunces", Georgia, serif);
     --hl-r-xs: 4px; --hl-r-sm: 8px; --hl-r-md: 12px;
     --hl-r-lg: 18px; --hl-r-xl: 24px; --hl-r-pill: 999px;
     --hl-shadow-1: 0 1px 0 rgba(255,255,255,0.04) inset, 0 1px 2px rgba(0,0,0,0.4);
@@ -491,30 +494,45 @@
     background: var(--hl-bg-elev-1);
   }
 
-  /* Page-transition nav pip — small leaf badge, bottom-right corner, 750ms */
-  .hl-nav-pip {
+  /*
+   * Sayfa geçişi — tüm ekranı kaplayan bulanık perde + ortada dönen halka.
+   * (Önceden sağ alt köşede küçük bir rozetti; gözü footer'a çekiyordu.)
+   * pointer-events:none → perde tıklamayı engellemez, 700 ms'de kendiliğinden söner.
+   */
+  .hl-nav-veil {
     position: fixed;
-    bottom: 28px;
-    right: 28px;
+    inset: 0;
     z-index: 9998;
     pointer-events: none;
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    background: var(--hl-glass-bg);
-    border: 1px solid var(--hl-line-bronze);
-    box-shadow: 0 4px 20px var(--hl-shadow-color), 0 0 0 1px rgba(235, 197, 112, 0.08);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    animation: hl-nav-pip 750ms var(--hl-ease) forwards;
+    display: grid;
+    place-items: center;
+    background: var(--hl-scrim);
+    backdrop-filter: blur(9px) saturate(0.92);
+    -webkit-backdrop-filter: blur(9px) saturate(0.92);
+    animation: hl-nav-veil 700ms var(--hl-ease) forwards;
   }
-  .hl-nav-leaf {
+  .hl-nav-veil-badge {
+    position: relative;
+    width: 86px;
+    height: 86px;
+    display: grid;
+    place-items: center;
+  }
+  /* Dönen bronz yay — maske ile ince halkaya indirgenir */
+  .hl-nav-veil-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, transparent 0 58%, var(--hl-bronze-400) 92%, transparent 100%);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+    animation: hl-nav-spin 850ms linear infinite;
+  }
+  .hl-nav-veil-leaf {
+    position: relative;
     pointer-events: none;
-    animation: hl-nav-leaf-pulse 600ms ease-in-out 1;
-    filter: drop-shadow(0 0 4px rgba(235, 197, 112, 0.55));
+    animation: hl-nav-leaf-pulse 700ms ease-in-out infinite alternate;
+    filter: drop-shadow(0 0 6px rgba(235, 197, 112, 0.5));
   }
 
   /* Splash screen */
@@ -747,18 +765,19 @@
   100% { opacity: 0; }
 }
 
-/* Page-transition nav pip keyframes */
-@keyframes hl-nav-pip {
-  0%   { opacity: 0; transform: translateY(8px) scale(0.82); }
-  18%  { opacity: 1; transform: translateY(0)   scale(1.04); }
-  28%  { opacity: 1; transform: scale(1); }
-  70%  { opacity: 1; }
-  100% { opacity: 0; transform: translateY(-4px) scale(0.92); }
+/* Sayfa geçişi perdesi */
+@keyframes hl-nav-veil {
+  0%   { opacity: 0; }
+  16%  { opacity: 1; }
+  72%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes hl-nav-spin {
+  to { transform: rotate(360deg); }
 }
 @keyframes hl-nav-leaf-pulse {
-  0%   { transform: scale(0.85) rotate(-4deg); }
-  45%  { transform: scale(1.1)  rotate(3deg); }
-  100% { transform: scale(0.95) rotate(0deg); }
+  from { transform: scale(0.94); opacity: 0.85; }
+  to   { transform: scale(1.06); opacity: 1; }
 }
 
 /* V1 Cinematic splash keyframes */
@@ -1169,8 +1188,9 @@
   .hl-progress-bar   { animation: none; width: 100%; }
   .hl-page-enter     { animation: none; }
   .hl-breathe        { animation: none; opacity: 1; transform: none; }
-  .hl-nav-pip        { display: none; }
-  .hl-nav-leaf       { animation: none; }
+  .hl-nav-veil       { display: none; }
+  .hl-nav-veil-ring  { animation: none; }
+  .hl-nav-veil-leaf  { animation: none; }
   .hl-s1-bg          { animation: none; opacity: 1; }
   .hl-s1-halo        { animation: none; opacity: 0.45; transform: translate(-50%, -50%) scale(1); }
   .hl-s1-fill        { animation: none; opacity: 0.08; }
@@ -2308,6 +2328,29 @@
 
 @media (prefers-reduced-motion: reduce) {
   .hl-theme-icon { transition: opacity 120ms ease; transform: none !important; }
+}
+
+/* Kart şeması rozetleri (Visa / Mastercard / troy).
+   Logolar renkli olduğu için koyu temada da açık zeminli kutucukta durur. */
+.hl-cardschemes {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.hl-cardscheme {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 7px;
+  border-radius: 5px;
+  background: #ffffff;
+  border: 1px solid var(--hl-line-strong);
+}
+.hl-cardscheme img {
+  display: block;
+  width: auto;
+  max-height: 100%;
 }
 
 /* PayTR rozeti — temaya göre logo değişimi */

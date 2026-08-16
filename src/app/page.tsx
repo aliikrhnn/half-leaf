@@ -5,6 +5,7 @@ import { getUsdTryRate } from "@/lib/pricing";
 import { jsonLd } from "@/lib/utils";
 import { SITE_NAME, SITE_DESCRIPTION } from "@/lib/constants";
 import Hero, { type HeroSlideData } from "@/components/sections/Hero";
+import VideoReels from "@/components/sections/VideoReels";
 import BestsellersSection from "@/components/sections/BestsellersSection";
 import NewArrivalsSection from "@/components/sections/NewArrivalsSection";
 import FeaturedSection from "@/components/sections/FeaturedSection";
@@ -251,6 +252,7 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: jsonLd(websiteJsonLd) }}
       />
       <Hero slides={heroSlides} />
+      <VideoReels />
       {/* Fırsatlar hero'nun hemen altında: sayfaya giren ilk gördüğü şey olsun. */}
       <FlashProductsSection products={flashProducts} />
       <NewArrivalsSection products={newArrivals} />

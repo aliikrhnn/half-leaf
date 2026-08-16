@@ -6,6 +6,7 @@ import { mapProduct, mapCategory } from "@/lib/db/mappers";
 import { getUsdTryRate } from "@/lib/pricing";
 import ProductsClient from "./ProductsClient";
 import ProductGridSkeleton from "@/components/product/ProductGridSkeleton";
+import { isDefaultSort, interleaveByCategory } from "@/lib/products/list-query";
 import type { Product } from "@/lib/types";
 import type { MaterialOption, BrandOption } from "./FilterPanel";
 
@@ -250,16 +251,36 @@ export async function fetchAll(sp: SearchParams) {
     ...catIdFilter,
   };
 
+  // Varsayılan ("önerilen") sıralamada ürünler kategoriye göre dağıtılır —
+  // /api/urunler ile birebir aynı davranış (bkz. lib/products/list-query.ts).
+  // Sayfalama bozulmasın diye sıralama TÜM eşleşen kayıtlar üzerinde kurulur.
+  let interleavedPageIds: string[] | null = null;
+  if (isDefaultSort(siralama)) {
+    const ordering = await prisma.product.findMany({
+      where,
+      select: { id: true, categoryId: true },
+      orderBy,
+    });
+    interleavedPageIds = interleaveByCategory(ordering)
+      .slice(skip, skip + PAGE_SIZE)
+      .map((r) => r.id);
+  }
+
   // ── Step 2: run all data queries in parallel ──
-  const [dbProducts, totalCount, dbMaterials, allVariants, featuredDb, dbBrands] =
+  const [dbProductsRaw, totalCount, dbMaterials, allVariants, featuredDb, dbBrands] =
     await Promise.all([
-      prisma.product.findMany({
-        where,
-        include: productInclude,
-        orderBy,
-        skip,
-        take: PAGE_SIZE,
-      }),
+      interleavedPageIds
+        ? prisma.product.findMany({
+            where: { id: { in: interleavedPageIds } },
+            include: productInclude,
+          })
+        : prisma.product.findMany({
+            where,
+            include: productInclude,
+            orderBy,
+            skip,
+            take: PAGE_SIZE,
+          }),
       prisma.product.count({ where }),
       prisma.material.findMany({
         where: {
@@ -296,6 +317,16 @@ export async function fetchAll(sp: SearchParams) {
         orderBy: { brand: "asc" },
       }),
     ]);
+
+  // `id in (...)` sorgusu sırayı korumaz — round-robin sırasına geri diz.
+  const dbProducts = interleavedPageIds
+    ? (() => {
+        const byId = new Map(dbProductsRaw.map((r) => [r.id, r]));
+        return interleavedPageIds
+          .map((id) => byId.get(id))
+          .filter((r): r is (typeof dbProductsRaw)[number] => Boolean(r));
+      })()
+    : dbProductsRaw;
 
   // Map products
   const products: Product[] = dbProducts.map((p) => {

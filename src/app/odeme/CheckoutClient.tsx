@@ -13,6 +13,7 @@ import { formatPrice } from "@/lib/utils";
 import HalfLeafLogo from "@/components/brand/HalfLeafLogo";
 import { IL_NAMES, getIlceler } from "@/data/turkey-locations";
 import PayTrLogo from "@/components/layout/PayTrLogo";
+import CardSchemes from "@/components/layout/CardSchemes";
 
 type ShippingMethod = "AYNI_GUN" | "YURT_ICI" | "DUKKAN_TESLIM" | string;
 type PaymentMethod = "KREDI_KARTI" | "HAVALE_EFT";
@@ -750,7 +751,10 @@ export default function CheckoutClient({
                     <>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
                         <span style={{ fontWeight: 600, color: "var(--hl-text)" }}>Kredi / Banka Kartı ile Ödeme</span>
-                        <PayTrLogo />
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+                          <PayTrLogo />
+                          <CardSchemes height={18} />
+                        </span>
                       </div>
                       Siparişi onayladıktan sonra <strong style={{ color: "var(--hl-text-soft)" }}>PayTR</strong> güvenli ödeme ekranına yönlendirileceksiniz.
                       Kart bilgileriniz 256-bit SSL ve 3D Secure ile şifrelenir; tek çekim veya taksit seçenekleri ödeme ekranında sunulur.

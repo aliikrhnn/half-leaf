@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Header from "./Header";
 import SplashScreen from "@/components/brand/SplashScreen";
@@ -23,6 +23,18 @@ interface Props {
 export default function AppShell({ children, footer, navCategories = [], announcementMessages }: Props) {
   const pathname = usePathname();
   const [initialPathname] = useState(pathname);
+
+  /*
+   * Sayfa değişince en üste dön.
+   *
+   * `html { scroll-behavior: smooth }` açık olduğu için tarayıcı, yeni sayfaya
+   * geçerken eski kaydırma konumundan yumuşak biçimde yukarı süzülüyordu; uzun
+   * bir sayfadan kısa bir sayfaya geçildiğinde kullanıcı kendini footer'ın
+   * yanında buluyordu. "instant" ile geçiş anında ve tek seferde en üste alınır.
+   */
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
+  }, [pathname]);
   const isAdmin = pathname.startsWith("/admin");
   const isCheckout =
     pathname.startsWith("/odeme") || pathname.startsWith("/siparis-tamamlandi");
@@ -45,8 +57,11 @@ export default function AppShell({ children, footer, navCategories = [], announc
       <SplashScreen />
       <Header navCategories={navCategories} />
       {showCurtain && (
-        <div key={`hl-nav-${pathname}`} className="hl-nav-pip" aria-hidden="true">
-          <LeafMark width={26} height={52} className="hl-nav-leaf" />
+        <div key={`hl-nav-${pathname}`} className="hl-nav-veil" aria-hidden="true">
+          <span className="hl-nav-veil-badge">
+            <span className="hl-nav-veil-ring" />
+            <LeafMark width={26} height={52} className="hl-nav-veil-leaf" />
+          </span>
         </div>
       )}
       <main key={pathname} className="hl-page-enter">

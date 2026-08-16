@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Manrope } from "next/font/google";
+import { Manrope, Fraunces } from "next/font/google";
 import "./globals.css";
 import AppShell from "@/components/layout/AppShell";
 import { SiteFlagsProvider } from "@/components/layout/SiteFlags";
@@ -17,6 +17,22 @@ const manrope = Manrope({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
   variable: "--font-manrope",
+  display: "swap",
+});
+
+/**
+ * Fraunces — YALNIZCA video reel bölümünün başlığı için.
+ *
+ * VideoReels.module.css `var(--font-display, "Fraunces", serif)` bekliyor.
+ * Sitenin geri kalanı `--hl-font-display` (Manrope) kullanmaya devam eder;
+ * bu değişken ona dokunmaz. Tek tipografiye dönmek isterseniz aşağıdaki
+ * `--font-display` tanımını `var(--hl-font-display)` yapmanız yeterli.
+ */
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  weight: ["500", "600"],
+  style: ["normal", "italic"],
+  variable: "--font-fraunces",
   display: "swap",
 });
 
@@ -195,7 +211,7 @@ export default async function RootLayout({
     <html
       lang="tr"
       data-theme="dark"
-      className={`scroll-smooth ${manrope.variable}`}
+      className={`scroll-smooth ${manrope.variable} ${fraunces.variable}`}
       suppressHydrationWarning
     >
       <head>

@@ -8,6 +8,7 @@ import { canViewOrder } from "@/lib/orders/access";
 import { formatPrice } from "@/lib/utils";
 import HalfLeafLogo from "@/components/brand/HalfLeafLogo";
 import PayTrLogo from "@/components/layout/PayTrLogo";
+import CardSchemes from "@/components/layout/CardSchemes";
 import {
   requestIframeToken,
   iframeUrl,
@@ -307,6 +308,7 @@ export default async function PaytrPaymentPage({ params, searchParams }: Props) 
         <span>256-bit SSL ile şifrelenir · 3D Secure</span>
         <span style={{ opacity: 0.4 }}>·</span>
         <PayTrLogo />
+        <CardSchemes height={18} />
       </div>
 
       <p style={{ textAlign: "center", marginTop: 14, fontSize: 11 }}>

@@ -7,6 +7,7 @@ import { buildStoreLocation } from "@/lib/store-location";
 import HalfLeafLogo from "@/components/brand/HalfLeafLogo";
 import StoreLocation from "./StoreLocation";
 import PayTrLogo from "./PayTrLogo";
+import CardSchemes from "./CardSchemes";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://halfleafstore.com";
 
@@ -147,6 +148,7 @@ export default async function Footer() {
           <span className="hl-footer-pay-logo">
             <PayTrLogo />
           </span>
+          <CardSchemes />
           <span className="hl-footer-pay-text">
             256-bit SSL · 3D Secure · Kredi / Banka Kartı · Havale / EFT
           </span>

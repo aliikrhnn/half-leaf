@@ -115,6 +115,45 @@ export function buildProductWhere(
   return where;
 }
 
+/** Kullanıcı açık bir sıralama seçmediyse (varsayılan "önerilen"). */
+export function isDefaultSort(siralama?: string): boolean {
+  return !siralama || siralama === "onerilen";
+}
+
+/**
+ * Ürünleri kategorilerine göre sırayla dağıtır (round-robin).
+ * 1. tur: her kategoriden 1 ürün · 2. tur: her kategoriden 2. ürün …
+ * Kategori içindeki özgün sıra korunur.
+ *
+ * Sayfalama bozulmasın diye TÜM eşleşen kayıtlar üzerinde çalışır; bu yüzden
+ * yalnızca hafif bir `{id, categoryId}` projeksiyonu ile çağrılır. Katalog
+ * on binlere çıkarsa bu adımı SQL penceresi (ROW_NUMBER OVER PARTITION BY)
+ * ile değiştirmek gerekir.
+ */
+export function interleaveByCategory<T extends { categoryId: string }>(rows: T[]): T[] {
+  const buckets = new Map<string, T[]>();
+  for (const r of rows) {
+    const bucket = buckets.get(r.categoryId);
+    if (bucket) bucket.push(r);
+    else buckets.set(r.categoryId, [r]);
+  }
+
+  const queues = [...buckets.values()];
+  const out: T[] = [];
+  for (let round = 0; out.length < rows.length; round++) {
+    let placed = false;
+    for (const queue of queues) {
+      const item = queue[round];
+      if (item) {
+        out.push(item);
+        placed = true;
+      }
+    }
+    if (!placed) break; // güvenlik ağı
+  }
+  return out;
+}
+
 export function buildOrderBy(siralama?: string) {
   return siralama === "fiyat-artan" ? [{ basePrice: "asc" as const }]
     : siralama === "fiyat-azalan" ? [{ basePrice: "desc" as const }]
@@ -172,6 +211,31 @@ export async function fetchProductsPage(
 
   const where = buildProductWhere(sp, categoryIds);
   const orderBy = buildOrderBy(sp.siralama);
+
+  // Varsayılan ("önerilen") sıralamada ürünler kategoriye göre dağıtılır;
+  // aksi hâlde toplu eklenen bir kategori listenin başını tek başına doldurur.
+  // Fiyat/tarih sıralamaları kullanıcının açık talebidir, onlara dokunulmaz.
+  if (isDefaultSort(sp.siralama)) {
+    const [ordering, total] = await Promise.all([
+      prisma.product.findMany({ where, select: { id: true, categoryId: true }, orderBy }),
+      prisma.product.count({ where }),
+    ]);
+
+    const pageIds = interleaveByCategory(ordering).slice(skip, skip + PAGE_SIZE).map((r) => r.id);
+    if (pageIds.length === 0) return { products: [], total };
+
+    const rows = await prisma.product.findMany({
+      where: { id: { in: pageIds } },
+      include: productInclude,
+    });
+    // `in` sorgusu sırayı korumaz — round-robin sırasına geri diz.
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    const products = pageIds
+      .map((id) => byId.get(id))
+      .filter((r): r is (typeof rows)[number] => Boolean(r))
+      .map((p) => mapProductRow(p, usdTryRate, now));
+    return { products, total };
+  }
 
   const [dbProducts, total] = await Promise.all([
     prisma.product.findMany({ where, include: productInclude, orderBy, skip, take: PAGE_SIZE }),
