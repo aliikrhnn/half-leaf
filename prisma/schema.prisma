@@ -515,6 +515,7 @@ model User {
   Account              Account[]
   Address              Address[]
   AuditLog             AuditLog[]
+  PasswordResetToken   PasswordResetToken[]
   Cart                 Cart[]
   ConsentLog           ConsentLog[]
   ImageProcessingJob   ImageProcessingJob[]
@@ -525,6 +526,23 @@ model User {
   StockMovement        StockMovement[]
 
   @@index([unsubscribeToken])
+}
+
+/// Şifre sıfırlama bağlantıları. Token'ın KENDİSİ saklanmaz, yalnızca SHA-256
+/// özeti; böylece veritabanı sızsa bile kimse sıfırlama linki üretemez.
+model PasswordResetToken {
+  id          String    @id @default(cuid())
+  userId      String
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  /// Dolu ise token harcanmıştır (tek kullanımlık).
+  usedAt      DateTime?
+  requestedIp String?
+  createdAt   DateTime  @default(now())
+  User        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Review {

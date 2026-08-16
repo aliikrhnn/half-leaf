@@ -47,6 +47,38 @@ function button(href: string, label: string): string {
   return `<a href="${href}" style="display:inline-block;background:${BRONZE};color:#ffffff;text-decoration:none;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:12px 26px;border-radius:999px;">${label}</a>`;
 }
 
+export interface PasswordResetEmailData {
+  name: string;
+  resetUrl: string;
+  expiresInMinutes: number;
+}
+
+/** Şifre sıfırlama e-postası. */
+export function passwordResetEmail(
+  data: PasswordResetEmailData,
+): { subject: string; html: string } {
+  const greeting = data.name ? `Merhaba ${escapeHtml(data.name)},` : "Merhaba,";
+  const body = `
+    <p style="font-size:14px;color:${MUTE};line-height:1.7;margin:0 0 16px;">${greeting}</p>
+    <p style="font-size:14px;color:${MUTE};line-height:1.7;margin:0 0 20px;">
+      Half Leaf hesabınız için şifre sıfırlama talebi aldık. Yeni şifrenizi belirlemek
+      için aşağıdaki düğmeye tıklayın.
+    </p>
+    <div style="text-align:center;margin:24px 0;">${button(data.resetUrl, "Şifremi Belirle")}</div>
+    <p style="font-size:12px;color:${MUTE};line-height:1.7;margin:0 0 8px;">
+      Bu bağlantı <b style="color:${INK};">${data.expiresInMinutes} dakika</b> geçerlidir ve
+      yalnızca bir kez kullanılabilir.
+    </p>
+    <p style="font-size:12px;color:${MUTE};line-height:1.7;margin:0 0 16px;">
+      Bu talebi siz yapmadıysanız bu e-postayı yok sayabilirsiniz — şifreniz değişmez.
+    </p>
+    <p style="font-size:11px;color:${MUTE};line-height:1.6;margin:16px 0 0;word-break:break-all;">
+      Düğme çalışmazsa bu adresi tarayıcınıza yapıştırın:<br>${escapeHtml(data.resetUrl)}
+    </p>
+  `;
+  return { subject: "Şifre sıfırlama talebiniz · Half Leaf", html: shell("Şifrenizi sıfırlayın", body) };
+}
+
 export interface OrderEmailData {
   orderNumber: string;
   items: ReadonlyArray<{ name: string; quantity: number; lineTotal: number }>;

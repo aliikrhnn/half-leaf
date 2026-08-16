@@ -39,6 +39,28 @@ export const ChangePasswordSchema = z
     path: ["confirmPassword"],
   });
 
+export const ForgotPasswordSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Geçerli bir e-posta adresi giriniz."),
+});
+
+export const ResetPasswordSchema = z
+  .object({
+    token: z.string().min(10, "Bağlantı geçersiz.").max(200),
+    password: z
+      .string()
+      .min(8, "Şifre en az 8 karakter olmalıdır.")
+      .max(200)
+      .regex(/[A-Z]/, "Şifre en az bir büyük harf içermelidir.")
+      .regex(/[0-9]/, "Şifre en az bir rakam içermelidir."),
+    confirmPassword: z.string(),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    message: "Şifreler eşleşmiyor.",
+    path: ["confirmPassword"],
+  });
+
+export type ForgotPasswordInput = z.infer<typeof ForgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
 export type RegisterInput = z.infer<typeof RegisterSchema>;
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;

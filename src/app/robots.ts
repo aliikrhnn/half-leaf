@@ -17,6 +17,8 @@ export default function robots(): MetadataRoute.Robots {
           "/sepet",
           "/giris",
           "/kayit",
+          "/sifremi-unuttum",
+          "/sifre-sifirla",
           "/siparis-tamamlandi",
         ],
       },

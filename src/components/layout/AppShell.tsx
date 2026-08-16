@@ -26,10 +26,12 @@ export default function AppShell({ children, footer, navCategories = [], announc
   const isAdmin = pathname.startsWith("/admin");
   const isCheckout =
     pathname.startsWith("/odeme") || pathname.startsWith("/siparis-tamamlandi");
+  // Bu sayfalar kendi kabuklarını (AuthShell) taşır — site header/footer'ı almazlar.
   const isAuth =
     pathname === "/giris" ||
     pathname === "/kayit" ||
-    pathname === "/sifremi-unuttum";
+    pathname === "/sifremi-unuttum" ||
+    pathname === "/sifre-sifirla";
 
   if (isAdmin || isCheckout || isAuth) {
     return <>{children}</>;
