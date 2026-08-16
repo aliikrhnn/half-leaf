@@ -31,7 +31,14 @@ interface Reel {
 interface PickerProduct {
   id: string;
   name: string;
-  brand?: string;
+  brand: string | null;
+  /** Bu ürünün zaten bir reel kaydı var mı. */
+  hasReel: boolean;
+}
+
+/** Seçenek etiketi: "Marka · Ürün Adı" */
+function optionLabel(p: PickerProduct): string {
+  return p.brand ? `${p.brand} · ${p.name}` : p.name;
 }
 
 const DEFAULT_HANDLE = "@halfleafstore";
@@ -68,17 +75,20 @@ export default function AdminReelsPage() {
   // eslint-disable-next-line react-hooks/set-state-in-effect -- veri çekme deseni
   useEffect(() => { void load(); }, [load]);
 
-  // Ürün seçici listesi (form açılınca bir kez)
+  // Ürün seçici listesi — hem yeni kayıt formu hem de satırlardaki ürün
+  // değiştirme kutusu bunu kullanır, o yüzden sayfa açılır açılmaz çekilir.
   useEffect(() => {
-    if (!adding || products.length > 0) return;
     void (async () => {
       try {
-        const res = await fetch("/api/products?limit=200");
+        const res = await fetch("/api/admin/reels/urunler");
         const json = await res.json();
         if (json.success) setProducts(json.data);
-      } catch { /* seçici boş kalır */ }
+        else setError("Ürün listesi yüklenemedi.");
+      } catch {
+        setError("Ürün listesi yüklenemedi.");
+      }
     })();
-  }, [adding, products.length]);
+  }, []);
 
   const flash = (msg: string) => {
     setSaved(msg);
@@ -212,13 +222,13 @@ export default function AdminReelsPage() {
                 {products
                   .filter((p) => !usedIds.has(p.id))
                   .map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.brand ? `${p.brand} · ` : ""}{p.name}
-                    </option>
+                    <option key={p.id} value={p.id}>{optionLabel(p)}</option>
                   ))}
               </select>
               <p className="text-[11px] text-ink-dim mt-1.5">
-                Zaten reel&apos;i olan ürünler listede görünmez (ürün başına tek reel).
+                {products.length === 0
+                  ? "Ürün listesi yükleniyor…"
+                  : `${products.filter((p) => !usedIds.has(p.id)).length} uygun ürün. Zaten reel'i olanlar listede görünmez (ürün başına tek reel).`}
               </p>
             </div>
 
@@ -299,6 +309,26 @@ export default function AdminReelsPage() {
                     {r.isActive ? <Badge variant="success">Yayında</Badge> : <Badge variant="default">Gizli</Badge>}
                     {!r.Product.isActive && <Badge variant="default">Ürün pasif</Badge>}
                     {!r.videoUrl && <Badge variant="default">Video yok</Badge>}
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] text-ink-dim mb-1">Ürün</label>
+                    <select
+                      value={r.productId}
+                      onChange={(e) => {
+                        if (e.target.value !== r.productId) {
+                          void patch(r.id, { productId: e.target.value }, "Ürün değiştirildi");
+                        }
+                      }}
+                      className="w-full bg-bg-elevated border border-border-default text-ink rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent"
+                    >
+                      {/* Kendi ürünü + başka reel'e bağlı olmayanlar */}
+                      {products
+                        .filter((p) => p.id === r.productId || !usedIds.has(p.id))
+                        .map((p) => (
+                          <option key={p.id} value={p.id}>{optionLabel(p)}</option>
+                        ))}
+                    </select>
                   </div>
 
                   <div className="grid sm:grid-cols-2 gap-3">
