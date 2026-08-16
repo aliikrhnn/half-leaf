@@ -70,6 +70,28 @@ export default function GirisClient({ redirectTo }: { redirectTo: string }) {
   const [showPw, setShowPw] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
   const [loading, setLoading] = useState(false);
+  /** Giriş, e-posta doğrulanmadığı için reddedildi. */
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendMsg, setResendMsg] = useState("");
+
+  const resendVerification = async () => {
+    setResending(true);
+    setResendMsg("");
+    try {
+      const res = await fetch("/api/auth/eposta-dogrula", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      });
+      const json = await res.json() as { success: boolean; data?: { message?: string }; error?: string };
+      setResendMsg(json.data?.message ?? json.error ?? "İstek gönderildi.");
+    } catch {
+      setResendMsg("Bağlantı hatası. Lütfen tekrar deneyin.");
+    } finally {
+      setResending(false);
+    }
+  };
 
   const validate = (): Errors => {
     const e: Errors = {};
@@ -92,7 +114,13 @@ export default function GirisClient({ redirectTo }: { redirectTo: string }) {
         credentials: "include",
       });
       if (!res.ok) {
-        const data = await res.json() as { error?: string };
+        const data = await res.json() as { error?: string; code?: string };
+        // E-posta doğrulanmamış: hata yerine "tekrar gönder" akışı gösterilir.
+        if (res.status === 403 && data.code === "EMAIL_NOT_VERIFIED") {
+          setNeedsVerification(true);
+          setErrors({});
+          return;
+        }
         if (res.status === 429) {
           setErrors({ general: data.error ?? "Çok fazla giriş denemesi yaptınız. Lütfen birkaç dakika sonra tekrar deneyin." });
         } else if (res.status === 400 || res.status === 401) {
@@ -161,6 +189,42 @@ export default function GirisClient({ redirectTo }: { redirectTo: string }) {
                 fontSize: 12, color: "#e05252", fontFamily: "var(--hl-font-ui)",
               }}>
                 {errors.general}
+              </div>
+            )}
+
+            {needsVerification && (
+              <div style={{
+                padding: "14px 16px", borderRadius: 10, marginBottom: 20,
+                background: "rgba(182,137,80,0.1)", border: "1px solid var(--hl-line-bronze)",
+                fontFamily: "var(--hl-font-ui)",
+              }}>
+                <p style={{ fontSize: 12.5, fontWeight: 700, color: "var(--hl-text)", marginBottom: 6 }}>
+                  E-posta adresiniz doğrulanmamış
+                </p>
+                <p style={{ fontSize: 12, color: "var(--hl-text-mute)", lineHeight: 1.65, marginBottom: 12 }}>
+                  Kayıt olurken gönderdiğimiz doğrulama bağlantısına tıklamanız gerekiyor.
+                  E-posta elinize ulaşmadıysa yeniden gönderebiliriz.
+                </p>
+                <button
+                  type="button"
+                  onClick={resendVerification}
+                  disabled={resending}
+                  style={{
+                    padding: "9px 18px", borderRadius: 999,
+                    background: resending ? "var(--hl-bg-elev-3)" : "var(--hl-bronze-400)",
+                    color: resending ? "var(--hl-text-mute)" : "var(--hl-on-bronze)",
+                    border: "none", fontSize: 11, fontWeight: 700,
+                    letterSpacing: "0.06em", textTransform: "uppercase",
+                    cursor: resending ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {resending ? "Gönderiliyor…" : "Bağlantıyı Tekrar Gönder"}
+                </button>
+                {resendMsg && (
+                  <p style={{ fontSize: 11.5, color: "var(--hl-text-mute)", lineHeight: 1.6, marginTop: 10 }}>
+                    {resendMsg}
+                  </p>
+                )}
               </div>
             )}
 

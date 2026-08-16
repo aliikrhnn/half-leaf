@@ -339,6 +339,7 @@ model Product {
   Category         Category         @relation(fields: [categoryId], references: [id])
   Material         Material?        @relation(fields: [materialId], references: [id])
   ProductImage     ProductImage[]
+  ProductReel      ProductReel?
   ProductVariant   ProductVariant[]
   Review           Review[]
 
@@ -516,6 +517,7 @@ model User {
   Address              Address[]
   AuditLog             AuditLog[]
   PasswordResetToken   PasswordResetToken[]
+  EmailVerificationToken EmailVerificationToken[]
   Cart                 Cart[]
   ConsentLog           ConsentLog[]
   ImageProcessingJob   ImageProcessingJob[]
@@ -526,6 +528,40 @@ model User {
   StockMovement        StockMovement[]
 
   @@index([unsubscribeToken])
+}
+
+/// Ana sayfadaki video reel karuseli. Her ürünün en fazla bir reel'i olur;
+/// video yönetim panelinden yüklenir, marka/model/fiyat ürünün kendisinden gelir.
+model ProductReel {
+  id        String   @id @default(cuid())
+  productId String   @unique
+  /// Supabase Storage'daki MP4 URL'i. Boşsa kart placeholder gösterir.
+  videoUrl  String?
+  /// Kart üstündeki küçük etiket ("Çok Satan", "%10 İndirim" vb.).
+  badge     String?
+  /// Video üzerinde görünen sosyal hesap etiketi.
+  handle    String?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  Product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([sortOrder])
+}
+
+/// E-posta doğrulama bağlantıları. Token saklanmaz, yalnızca SHA-256 özeti.
+model EmailVerificationToken {
+  id          String    @id @default(cuid())
+  userId      String
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  requestedIp String?
+  createdAt   DateTime  @default(now())
+  User        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 /// Şifre sıfırlama bağlantıları. Token'ın KENDİSİ saklanmaz, yalnızca SHA-256

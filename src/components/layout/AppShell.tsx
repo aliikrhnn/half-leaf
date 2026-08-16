@@ -43,7 +43,8 @@ export default function AppShell({ children, footer, navCategories = [], announc
     pathname === "/giris" ||
     pathname === "/kayit" ||
     pathname === "/sifremi-unuttum" ||
-    pathname === "/sifre-sifirla";
+    pathname === "/sifre-sifirla" ||
+    pathname === "/eposta-dogrula";
 
   if (isAdmin || isCheckout || isAuth) {
     return <>{children}</>;

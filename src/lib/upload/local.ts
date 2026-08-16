@@ -59,6 +59,34 @@ export async function saveHeroImage(
 }
 
 /**
+ * Ürün reel videosunu (dikey MP4) Supabase Storage'a yükler.
+ * @param buffer       - Ham video baytları
+ * @param originalName - İstemciden gelen dosya adı
+ * @returns Supabase CDN public URL
+ */
+export async function saveReelVideo(
+  buffer: ArrayBuffer,
+  originalName: string,
+): Promise<string> {
+  const ext  = path.extname(originalName).toLowerCase() || ".mp4";
+  const base = path.basename(originalName, ext);
+  const slug = slugify(base) || "reel";
+  const tag  = Date.now().toString(36);
+  const storagePath = `reels/${slug}-${tag}${ext}`;
+
+  const supabase = getStorageClient();
+  const { error } = await supabase.storage
+    .from(BUCKET)
+    .upload(storagePath, Buffer.from(buffer), {
+      contentType: ext === ".webm" ? "video/webm" : "video/mp4",
+      upsert: true,
+    });
+
+  if (error) throw new Error(`Video yüklenemedi: ${error.message}`);
+  return storagePublicUrl(storagePath);
+}
+
+/**
  * Ürün görselini Supabase Storage'a yükler ve public URL döndürür.
  * @param buffer       - Ham görsel baytları
  * @param originalName - İstemciden gelen dosya adı

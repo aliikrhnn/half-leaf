@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { loginUser } from "@/lib/services/auth.service";
 import { LoginSchema } from "@/lib/validations/auth.schema";
 import { ok, badRequest, serverError, tooManyRequests } from "@/lib/api/response";
@@ -55,6 +55,14 @@ export async function POST(req: NextRequest) {
     return res;
   } catch (err: unknown) {
     const e = err as { code?: string; message?: string };
+    // Doğrulanmamış e-posta ayrı kodla döner ki istemci "tekrar gönder"
+    // düğmesini gösterebilsin.
+    if (e?.code === "EMAIL_NOT_VERIFIED") {
+      return NextResponse.json(
+        { success: false, error: e.message, code: "EMAIL_NOT_VERIFIED" },
+        { status: 403 },
+      );
+    }
     if (e?.code === "INVALID_CREDENTIALS" || e?.code === "ACCOUNT_DISABLED") {
       return badRequest(e.message ?? "Giriş başarısız.");
     }

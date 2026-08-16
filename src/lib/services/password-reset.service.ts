@@ -107,7 +107,10 @@ export async function resetPassword(
 
   const row = await prisma.passwordResetToken.findUnique({
     where: { tokenHash },
-    select: { id: true, userId: true, usedAt: true, expiresAt: true },
+    select: {
+      id: true, userId: true, usedAt: true, expiresAt: true,
+      User: { select: { emailVerifiedAt: true } },
+    },
   });
   if (!row) return "invalid";
   if (row.usedAt) return "used";
@@ -124,9 +127,15 @@ export async function resetPassword(
     });
     if (claimed.count === 0) return "used" as const;
 
+    // Şifre sıfırlama, e-posta kutusuna erişimi kanıtlar: adres henüz
+    // doğrulanmamışsa bu noktada doğrulanmış sayılır (kullanıcı ikinci bir
+    // adımla uğraşmasın). Zaten doğrulanmışsa özgün tarih korunur.
     await tx.user.update({
       where: { id: row.userId },
-      data: { passwordHash },
+      data: {
+        passwordHash,
+        ...(row.User.emailVerifiedAt ? {} : { emailVerifiedAt: new Date() }),
+      },
     });
     // Aynı kullanıcının diğer bekleyen bağlantılarını da kapat.
     await tx.passwordResetToken.updateMany({

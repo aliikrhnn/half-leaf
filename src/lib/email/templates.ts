@@ -47,6 +47,41 @@ function button(href: string, label: string): string {
   return `<a href="${href}" style="display:inline-block;background:${BRONZE};color:#ffffff;text-decoration:none;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:12px 26px;border-radius:999px;">${label}</a>`;
 }
 
+export interface EmailVerificationData {
+  name: string;
+  verifyUrl: string;
+  expiresInHours: number;
+}
+
+/** Kayıt sonrası e-posta doğrulama. */
+export function emailVerificationEmail(
+  data: EmailVerificationData,
+): { subject: string; html: string } {
+  const greeting = data.name ? `Merhaba ${escapeHtml(data.name)},` : "Merhaba,";
+  const body = `
+    <p style="font-size:14px;color:${MUTE};line-height:1.7;margin:0 0 16px;">${greeting}</p>
+    <p style="font-size:14px;color:${MUTE};line-height:1.7;margin:0 0 20px;">
+      Half Leaf'e hoş geldiniz. Hesabınızı kullanmaya başlamak için e-posta
+      adresinizi doğrulayın.
+    </p>
+    <div style="text-align:center;margin:24px 0;">${button(data.verifyUrl, "E-postamı Doğrula")}</div>
+    <p style="font-size:12px;color:${MUTE};line-height:1.7;margin:0 0 8px;">
+      Bu bağlantı <b style="color:${INK};">${data.expiresInHours} saat</b> geçerlidir.
+      Doğrulama tamamlanmadan hesabınıza giriş yapılamaz.
+    </p>
+    <p style="font-size:12px;color:${MUTE};line-height:1.7;margin:0 0 16px;">
+      Bu hesabı siz oluşturmadıysanız bu e-postayı yok sayabilirsiniz.
+    </p>
+    <p style="font-size:11px;color:${MUTE};line-height:1.6;margin:16px 0 0;word-break:break-all;">
+      Düğme çalışmazsa bu adresi tarayıcınıza yapıştırın:<br>${escapeHtml(data.verifyUrl)}
+    </p>
+  `;
+  return {
+    subject: "E-posta adresinizi doğrulayın · Half Leaf",
+    html: shell("Hesabınızı doğrulayın", body),
+  };
+}
+
 export interface PasswordResetEmailData {
   name: string;
   resetUrl: string;

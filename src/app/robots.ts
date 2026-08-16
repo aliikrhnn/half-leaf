@@ -19,6 +19,7 @@ export default function robots(): MetadataRoute.Robots {
           "/kayit",
           "/sifremi-unuttum",
           "/sifre-sifirla",
+          "/eposta-dogrula",
           "/siparis-tamamlandi",
         ],
       },

@@ -63,7 +63,10 @@ export async function loginUser(data: LoginInput) {
 
   const user = await prisma.user.findFirst({
     where: { email: { equals: email, mode: "insensitive" } },
-    select: { id: true, email: true, fullName: true, role: true, passwordHash: true, isActive: true, tokenVersion: true },
+    select: {
+      id: true, email: true, fullName: true, role: true,
+      passwordHash: true, isActive: true, tokenVersion: true, emailVerifiedAt: true,
+    },
   });
 
   // Şifre doğrulaması HER ZAMAN çalışır; kullanıcı yoksa sahte hash'e karşı.
@@ -79,6 +82,16 @@ export async function loginUser(data: LoginInput) {
     throw Object.assign(new Error("Hesabınız devre dışı bırakıldı."), { code: "ACCOUNT_DISABLED" });
   }
 
+  // E-posta doğrulanmadan giriş yok — rastgele/sahte adreslerle açılan
+  // hesapların kullanılmasını engeller. (Bu kural devreye alınırken mevcut
+  // tüm kullanıcılar doğrulanmış işaretlendi, kimse dışarıda kalmadı.)
+  if (!user.emailVerifiedAt) {
+    throw Object.assign(
+      new Error("E-posta adresiniz henüz doğrulanmadı. Gelen kutunuzdaki doğrulama bağlantısına tıklayın."),
+      { code: "EMAIL_NOT_VERIFIED" },
+    );
+  }
+
   const token = await signToken({
     userId: user.id,
     email: user.email,
@@ -89,6 +102,33 @@ export async function loginUser(data: LoginInput) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- intentional: passwordHash/tokenVersion istemciye dönmez
   const { passwordHash: _passwordHash, tokenVersion: _tv, ...safeUser } = user;
   return { user: safeUser, token };
+}
+
+/** Kayıt akışı: hesabı açar ama OTURUM AÇMAZ — önce e-posta doğrulanmalı. */
+export async function registerCustomerPendingVerification(data: RegisterInput) {
+  const email = normalizeEmail(data.email);
+
+  const existing = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: "insensitive" } },
+    select: { id: true },
+  });
+  if (existing) {
+    throw Object.assign(new Error("Bu e-posta adresi zaten kayıtlı."), { code: "EMAIL_TAKEN" });
+  }
+
+  const passwordHash = await bcrypt.hash(data.password, 12);
+
+  return prisma.user.create({
+    data: {
+      email,
+      fullName: data.name,
+      phone: data.phone,
+      passwordHash,
+      role: "MUSTERI",
+      // emailVerifiedAt bilinçli olarak null — doğrulama bağlantısı bekleniyor.
+    },
+    select: { id: true, email: true, fullName: true, role: true },
+  });
 }
 
 export async function getUserById(id: string) {

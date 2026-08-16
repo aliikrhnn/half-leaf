@@ -4,7 +4,8 @@ import { mapProduct } from "@/lib/db/mappers";
 import { getUsdTryRate } from "@/lib/pricing";
 import { jsonLd } from "@/lib/utils";
 import { SITE_NAME, SITE_DESCRIPTION } from "@/lib/constants";
-import VideoReels from "@/components/sections/VideoReels";
+import { fetchReelItems } from "@/components/sections/VideoReels";
+import VideoReelsCarousel from "@/components/sections/VideoReelsCarousel";
 import BestsellersSection from "@/components/sections/BestsellersSection";
 import NewArrivalsSection from "@/components/sections/NewArrivalsSection";
 import FeaturedSection from "@/components/sections/FeaturedSection";
@@ -166,8 +167,9 @@ function interleaveByCategory(products: Product[]): Product[] {
 
 export default async function HomePage() {
   const usdTryRate = await getUsdTryRate();
-  const [newArrivals, featuredProducts, flashProducts, bestsellerProducts, brands, allProducts] =
+  const [reelItems, newArrivals, featuredProducts, flashProducts, bestsellerProducts, brands, allProducts] =
     await Promise.all([
+      fetchReelItems(),
       getNewArrivals(usdTryRate),
       getFeaturedProducts(usdTryRate),
       getFlashProducts(usdTryRate),
@@ -222,7 +224,7 @@ export default async function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLd(websiteJsonLd) }}
       />
-      <VideoReels />
+      <VideoReelsCarousel reels={reelItems} />
       <FlashProductsSection products={flashProducts} />
       <NewArrivalsSection products={newArrivals} />
       <AllProductsSection products={allChunk1} eyebrow="Tüm Koleksiyon" title="Tüm ürünler" href="/urunler" />

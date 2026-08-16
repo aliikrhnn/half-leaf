@@ -36,7 +36,7 @@ const NAV_ITEMS = [
   { href: "/admin/iade-talepleri", label: "İade Talepleri", icon: RefreshCw },
   { href: "/admin/yorumlar", label: "Yorumlar", icon: Star },
   { href: "/admin/icerik-sayfalari", label: "İçerik Sayfaları", icon: FileText },
-  { href: "/admin/hero-slides",      label: "Hero Slide'lar",   icon: Layers },
+  { href: "/admin/reels",            label: "Reels",            icon: Layers },
   { href: "/admin/iletisim",         label: "İletişim",         icon: MessageSquare },
   { href: "/admin/kampanya",         label: "Kampanya",         icon: Mail },
   { href: "/admin/ayarlar",          label: "Ayarlar",          icon: Settings },

@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Lock, Eye, EyeOff, Check } from "lucide-react";
+import { Lock, Eye, EyeOff, Check, MailCheck } from "lucide-react";
 import HalfLeafLogo from "@/components/brand/HalfLeafLogo";
+import AuthShell from "@/components/layout/AuthShell";
 
 type Errors = Partial<Record<
   "name" | "email" | "phone" | "password" | "confirmPassword" | "kvkk" | "general",
@@ -80,8 +80,6 @@ function CheckBox({ checked, onChange }: { checked: boolean; onChange: () => voi
 }
 
 export default function KayitClient() {
-  const router = useRouter();
-
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phoneSuffix, setPhoneSuffix] = useState("");
@@ -89,6 +87,8 @@ export default function KayitClient() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [kvkk, setKvkk] = useState(false);
   const [ticariIleti, setTicariIleti] = useState(false);
+  /** Dolu ise kayıt tamamlandı ve doğrulama e-postası bekleniyor. */
+  const [pendingMessage, setPendingMessage] = useState("");
   const [errors, setErrors] = useState<Errors>({});
   const [loading, setLoading] = useState(false);
 
@@ -126,7 +126,10 @@ export default function KayitClient() {
           ageVerified: true,
         }),
       });
-      const data = (await res.json()) as { error?: string };
+      const data = (await res.json()) as {
+        error?: string;
+        data?: { verificationRequired?: boolean; message?: string };
+      };
       if (!res.ok) {
         if (res.status === 409) {
           setErrors({ email: "Bu e-posta adresi zaten kayıtlı." });
@@ -139,14 +142,60 @@ export default function KayitClient() {
         }
         return;
       }
-      router.push("/hesabim");
-      router.refresh();
+      // Artık kayıt sonrası otomatik giriş YOK: önce e-posta doğrulanmalı.
+      setPendingMessage(
+        data.data?.message ??
+          "Hesabınız oluşturuldu. E-posta adresinize gönderdiğimiz doğrulama bağlantısına tıklayın.",
+      );
     } catch {
       setErrors({ general: "Bir hata oluştu. Lütfen tekrar deneyin." });
     } finally {
       setLoading(false);
     }
   };
+
+  /* Kayıt tamamlandı — doğrulama bağlantısı bekleniyor. */
+  if (pendingMessage) {
+    return (
+      <AuthShell>
+        <div style={{ width: "100%", maxWidth: 440, textAlign: "center" }}>
+          <div style={{
+            width: 64, height: 64, borderRadius: "50%",
+            background: "rgba(122,184,122,0.12)", border: "1px solid rgba(122,184,122,0.3)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            margin: "0 auto 24px",
+          }}>
+            <MailCheck size={30} color="var(--hl-success)" />
+          </div>
+          <h1 style={{
+            fontFamily: "var(--hl-font-display)", fontSize: "clamp(26px, 4.5vw, 34px)",
+            fontWeight: 600, letterSpacing: "-0.02em", color: "var(--hl-text)",
+            lineHeight: 1.15, margin: "0 0 14px",
+          }}>
+            Son bir adım kaldı
+          </h1>
+          <p style={{ fontSize: 13.5, color: "var(--hl-text-mute)", lineHeight: 1.75, marginBottom: 10 }}>
+            {pendingMessage}
+          </p>
+          <p style={{ fontSize: 12.5, color: "var(--hl-text-soft)", fontWeight: 600, marginBottom: 26 }}>
+            {email.trim().toLowerCase()}
+          </p>
+          <p style={{ fontSize: 12, color: "var(--hl-text-faint)", lineHeight: 1.7, marginBottom: 26 }}>
+            Bağlantı 24 saat geçerlidir. E-posta gelmediyse spam klasörünü kontrol edin;
+            giriş sayfasından yeniden gönderebilirsiniz.
+          </p>
+          <Link href="/giris" style={{
+            display: "inline-block", padding: "13px 30px", borderRadius: "var(--hl-r-pill)",
+            background: "var(--hl-bronze-400)", color: "var(--hl-on-bronze)",
+            fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
+            textTransform: "uppercase", textDecoration: "none",
+          }}>
+            Giriş Sayfasına Git
+          </Link>
+        </div>
+      </AuthShell>
+    );
+  }
 
   return (
     <div style={{

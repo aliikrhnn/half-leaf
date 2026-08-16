@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { registerCustomer } from "@/lib/services/auth.service";
+import { registerCustomerPendingVerification } from "@/lib/services/auth.service";
 import { RegisterSchema } from "@/lib/validations/auth.schema";
 import { created, badRequest, conflict, serverError, tooManyRequests } from "@/lib/api/response";
 import { prisma } from "@/lib/db/prisma";
@@ -37,7 +37,8 @@ export async function POST(req: NextRequest) {
       return badRequest(parsed.error.issues.map((e) => e.message).join(", "));
     }
 
-    const { user, token } = await registerCustomer(parsed.data);
+    // Hesap açılır ama OTURUM AÇILMAZ: önce e-posta doğrulanmalı.
+    const user = await registerCustomerPendingVerification(parsed.data);
 
     // Onay kaydı hukuki bir belgedir: IP, istemcinin yazabildiği ham
     // x-forwarded-for'dan değil doğrulanmış kaynaktan alınır.
@@ -74,6 +75,15 @@ export async function POST(req: NextRequest) {
       ],
     });
 
+    // Doğrulama bağlantısını gönder. Gönderilemese bile kayıt tamamlanmış
+    // sayılır; kullanıcı giriş ekranından "tekrar gönder" diyebilir.
+    try {
+      const { sendVerificationEmail } = await import("@/lib/services/email-verification.service");
+      await sendVerificationEmail(user.id, ipAddress);
+    } catch (err) {
+      console.error("[register] doğrulama e-postası gönderilemedi:", err);
+    }
+
     // Ticari ileti onayı verildiyse: pazarlama izni + hoş geldin e-postası (env-gated).
     if (parsed.data.ticariIletiConsent) {
       try {
@@ -91,15 +101,13 @@ export async function POST(req: NextRequest) {
       } catch { /* e-posta/izin hatası kaydı kırmaz */ }
     }
 
-    const res = created({ user });
-    res.cookies.set("hl-token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7,
-      path: "/",
+    // Çerez YOK — doğrulama tamamlanana kadar oturum açılmaz.
+    return created({
+      user,
+      verificationRequired: true,
+      message:
+        "Hesabınız oluşturuldu. E-posta adresinize gönderdiğimiz doğrulama bağlantısına tıklayın.",
     });
-    return res;
   } catch (err: unknown) {
     const e = err as { code?: string; message?: string };
     if (e?.code === "EMAIL_TAKEN") return conflict(e.message ?? "E-posta zaten kayıtlı.");
