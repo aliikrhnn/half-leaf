@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
-import { CONTACT_EMAIL, CONTACT_PHONE, CONTACT_ADDRESS } from "@/lib/constants";
+import { CONTACT_EMAIL, CONTACT_PHONE, CONTACT_ADDRESS, SITE_NAME } from "@/lib/constants";
 import { buildStoreLocation } from "@/lib/store-location";
 import StoreLocation from "@/components/layout/StoreLocation";
 import IletisimClient from "./IletisimClient";
@@ -28,7 +28,7 @@ export default async function IletisimPage() {
 
   const contactAddress = s?.contactAddress || CONTACT_ADDRESS;
   const contactPhone   = s?.contactPhone ?? CONTACT_PHONE;
-  const loc = buildStoreLocation(contactAddress, s?.mapsUrl, s?.mapEmbedUrl);
+  const loc = buildStoreLocation(contactAddress, s?.mapsUrl, s?.mapEmbedUrl, SITE_NAME);
 
   return (
     <IletisimClient

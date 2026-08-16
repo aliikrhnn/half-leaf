@@ -131,7 +131,7 @@ export default function Header({ navCategories = [] }: Props) {
   return (
     <>
       <header
-        className={`hl-header fixed top-10 left-0 right-0 z-40 transition-all duration-300${
+        className={`hl-header fixed top-0 left-0 right-0 z-40 transition-all duration-300${
           scrolled ? " hl-header--scrolled" : ""
         }`}
       >

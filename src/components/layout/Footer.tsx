@@ -39,7 +39,7 @@ export default async function Footer() {
   const instagramUrl   = s?.instagramUrl   ?? "https://instagram.com/halfleafstore";
   const facebookUrl    = s?.facebookUrl    ?? "https://facebook.com/halfleafstore";
 
-  const loc = buildStoreLocation(contactAddress, s?.mapsUrl, s?.mapEmbedUrl);
+  const loc = buildStoreLocation(contactAddress, s?.mapsUrl, s?.mapEmbedUrl, SITE_NAME);
 
   // Google'ın mağazayı haritalarda/yerel sonuçlarda tanıyabilmesi için
   // yapısal veri (schema.org Store).

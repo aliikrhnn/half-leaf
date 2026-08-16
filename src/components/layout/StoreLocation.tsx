@@ -1,5 +1,6 @@
 import { MapPin, Navigation, Phone } from "lucide-react";
 import { buildStoreLocation } from "@/lib/store-location";
+import { SITE_NAME } from "@/lib/constants";
 
 interface Props {
   address: string;
@@ -21,7 +22,7 @@ export default function StoreLocation({
   mapEmbedUrl,
   variant = "compact",
 }: Props) {
-  const loc = buildStoreLocation(address, mapsUrl, mapEmbedUrl);
+  const loc = buildStoreLocation(address, mapsUrl, mapEmbedUrl, SITE_NAME);
   if (loc.lines.length === 0) return null;
 
   const isFull = variant === "full";

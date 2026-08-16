@@ -1,5 +1,15 @@
 "use client";
 
+/*
+ * ŞU AN KULLANILMIYOR — sayfanın en üstündeki duyuru şeridi kaldırıldı
+ * (AppShell artık bu bileşeni render etmiyor, --hl-bar-h de 0'a çekildi).
+ *
+ * Geri açmak için: AppShell'de <AnnouncementBar messages={...} /> satırını
+ * ekleyin, globals.css'te --hl-bar-h değerini 2.5rem yapın ve Header'daki
+ * `top-0` sınıfını `top-10` yapın. Mesajlar yönetim panelinde
+ * (Ayarlar → Duyurular) durmaya devam ediyor.
+ */
+
 const DEFAULT_MESSAGES = [
   "2.500 ₺ ve üzeri siparişlerde ücretsiz kargo",
   "Özenle seçilmiş premium nargile koleksiyonu",

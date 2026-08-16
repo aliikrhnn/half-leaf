@@ -74,14 +74,31 @@ function isSafeMapsUrl(url: string): boolean {
 export function buildStoreLocation(
   address: string,
   mapsUrl?: string | null,
-  mapEmbedUrl?: string | null
+  mapEmbedUrl?: string | null,
+  /** Google Haritalar'a kayıtlı işletme adı. */
+  businessName?: string
 ): StoreLocation {
   const lines = toLines(address);
   const singleLine = lines.join(", ");
-  const query = encodeURIComponent(singleLine || DEFAULT_COUNTRY);
 
   const localityLine = lines.find((l) => /türkiye|turkey/i.test(l)) ?? "";
   const locality = localityLine.split(",")[0]?.trim() ?? "";
+
+  /*
+   * Sorgu İŞLETME ADIYLA başlar.
+   *
+   * Yalnızca açık adresle arandığında Google haritada iğneyi adresin son
+   * parçasıyla ("Dükkan 2") etiketliyordu. İşletme Google Haritalar'a kayıtlı
+   * olduğu için ad + adres birlikte gönderildiğinde kayıtlı işletme kaydı
+   * eşleşir ve iğne "Half Leaf" olarak görünür.
+   *
+   * Kesin sonuç için yönetim panelinden `mapsUrl` / `mapEmbedUrl` alanlarına
+   * Google Haritalar'daki gerçek yer bağlantısı yapıştırılabilir; girilirse
+   * bu üretilen sorgu hiç kullanılmaz.
+   */
+  const name = businessName?.trim();
+  const queryText = [name, singleLine].filter(Boolean).join(", ") || DEFAULT_COUNTRY;
+  const query = encodeURIComponent(queryText);
 
   const trimmedMaps = mapsUrl?.trim();
   const trimmedEmbed = mapEmbedUrl?.trim();
