@@ -4,7 +4,6 @@ import { mapProduct } from "@/lib/db/mappers";
 import { getUsdTryRate } from "@/lib/pricing";
 import { jsonLd } from "@/lib/utils";
 import { SITE_NAME, SITE_DESCRIPTION } from "@/lib/constants";
-import Hero, { type HeroSlideData } from "@/components/sections/Hero";
 import VideoReels from "@/components/sections/VideoReels";
 import BestsellersSection from "@/components/sections/BestsellersSection";
 import NewArrivalsSection from "@/components/sections/NewArrivalsSection";
@@ -98,41 +97,6 @@ async function getFlashProducts(rate: number): Promise<Product[]> {
   }
 }
 
-async function getHeroSlides(): Promise<HeroSlideData[]> {
-  try {
-    const now = new Date();
-    const rows = await prisma.heroSlide.findMany({
-      where: {
-        isActive: true,
-        OR: [
-          { startsAt: null },
-          { startsAt: { lte: now } },
-        ],
-        AND: [
-          {
-            OR: [
-              { endsAt: null },
-              { endsAt: { gte: now } },
-            ],
-          },
-        ],
-      },
-      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-    });
-    return rows.map(r => ({
-      id:         r.id,
-      title:      r.title,
-      subtitle:   r.subtitle,
-      eyebrow:    r.eyebrow,
-      ctaLabel:   r.ctaLabel,
-      ctaHref:    r.ctaHref,
-      image:      r.image,
-      mobileImage: r.mobileImage,
-    }));
-  } catch {
-    return [];
-  }
-}
 
 async function getAllProducts(rate: number): Promise<Product[]> {
   try {
@@ -202,9 +166,8 @@ function interleaveByCategory(products: Product[]): Product[] {
 
 export default async function HomePage() {
   const usdTryRate = await getUsdTryRate();
-  const [heroSlides, newArrivals, featuredProducts, flashProducts, bestsellerProducts, brands, allProducts] =
+  const [newArrivals, featuredProducts, flashProducts, bestsellerProducts, brands, allProducts] =
     await Promise.all([
-      getHeroSlides(),
       getNewArrivals(usdTryRate),
       getFeaturedProducts(usdTryRate),
       getFlashProducts(usdTryRate),
@@ -246,14 +209,20 @@ export default async function HomePage() {
   };
 
   return (
-    <div style={{ background: "var(--hl-bg)", minHeight: "100vh" }}>
+    /* Hero kaldırıldı: header + duyuru şeridi `fixed` olduğu için ilk bölüm
+       onların altında kalmasın diye üstten boşluk verilir. */
+    <div
+      style={{
+        background: "var(--hl-bg)",
+        minHeight: "100vh",
+        paddingTop: "calc(var(--hl-bar-h) + var(--hl-header-h))",
+      }}
+    >
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLd(websiteJsonLd) }}
       />
-      <Hero slides={heroSlides} />
       <VideoReels />
-      {/* Fırsatlar hero'nun hemen altında: sayfaya giren ilk gördüğü şey olsun. */}
       <FlashProductsSection products={flashProducts} />
       <NewArrivalsSection products={newArrivals} />
       <AllProductsSection products={allChunk1} eyebrow="Tüm Koleksiyon" title="Tüm ürünler" href="/urunler" />

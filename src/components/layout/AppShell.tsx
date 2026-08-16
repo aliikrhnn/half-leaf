@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Header from "./Header";
 import SplashScreen from "@/components/brand/SplashScreen";
+import AnnouncementBar from "@/components/sections/AnnouncementBar";
 import LeafMark from "@/components/brand/LeafMark";
 import Toaster from "@/components/ui/Toaster";
 import RegisterPrompt from "./RegisterPrompt";
@@ -16,9 +17,10 @@ interface Props {
   children: React.ReactNode;
   footer: React.ReactNode;
   navCategories?: NavCategory[];
+  announcementMessages?: string[];
 }
 
-export default function AppShell({ children, footer, navCategories = [] }: Props) {
+export default function AppShell({ children, footer, navCategories = [], announcementMessages }: Props) {
   const pathname = usePathname();
   const [initialPathname] = useState(pathname);
 
@@ -51,6 +53,7 @@ export default function AppShell({ children, footer, navCategories = [] }: Props
 
   return (
     <>
+      <AnnouncementBar messages={announcementMessages} />
       <SplashScreen />
       <Header navCategories={navCategories} />
       {showCurtain && (

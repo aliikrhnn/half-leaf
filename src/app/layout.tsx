@@ -180,21 +180,19 @@ async function getNavCategories(): Promise<NavCategory[]> {
   }
 }
 
-// Not: `SiteSettings.announcementMessages` alanı ve yönetim panelindeki
-// "Duyurular" sekmesi duruyor, ancak üstteki duyuru şeridi kaldırıldığı için
-// storefront artık okumuyor.
-async function getSiteData(): Promise<{ giftBoxEnabled: boolean; whatsappNumber: string | null }> {
+async function getSiteData(): Promise<{ announcementMessages: string[]; giftBoxEnabled: boolean; whatsappNumber: string | null }> {
   try {
     const s = await prisma.siteSettings.findUnique({
       where:  { id: "site" },
-      select: { giftBoxEnabled: true, whatsappNumber: true },
+      select: { announcementMessages: true, giftBoxEnabled: true, whatsappNumber: true },
     });
     return {
+      announcementMessages: s?.announcementMessages ?? [],
       giftBoxEnabled: s?.giftBoxEnabled ?? true,
       whatsappNumber: s?.whatsappNumber ?? CONTACT_PHONE,
     };
   } catch {
-    return { giftBoxEnabled: true, whatsappNumber: CONTACT_PHONE };
+    return { announcementMessages: [], giftBoxEnabled: true, whatsappNumber: CONTACT_PHONE };
   }
 }
 
@@ -207,7 +205,7 @@ export default async function RootLayout({
     getNavCategories(),
     getSiteData(),
   ]);
-  const { giftBoxEnabled, whatsappNumber } = siteData;
+  const { announcementMessages, giftBoxEnabled, whatsappNumber } = siteData;
 
   return (
     <html
@@ -250,7 +248,7 @@ export default async function RootLayout({
         />
         <AgeGate />
         <SiteFlagsProvider flags={{ giftBoxEnabled, whatsappNumber }}>
-          <AppShell footer={<Footer />} navCategories={navCategories}>{children}</AppShell>
+          <AppShell footer={<Footer />} navCategories={navCategories} announcementMessages={announcementMessages}>{children}</AppShell>
         </SiteFlagsProvider>
       </body>
     </html>
