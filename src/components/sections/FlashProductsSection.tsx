@@ -3,35 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Timer } from "lucide-react";
 import type { Product } from "@/lib/types";
-
-/* ─── countdown ─────────────────────────────────────────── */
-function getCountdownTarget(): Date {
-  const now = Date.now();
-  const threeH = 3 * 60 * 60 * 1000;
-  return new Date(Math.ceil(now / threeH) * threeH);
-}
-
-function useCountdown(target: Date) {
-  // rem starts at 0 on both server and client — no Date.now() in initial state
-  const [mounted, setMounted] = useState(false);
-  const [rem, setRem] = useState(0);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydration guard: timer is client-only
-    setMounted(true);
-    setRem(Math.max(0, target.getTime() - Date.now()));
-    const id = setInterval(() => setRem(Math.max(0, target.getTime() - Date.now())), 1000);
-    return () => clearInterval(id);
-  }, [target]);
-
-  if (!mounted) return { h: "--", m: "--", s: "--" };
-  const h = String(Math.floor(rem / 3600000)).padStart(2, "0");
-  const m = String(Math.floor((rem % 3600000) / 60000)).padStart(2, "0");
-  const s = String(Math.floor((rem % 60000) / 1000)).padStart(2, "0");
-  return { h, m, s };
-}
 
 /* ─── ProductCard (compact, marquee variant) ─────────────── */
 function FlashCard({ product }: { product: Product }) {
@@ -148,8 +120,6 @@ function FlashCard({ product }: { product: Product }) {
 interface Props { products: Product[]; }
 
 export default function FlashProductsSection({ products }: Props) {
-  const [target] = useState(() => getCountdownTarget());
-  const { h, m, s } = useCountdown(target);
   const [reducedMotion, setRM] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
 
@@ -190,7 +160,7 @@ export default function FlashProductsSection({ products }: Props) {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div>
-            <div className="hl-eyebrow" style={{ marginBottom: 4 }}>Sınırlı Süreli Fırsatlar</div>
+            <div className="hl-eyebrow" style={{ marginBottom: 4 }}>Sınırlı Stok</div>
             <h2
               className="hl-display"
               style={{
@@ -202,37 +172,8 @@ export default function FlashProductsSection({ products }: Props) {
                 lineHeight: 1.1,
               }}
             >
-              Flaş Ürünler
+              Sınırlı Ürünler
             </h2>
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 7,
-              background: "var(--hl-bg-elev-3)",
-              border: "1px solid var(--hl-line-bronze)",
-              borderRadius: 999,
-              padding: "6px 14px",
-              flexShrink: 0,
-            }}
-          >
-            <Timer size={13} style={{ color: "var(--hl-bronze-400)", flexShrink: 0 }} />
-            <span
-              style={{
-                fontFamily: "var(--hl-font-mono)",
-                fontSize: "clamp(14px, 1.6vw, 18px)",
-                fontWeight: 700,
-                color: "var(--hl-bronze-300)",
-                letterSpacing: "0.06em",
-                fontVariantNumeric: "tabular-nums",
-              }}
-            >
-              {h}<span style={{ color: "var(--hl-text-mute)", margin: "0 1px" }}>:</span>
-              {m}<span style={{ color: "var(--hl-text-mute)", margin: "0 1px" }}>:</span>
-              {s}
-            </span>
           </div>
         </div>
 
