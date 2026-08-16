@@ -95,7 +95,10 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com data:",
               "img-src 'self' data: blob: https://*.supabase.co https://placehold.co",
-              "media-src 'self'",
+              // Reel videoları Supabase Storage'dan gelir; 'self' onları engelliyordu.
+              // Joker yerine bu projenin host'u — başka bir Supabase örneğinden
+              // medya yüklenmesine gerek yok.
+              `media-src 'self' blob: https://${supabaseHost}`,
               // PayTR ödeme iframe'i + mağaza konumu için Google Haritalar gömmesi
               "frame-src https://www.paytr.com https://www.google.com https://maps.google.com",
               "connect-src 'self' https://*.supabase.co https://www.paytr.com",

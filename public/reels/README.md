@@ -24,9 +24,22 @@ tamamlayabilirsiniz.
 | **Format** | MP4 (H.264 + AAC), WEBM veya MOV |
 | **Ses** | Videolar sessiz başlar; kullanıcı hoparlör düğmesiyle açar |
 
-20 MB sınırı üç yerde birden tanımlı ve üçü de aynı kalmalı:
-`VideoUploadField.tsx` · `api/admin/reels/upload/route.ts` · Supabase bucket
-sınırı (25 MB, pay bırakmak için).
+20 MB sınırı üç yerde tanımlı ve üçü de aynı kalmalı:
+`src/lib/upload/reel-video.ts` (sunucu) · `VideoUploadField.tsx` (istemci) ·
+Supabase bucket sınırı (25 MB, pay bırakmak için).
+
+## Video neden Vercel'den geçmiyor
+
+Vercel istek gövdelerini **4.5 MB**'ta `FUNCTION_PAYLOAD_TOO_LARGE` ile kesiyor
+ve bu sınır fonksiyon çalışmadan önce devreye girdiği için kodla yükseltilemiyor.
+Bu yüzden akış üç adımlı:
+
+1. `POST /api/admin/reels/upload-url` — sunucu boyutu/MIME'ı doğrular, depolama
+   yolunu **kendisi** üretir (uzantı dosya adından değil MIME'dan gelir) ve
+   imzalı bir yükleme adresi döndürür.
+2. Tarayıcı dosyayı **doğrudan** Supabase'e yükler — Vercel'e hiç uğramaz.
+3. `POST /api/admin/reels/upload-verify` — sunucu ilk 12 baytı Range isteğiyle
+   çekip boyutu ve video imzasını doğrular; geçersizse nesneyi siler.
 
 ## Boyut düşürme (ffmpeg)
 

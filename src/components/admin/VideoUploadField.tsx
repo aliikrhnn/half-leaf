@@ -9,21 +9,58 @@ interface Props {
   onChange: (url: string) => void;
 }
 
-interface UploadResponse {
+const ALLOWED_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime"]);
+/** lib/upload/reel-video.ts içindeki sınırla aynı olmalı. */
+const MAX_MB = 20;
+const MAX_BYTES = MAX_MB * 1024 * 1024;
+
+interface ApiEnvelope<T> {
   success?: boolean;
-  data?: { url: string };
+  data?: T;
   error?: string;
 }
 
-const ALLOWED_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime"]);
-/** Sunucudaki sert sınırla aynı olmalı (api/admin/reels/upload). */
-const MAX_MB = 20;
-const MAX_BYTES = MAX_MB * 1024 * 1024;
+/** Yanıt JSON olmayabilir (ör. 413 düz metin döner); hatayı yutmadan çöz. */
+async function readEnvelope<T>(res: Response): Promise<ApiEnvelope<T>> {
+  const raw = await res.text();
+  try {
+    return JSON.parse(raw) as ApiEnvelope<T>;
+  } catch {
+    return { success: false, error: `Sunucu beklenmeyen bir yanıt döndürdü (HTTP ${res.status}).` };
+  }
+}
+
+/**
+ * Dosyayı imzalı adrese yükler. fetch yerine XHR: 20 MB'lık bir video mobil
+ * bağlantıda uzun sürebiliyor ve fetch yükleme ilerlemesi bildirmiyor.
+ */
+function putWithProgress(
+  url: string,
+  file: File,
+  onProgress: (percent: number) => void,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", url);
+    xhr.setRequestHeader("content-type", file.type);
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve();
+      else reject(new Error(`depolama HTTP ${xhr.status}`));
+    };
+    xhr.onerror = () => reject(new Error("ağ hatası"));
+    xhr.onabort = () => reject(new Error("yükleme iptal edildi"));
+    xhr.send(file);
+  });
+}
 
 export default function VideoUploadField({ label, value, onChange }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
 
   const upload = useCallback(async (file: File) => {
@@ -37,39 +74,48 @@ export default function VideoUploadField({ label, value, onChange }: Props) {
       setError(`Video en fazla ${MAX_MB} MB olabilir. Seçilen dosya ${mb} MB.`);
       return;
     }
+
     setUploading(true);
+    setProgress(0);
     try {
-      // FormData DEĞİL: route handler'ın multipart ayrıştırıcısı 10 MB'da
-      // kırılıyor. Dosyayı ham gövde olarak gönderiyoruz (bkz. upload/route.ts).
-      const res = await fetch("/api/admin/reels/upload", {
+      /* 1 — imzalı adres al (dosya bu istekte GİTMEZ) */
+      const signRes = await fetch("/api/admin/reels/upload-url", {
         method: "POST",
-        headers: {
-          "content-type": file.type,
-          "x-file-name": encodeURIComponent(file.name),
-        },
-        body: file,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          filename: file.name,
+          contentType: file.type,
+          size: file.size,
+        }),
       });
-
-      // Yanıt her zaman JSON olmayabilir (ör. platform 413/502 ile HTML döner).
-      // Body'yi ham okuyup ayrıştırıyoruz ki hata "bir şeyler ters gitti"ye düşmesin.
-      const raw = await res.text();
-      let json: UploadResponse | null = null;
-      try { json = JSON.parse(raw) as UploadResponse; } catch { /* JSON değil */ }
-
-      if (!json) {
-        setError(`Sunucu beklenmeyen bir yanıt döndürdü (HTTP ${res.status}).`);
+      const sign = await readEnvelope<{ signedUrl: string; path: string }>(signRes);
+      if (!sign.success || !sign.data) {
+        setError(sign.error ?? "Yükleme adresi alınamadı.");
         return;
       }
-      if (!json.success || !json.data) {
-        setError(json.error ?? `Yükleme başarısız oldu (HTTP ${res.status}).`);
+
+      /* 2 — dosyayı doğrudan Supabase'e yükle (Vercel'e uğramaz) */
+      await putWithProgress(sign.data.signedUrl, file, setProgress);
+
+      /* 3 — sunucuda boyut + video imzası doğrulaması */
+      const verifyRes = await fetch("/api/admin/reels/upload-verify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ path: sign.data.path }),
+      });
+      const verify = await readEnvelope<{ url: string }>(verifyRes);
+      if (!verify.success || !verify.data) {
+        setError(verify.error ?? "Yüklenen dosya doğrulanamadı.");
         return;
       }
-      onChange(json.data.url);
+
+      onChange(verify.data.url);
     } catch (err) {
       const reason = err instanceof Error ? err.message : "bilinmeyen hata";
       setError(`Yükleme tamamlanamadı: ${reason}`);
     } finally {
       setUploading(false);
+      setProgress(0);
     }
   }, [onChange]);
 
@@ -106,15 +152,21 @@ export default function VideoUploadField({ label, value, onChange }: Props) {
             const f = e.dataTransfer.files?.[0];
             if (f) void upload(f);
           }}
-          onClick={() => inputRef.current?.click()}
-          className={`flex flex-col items-center justify-center gap-2 py-8 px-4 rounded-lg border border-dashed cursor-pointer transition-colors ${
-            dragging ? "border-accent bg-bg-elevated" : "border-border-default hover:border-border-light"
-          }`}
+          onClick={() => { if (!uploading) inputRef.current?.click(); }}
+          className={`flex flex-col items-center justify-center gap-2 py-8 px-4 rounded-lg border border-dashed transition-colors ${
+            uploading ? "cursor-wait" : "cursor-pointer"
+          } ${dragging ? "border-accent bg-bg-elevated" : "border-border-default hover:border-border-light"}`}
         >
           {uploading ? (
             <>
               <Loader2 size={22} className="text-accent animate-spin" />
-              <span className="text-xs text-ink-muted">Yükleniyor…</span>
+              <span className="text-xs text-ink-muted">
+                {progress > 0 && progress < 100 ? `Yükleniyor… %${progress}` : "İşleniyor…"}
+              </span>
+              <div className="w-40 h-1 rounded-full bg-border-default overflow-hidden" role="progressbar"
+                   aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
+                <div className="h-full bg-accent transition-[width] duration-200" style={{ width: `${progress}%` }} />
+              </div>
             </>
           ) : (
             <>
