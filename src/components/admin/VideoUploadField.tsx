@@ -9,9 +9,16 @@ interface Props {
   onChange: (url: string) => void;
 }
 
+interface UploadResponse {
+  success?: boolean;
+  data?: { url: string };
+  error?: string;
+}
+
 const ALLOWED_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime"]);
-/** Sunucu 20 MB'a kadar kabul ediyor; öneri 8 MB altı. */
-const MAX_BYTES = 20 * 1024 * 1024;
+/** Sunucudaki sert sınırla aynı olmalı (api/admin/reels/upload). */
+const MAX_MB = 20;
+const MAX_BYTES = MAX_MB * 1024 * 1024;
 
 export default function VideoUploadField({ label, value, onChange }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -26,22 +33,41 @@ export default function VideoUploadField({ label, value, onChange }: Props) {
       return;
     }
     if (file.size > MAX_BYTES) {
-      setError("Video en fazla 20 MB olabilir (önerilen: 8 MB altı).");
+      const mb = (file.size / 1024 / 1024).toFixed(1);
+      setError(`Video en fazla ${MAX_MB} MB olabilir. Seçilen dosya ${mb} MB.`);
       return;
     }
     setUploading(true);
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/admin/reels/upload", { method: "POST", body: fd });
-      const json = await res.json() as { success: boolean; data?: { url: string }; error?: string };
+      // FormData DEĞİL: route handler'ın multipart ayrıştırıcısı 10 MB'da
+      // kırılıyor. Dosyayı ham gövde olarak gönderiyoruz (bkz. upload/route.ts).
+      const res = await fetch("/api/admin/reels/upload", {
+        method: "POST",
+        headers: {
+          "content-type": file.type,
+          "x-file-name": encodeURIComponent(file.name),
+        },
+        body: file,
+      });
+
+      // Yanıt her zaman JSON olmayabilir (ör. platform 413/502 ile HTML döner).
+      // Body'yi ham okuyup ayrıştırıyoruz ki hata "bir şeyler ters gitti"ye düşmesin.
+      const raw = await res.text();
+      let json: UploadResponse | null = null;
+      try { json = JSON.parse(raw) as UploadResponse; } catch { /* JSON değil */ }
+
+      if (!json) {
+        setError(`Sunucu beklenmeyen bir yanıt döndürdü (HTTP ${res.status}).`);
+        return;
+      }
       if (!json.success || !json.data) {
-        setError(json.error ?? "Yükleme başarısız oldu.");
+        setError(json.error ?? `Yükleme başarısız oldu (HTTP ${res.status}).`);
         return;
       }
       onChange(json.data.url);
-    } catch {
-      setError("Yükleme sırasında bir hata oluştu.");
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : "bilinmeyen hata";
+      setError(`Yükleme tamamlanamadı: ${reason}`);
     } finally {
       setUploading(false);
     }
@@ -95,7 +121,7 @@ export default function VideoUploadField({ label, value, onChange }: Props) {
               <Film size={22} className="text-ink-dim" />
               <span className="text-sm text-ink">Videoyu sürükleyin veya seçin</span>
               <span className="text-[11px] text-ink-dim text-center leading-relaxed">
-                Dikey 9:16 · ~720×1280 · 10-20 sn · MP4 · 8 MB altı önerilir
+                Dikey 9:16 · ~720×1280 · 10-20 sn · MP4 · en fazla {MAX_MB} MB
               </span>
               <span className="inline-flex items-center gap-1.5 mt-1 text-xs text-accent">
                 <Upload size={13} /> Dosya seç

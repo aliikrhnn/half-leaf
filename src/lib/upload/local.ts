@@ -74,15 +74,21 @@ export async function saveReelVideo(
   const tag  = Date.now().toString(36);
   const storagePath = `reels/${slug}-${tag}${ext}`;
 
+  // .mov'u video/mp4 olarak etiketlemek Safari dışında oynatma sorunu çıkarıyor.
+  const videoTypes: Record<string, string> = {
+    ".webm": "video/webm",
+    ".mov":  "video/quicktime",
+  };
+
   const supabase = getStorageClient();
   const { error } = await supabase.storage
     .from(BUCKET)
     .upload(storagePath, Buffer.from(buffer), {
-      contentType: ext === ".webm" ? "video/webm" : "video/mp4",
+      contentType: videoTypes[ext] ?? "video/mp4",
       upsert: true,
     });
 
-  if (error) throw new Error(`Video yüklenemedi: ${error.message}`);
+  if (error) throw new Error(error.message);
   return storagePublicUrl(storagePath);
 }
 

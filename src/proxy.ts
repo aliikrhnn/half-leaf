@@ -110,7 +110,16 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
+  /**
+   * `api/` hariç tutuluyor. İki sebep:
+   *  1) Proxy API yollarında zaten hiçbir şey yapmıyordu — bakım modu muaf
+   *     (`isMaintenanceExempt`), admin dalı `/admin` ile başlayanlara bakıyor
+   *     (`/api/admin/...` ona girmiyor, yetki `requireAdmin`'de), geriye
+   *     yalnızca hiçbir API tüketicisinin okumadığı `x-pathname` kalıyordu.
+   *  2) Gövdeyi proxy üzerinden geçirmek istekleri 10 MB'da kesiyordu; video
+   *     yükleme bu yüzden bozuk dosya kaydediyordu.
+   */
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)",
+    "/((?!api/|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)",
   ],
 };
