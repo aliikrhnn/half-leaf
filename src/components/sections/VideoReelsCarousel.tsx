@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import styles from "./VideoReels.module.css";
 
@@ -17,7 +17,12 @@ export interface ReelItem {
   url: string;
 }
 
+/** Videosu olmayan kart bu sürede geçilir. */
 const AUTO_MS = 4500;
+/** Video ilerlemiyorsa (yüklenemedi / otomatik oynatma engellendi) emniyet süresi. */
+const STALL_MS = 12000;
+/** İki geçiş arası en az bu kadar beklenir — `ended` ile emniyet aynı anda tetiklenmesin. */
+const ADVANCE_GUARD_MS = 600;
 
 export default function VideoReelsCarousel({ reels }: { reels: ReelItem[] }) {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -66,18 +71,113 @@ export default function VideoReelsCarousel({ reels }: { reels: ReelItem[] }) {
     return () => io.disconnect();
   }, [reels]);
 
-  /* otomatik kaydırma */
+  /* fareyle sürükleme */
+  const drag = useRef({ down: false, x: 0, scroll: 0 });
+
+  /** Sola en yakın kart = o an "izlenen" kart. */
+  const cardEls = useCallback(
+    () => Array.from(trackRef.current?.querySelectorAll<HTMLElement>(`.${styles.card}`) ?? []),
+    [],
+  );
+
+  const currentCardIndex = useCallback(() => {
+    const el = trackRef.current;
+    if (!el) return 0;
+    // getBoundingClientRect: offsetLeft konumlanmış ataya (.trackWrap) göre
+    // ölçüldüğü için padding kadar kayıyor; ekran koordinatı belirsizlik bırakmaz.
+    const trackLeft = el.getBoundingClientRect().left;
+    let best = 0;
+    let bestDist = Infinity;
+    cardEls().forEach((c, i) => {
+      const d = Math.abs(c.getBoundingClientRect().left - trackLeft);
+      if (d < bestDist) {
+        bestDist = d;
+        best = i;
+      }
+    });
+    return best;
+  }, [cardEls]);
+
+  const currentVideo = useCallback(
+    () => cardEls()[currentCardIndex()]?.querySelector("video") ?? null,
+    [cardEls, currentCardIndex],
+  );
+
+  /* ── otomatik ilerleme ───────────────────────────────────────────────
+   * Eskiden sabit 4.5 sn'lik zamanlayıcı vardı; videolar `loop` olduğu için
+   * hiç bitmiyor, karusel de onları yarıda kesiyordu. Artık kart, videosu
+   * bitene kadar bekliyor.
+   *
+   * Emniyet şart: reel'lerin çoğunda henüz video yok ve yalnızca `ended`e
+   * bağlanmak videosuz tek bir kartın karuseli kalıcı olarak durdurmasına
+   * yol açardı. Aynısı yüklenemeyen ya da otomatik oynatması engellenen
+   * video için de geçerli.
+   */
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const t = setInterval(() => {
-      const el = trackRef.current;
-      if (!el) return;
+    const el = trackRef.current;
+    if (!el) return;
+
+    let lastAdvance = 0;
+    const advance = () => {
+      if (drag.current.down) return;
+      const now = Date.now();
+      if (now - lastAdvance < ADVANCE_GUARD_MS) return;
+      lastAdvance = now;
       const max = el.scrollWidth - el.clientWidth - 4;
       if (el.scrollLeft >= max) el.scrollTo({ left: 0, behavior: "smooth" });
       else el.scrollBy({ left: cardW(), behavior: "smooth" });
-    }, AUTO_MS);
-    return () => clearInterval(t);
-  }, []);
+    };
+
+    /* `ended` baloncuklanmaz; yakalama (capture) fazında dinleniyor. */
+    const onEnded = (e: Event) => {
+      const v = e.target as HTMLVideoElement;
+      const isCurrent = v === currentVideo();
+      // Biten videoyu başa sar, yoksa kart son karede donmuş görünür.
+      v.currentTime = 0;
+      void v.play().catch(() => {});
+      if (isCurrent) advance();
+    };
+    el.addEventListener("ended", onEnded, true);
+
+    /* Emniyet saati */
+    let seenIndex = currentCardIndex();
+    let enteredAt = Date.now();
+    let lastTime = -1;
+    let lastProgress = Date.now();
+
+    const watch = window.setInterval(() => {
+      const idx = currentCardIndex();
+      if (idx !== seenIndex) {
+        seenIndex = idx;
+        enteredAt = Date.now();
+        lastTime = -1;
+        lastProgress = Date.now();
+        return;
+      }
+
+      const now = Date.now();
+      const v = currentVideo();
+
+      if (!v) {
+        // Videosu olmayan kart: eski davranış, sabit süre.
+        if (now - enteredAt >= AUTO_MS) advance();
+        return;
+      }
+
+      if (!v.paused && v.currentTime !== lastTime) {
+        lastTime = v.currentTime;
+        lastProgress = now;
+        return;
+      }
+      if (now - lastProgress >= STALL_MS) advance();
+    }, 1000);
+
+    return () => {
+      el.removeEventListener("ended", onEnded, true);
+      clearInterval(watch);
+    };
+  }, [currentCardIndex, currentVideo]);
 
   /* ilerleme çubuğu */
   const onScroll = () => {
@@ -89,8 +189,6 @@ export default function VideoReelsCarousel({ reels }: { reels: ReelItem[] }) {
     setIndex(Math.min(reels.length, Math.round(p * (reels.length - 1)) + 1));
   };
 
-  /* fareyle sürükleme */
-  const drag = useRef({ down: false, x: 0, scroll: 0 });
   const onPointerDown = (e: React.PointerEvent) => {
     drag.current = { down: true, x: e.clientX, scroll: trackRef.current!.scrollLeft };
     setDragging(true);
@@ -112,10 +210,20 @@ export default function VideoReelsCarousel({ reels }: { reels: ReelItem[] }) {
     };
   }, []);
 
-  const toggleMute = (e: React.MouseEvent<HTMLButtonElement>) => {
-    const v = e.currentTarget.parentElement?.querySelector("video");
-    if (v) v.muted = !v.muted;
-  };
+  /**
+   * Sesi açık olan reel'in url'i. Tek bir değer tutuluyor: aynı anda birden
+   * fazla videodan ses gelmesi istenmiyor, ikinci karta basınca ilki susuyor.
+   * Simge de bu duruma bakıyor — eskiden `v.muted` doğrudan değiştiriliyordu,
+   * React haberdar olmadığı için ses açılsa bile simge "sessiz" kalıyordu.
+   */
+  const [soundOn, setSoundOn] = useState<string | null>(null);
+
+  useEffect(() => {
+    cardEls().forEach((c, i) => {
+      const v = c.querySelector("video");
+      if (v) v.muted = reels[i]?.url !== soundOn;
+    });
+  }, [soundOn, reels, cardEls]);
 
   const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -174,13 +282,28 @@ export default function VideoReelsCarousel({ reels }: { reels: ReelItem[] }) {
                     {r.name}
                   </span>
                 </div>
-                {r.video && <video muted loop playsInline preload="none" data-src={r.video} />}
+                {/* `loop` yok: video bitmeden karusel kaymasın diye `ended` gerekiyor. */}
+                {r.video && <video muted playsInline preload="none" data-src={r.video} />}
                 <span className={styles.handle}>{r.handle}</span>
-                <button className={styles.mute} aria-label="Sesi aç/kapat" onClick={toggleMute}>
+                <button
+                  className={styles.mute}
+                  aria-label={soundOn === r.url ? "Sesi kapat" : "Sesi aç"}
+                  aria-pressed={soundOn === r.url}
+                  onClick={() => setSoundOn((prev) => (prev === r.url ? null : r.url))}
+                >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M11 5L6 9H2v6h4l5 4V5z" />
-                    <line x1="23" y1="9" x2="17" y2="15" />
-                    <line x1="17" y1="9" x2="23" y2="15" />
+                    {soundOn === r.url ? (
+                      <>
+                        <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+                        <path d="M18.5 5.5a9 9 0 0 1 0 13" />
+                      </>
+                    ) : (
+                      <>
+                        <line x1="23" y1="9" x2="17" y2="15" />
+                        <line x1="17" y1="9" x2="23" y2="15" />
+                      </>
+                    )}
                   </svg>
                 </button>
               </div>

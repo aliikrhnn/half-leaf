@@ -120,6 +120,10 @@ export const config = {
    *     yükleme bu yüzden bozuk dosya kaydediyordu.
    */
   matcher: [
-    "/((?!api/|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)",
+    // `_next/` tamamen hariç: proxy zaten ilk satırda onlar için çıkıyordu ama
+    // matcher yalnızca static/image'ı dışlıyordu. Geriye kalan `_next/webpack-hmr`
+    // bir WebSocket upgrade isteği ve proxy'den geçmesi el sıkışmayı bozuyordu —
+    // bu da `npm run dev`de sayfanın hiç hidrate olmamasına yol açıyordu.
+    "/((?!api/|_next/|favicon.ico|robots.txt|sitemap.xml).*)",
   ],
 };

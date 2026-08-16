@@ -16,6 +16,8 @@ function resolveSupabaseHost(): string {
 
 const supabaseHost = resolveSupabaseHost();
 
+const isDev = process.env.NODE_ENV === "development";
+
 const nextConfig: NextConfig = {
   images: {
     // AVIF/WebP ile otomatik daha küçük görsel (daha hızlı LCP, daha az bant genişliği).
@@ -91,7 +93,14 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' https://www.paytr.com",
+              /*
+               * 'unsafe-eval' YALNIZCA geliştirmede: React'in dev derlemesi
+               * eval() kullanıyor ve zorlayıcı CSP onu engelleyince sayfa hiç
+               * hidrate olmuyordu — `npm run dev` ile site tamamen etkileşimsiz
+               * kalıyor, video/karusel gibi istemci mantığı hiç çalışmıyordu.
+               * Üretim derlemesinde eval kullanılmadığı için orada eklenmiyor.
+               */
+              `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://www.paytr.com`,
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com data:",
               "img-src 'self' data: blob: https://*.supabase.co https://placehold.co",
