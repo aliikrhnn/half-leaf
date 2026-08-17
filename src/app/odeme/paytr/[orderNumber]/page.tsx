@@ -43,6 +43,11 @@ interface ShippingAddressShape {
 /* ─── Ortak kabuk ─── */
 function Shell({ children }: { children: React.ReactNode }) {
   return (
+    <>
+    {/* PayTR'a TLS el sıkışması iframe istenmeden başlasın (React bunları
+        <head>'e taşır) — form birkaç yüz ms daha erken görünür. */}
+    <link rel="preconnect" href="https://www.paytr.com" />
+    <link rel="dns-prefetch" href="https://www.paytr.com" />
     <div
       style={{
         background: "var(--hl-bg)",
@@ -70,6 +75,7 @@ function Shell({ children }: { children: React.ReactNode }) {
       </header>
       <main style={{ maxWidth: 640, margin: "0 auto", padding: "32px 20px 64px" }}>{children}</main>
     </div>
+    </>
   );
 }
 
@@ -77,18 +83,31 @@ export default async function PaytrPaymentPage({ params, searchParams }: Props) 
   const { orderNumber } = await params;
   const { t } = await searchParams;
 
-  const order = await prisma.order.findUnique({
-    where: { orderNumber },
-    include: {
-      User: { select: { email: true } },
-      OrderItem: { select: { productName: true, unitPrice: true, quantity: true } },
-      Payment: {
-        where: { provider: "paytr" },
-        orderBy: { createdAt: "desc" },
-        take: 1,
+  /* Sipariş sorgusu ile hız sınırı kontrolü BİRBİRİNE BAĞLI DEĞİL; ardışık
+     yapıldığında ödeme formunun açılmasına gereksiz bir gidiş-dönüş ekliyordu.
+     Paralel çalıştırılıyor. */
+  const hdrs = await headers();
+  const userIp = hdrs.get("x-forwarded-for") ?? hdrs.get("x-real-ip") ?? "";
+
+  const [order, rl] = await Promise.all([
+    prisma.order.findUnique({
+      where: { orderNumber },
+      include: {
+        User: { select: { email: true } },
+        OrderItem: { select: { productName: true, unitPrice: true, quantity: true } },
+        Payment: {
+          where: { provider: "paytr" },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
       },
-    },
-  });
+    }),
+    // Kötüye kullanım koruması: aynı IP'den aşırı token isteğini sınırla.
+    rateLimiter.checkLimit(`paytr-token:${normalizeUserIp(userIp)}`, {
+      maxRequests: 20,
+      windowMs: 10 * 60_000,
+    }),
+  ]);
 
   if (!order) notFound();
 
@@ -125,15 +144,8 @@ export default async function PaytrPaymentPage({ params, searchParams }: Props) 
     basket.push({ name: "Kargo", unitPrice: shippingTRY, quantity: 1 });
   }
 
-  const hdrs = await headers();
-  const userIp = hdrs.get("x-forwarded-for") ?? hdrs.get("x-real-ip") ?? "";
   const base = getSiteBaseUrl();
 
-  // Kötüye kullanım koruması: aynı IP'den aşırı token isteğini sınırla.
-  const rl = await rateLimiter.checkLimit(`paytr-token:${normalizeUserIp(userIp)}`, {
-    maxRequests: 20,
-    windowMs: 10 * 60_000,
-  });
   if (!rl.allowed) {
     return (
       <Shell>
@@ -170,8 +182,12 @@ export default async function PaytrPaymentPage({ params, searchParams }: Props) 
       userAddress: [addr.adres, addr.ilce, addr.sehir].filter(Boolean).join(" "),
       userPhone: addr.phone ?? "",
       basket,
-      okUrl: `${base}/siparis-tamamlandi?no=${encodeURIComponent(order.orderNumber)}${tokenQuery}`,
-      failUrl: `${base}/odeme/hata?no=${encodeURIComponent(order.orderNumber)}${tokenQuery}`,
+      /* PayTR bu adresleri IFRAME'İN İÇİNDE açar. Sonuç sayfalarının kendisi
+         `X-Frame-Options: DENY` ile korunduğundan doğrudan verilemez (beyaz
+         ekran); araya çerçevelenebilen tek adres olan /odeme/donus köprüsü
+         giriyor ve üst pencereyi gerçek sonuç sayfasına taşıyor. */
+      okUrl: `${base}/odeme/donus?d=ok&no=${encodeURIComponent(order.orderNumber)}${tokenQuery}`,
+      failUrl: `${base}/odeme/donus?d=fail&no=${encodeURIComponent(order.orderNumber)}${tokenQuery}`,
       lang: "tr",
     });
   } catch (err) {

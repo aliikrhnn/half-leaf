@@ -125,6 +125,33 @@ export async function POST(req: NextRequest) {
   const authUser = await getAuthUser(req);
 
   try {
+    /* ── 0. Transaction ÖNCESİ hazırlık ──
+       Bu üç iş de stok tutarlılığı gerektirmez ama pahalıdır. Transaction'ın
+       İÇİNDE yapıldıklarında SERIALIZABLE kilit penceresini uzatıyor, her
+       serileştirme yeniden denemesinde baştan tekrarlanıyor ve "ödemeye geç"
+       sonrası bekleme süresini büyütüyorlardı. Artık paralel ve tek seferlik. */
+    const [siteSettings, shippingOpt, guestPasswordHash] = await Promise.all([
+      prisma.siteSettings.findUnique({
+        where:  { id: "site" },
+        select: { freeShippingThreshold: true, shippingCost: true, usdTryRate: true, ecommerceEnabled: true },
+      }),
+      prisma.shippingOption.findUnique({
+        where:  { code: shippingMethod },
+        select: { alwaysFree: true, price: true, label: true },
+      }),
+      // bcrypt tek başına ~100 ms CPU harcar; yalnızca misafir akışında gerekir.
+      authUser ? Promise.resolve<string | null>(null) : bcrypt.hash(randomUUID(), 10),
+    ]);
+
+    // "Satışı kapat" anahtarı panelde vardı ama sunucuda uygulanmıyordu.
+    if (siteSettings && siteSettings.ecommerceEnabled === false) {
+      throw new CheckoutError("Şu anda sipariş alınamıyor. Lütfen daha sonra tekrar deneyin.");
+    }
+
+    const usdTryRate = siteSettings?.usdTryRate != null
+      ? Number(siteSettings.usdTryRate)
+      : DEFAULT_USD_TRY_RATE;
+
     const result = await runWithRetry(() => prisma.$transaction(async (tx) => {
       /* ── 1. Find or create guest user ── */
       let user = authUser
@@ -146,7 +173,8 @@ export async function POST(req: NextRequest) {
 
       let createdNow = false;
       if (!user) {
-        const passwordHash = await bcrypt.hash(randomUUID(), 10);
+        // Hash transaction dışında hesaplandı (bkz. adım 0).
+        const passwordHash = guestPasswordHash ?? await bcrypt.hash(randomUUID(), 10);
         user = await tx.user.create({
           data: {
             email: contact.email,
@@ -238,18 +266,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      /* ── 4. Fetch siteSettings (rate + shipping config) ── */
-      const siteSettings = await tx.siteSettings.findUnique({
-        where:  { id: "site" },
-        select: { freeShippingThreshold: true, shippingCost: true, usdTryRate: true, ecommerceEnabled: true },
-      });
-      // "Satışı kapat" anahtarı panelde vardı ama sunucuda uygulanmıyordu.
-      if (siteSettings && siteSettings.ecommerceEnabled === false) {
-        throw new CheckoutError("Şu anda sipariş alınamıyor. Lütfen daha sonra tekrar deneyin.");
-      }
-      const usdTryRate = siteSettings?.usdTryRate != null
-        ? Number(siteSettings.usdTryRate)
-        : DEFAULT_USD_TRY_RATE;
+      /* ── 4. siteSettings + kargo seçeneği: adım 0'da (transaction dışında) okundu ── */
 
       /* ── 5. Compute prices from DB (convert USD → TRY if needed) ── */
       // Birim fiyat: varyant seçiliyse varyantın kendi fiyatı geçerlidir
@@ -312,10 +329,6 @@ export async function POST(req: NextRequest) {
       const stdShipping   = Number(siteSettings?.shippingCost ?? 150);
 
       let shippingTotal: number;
-      const shippingOpt = await tx.shippingOption.findUnique({
-        where:  { code: shippingMethod },
-        select: { alwaysFree: true, price: true, label: true },
-      });
       if (shippingOpt?.alwaysFree) {
         shippingTotal = 0;
       } else {
@@ -359,30 +372,31 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      /* ── 10. Create OrderItems ── */
+      /* ── 10. Create OrderItems ──
+         Satır başına ayrı INSERT yerine tek createMany: 50 kalemlik sepette
+         50 ayrı DB gidiş-dönüşü yerine bir tane yapılır. */
       const emailItems: { name: string; quantity: number; lineTotal: number }[] = [];
-      for (const item of items) {
+      const orderItemRows = items.map((item) => {
         const product = dbProducts.find(p => p.id === item.productId)!;
         const variant = item.variantId ? variantById.get(item.variantId)! : null;
         const colorName = variant ? (((variant.attributes as Record<string, string> | null)?.renk) ?? variant.name) : null;
         const unitPriceTRY = unitPriceOf(item);
         const lineTotal = unitPriceTRY * item.quantity;
-        await tx.orderItem.create({
-          data: {
-            orderId: order.id,
-            productId: product.id,
-            variantId: variant?.id ?? null,
-            productName: product.name,
-            variantName: colorName,
-            sku: variant?.sku ?? product.sku,
-            unitPrice: unitPriceTRY,
-            quantity: item.quantity,
-            lineTotal,
-          },
-        });
         const emailName = colorName ? `${product.name} (${colorName})` : product.name;
         emailItems.push({ name: emailName, quantity: item.quantity, lineTotal });
-      }
+        return {
+          orderId: order.id,
+          productId: product.id,
+          variantId: variant?.id ?? null,
+          productName: product.name,
+          variantName: colorName,
+          sku: variant?.sku ?? product.sku,
+          unitPrice: unitPriceTRY,
+          quantity: item.quantity,
+          lineTotal,
+        };
+      });
+      await tx.orderItem.createMany({ data: orderItemRows });
 
       /* ── 11. Create Payment ── */
       const providerMap: Record<string, string> = {
@@ -409,67 +423,68 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      /* ── 13. Stock movements + inventory update (varyant varsa varyant stoğu) ── */
+      /* ── 13. Stock movements + inventory update (varyant varsa varyant stoğu) ──
+         Envanter bazında TOPLANIR: aynı ürün birden fazla satırdaysa tek update
+         yeter. Hareket (StockMovement) kayıtları da tek createMany ile yazılır.
+         Ürün-düzeyi düşüş için de artık hareket kaydı üretiliyor; iptal yolu
+         (restoreOrderStock) zaten iki envanteri de geri yüklüyordu, hareket
+         defteri böylece simetrik oluyor. */
+      const decByInventory = new Map<string, number>();
+      const addDec = (inventoryId: string, qty: number) => {
+        decByInventory.set(inventoryId, (decByInventory.get(inventoryId) ?? 0) + qty);
+      };
       for (const item of items) {
         const product = dbProducts.find(p => p.id === item.productId)!;
         const inv = item.variantId ? variantById.get(item.variantId)?.Inventory : product.Inventory;
-        if (inv) {
-          await tx.inventory.update({
-            where: { id: inv.id },
-            data: { quantity: { decrement: item.quantity } },
-          });
-          await tx.stockMovement.create({
-            data: {
-              inventoryId: inv.id,
-              type: "SATIS",
-              quantityChange: -item.quantity,
-              reason: "Sipariş",
-              referenceType: "Order",
-              referenceId: order.id,
-            },
-          });
-        }
+        if (inv) addDec(inv.id, item.quantity);
         // Renkli üründe ürün-düzeyi toplam stoğu da düşür (listeleme kartı gösterimi senkron kalsın).
-        if (item.variantId && product.Inventory) {
-          await tx.inventory.update({
-            where: { id: product.Inventory.id },
-            data: { quantity: { decrement: item.quantity } },
-          });
-        }
+        if (item.variantId && product.Inventory) addDec(product.Inventory.id, item.quantity);
       }
 
-      /* ── 14. Consent logs ── */
-      const consentTypes = ["MESAFELI_SATIS", "ON_BILGILENDIRME", "KVKK_AYDINLATMA"] as const;
-      for (const consentType of consentTypes) {
-        await tx.consentLog.create({
-          data: {
-            userId: user.id,
-            email: contact.email,
-            consentType,
-            textVersion: "v1.0",
-            granted: true,
-            ipAddress,
-            userAgent,
-            grantedAt: new Date(),
-          },
+      for (const [inventoryId, qty] of decByInventory) {
+        await tx.inventory.update({
+          where: { id: inventoryId },
+          data: { quantity: { decrement: qty } },
         });
       }
+      if (decByInventory.size > 0) {
+        await tx.stockMovement.createMany({
+          data: [...decByInventory].map(([inventoryId, qty]) => ({
+            inventoryId,
+            type: "SATIS" as const,
+            quantityChange: -qty,
+            reason: "Sipariş",
+            referenceType: "Order",
+            referenceId: order.id,
+          })),
+        });
+      }
+
+      /* ── 14. Consent logs (tek createMany) ── */
+      const consentTypes: Array<"MESAFELI_SATIS" | "ON_BILGILENDIRME" | "KVKK_AYDINLATMA" | "TICARI_ILETI"> = [
+        "MESAFELI_SATIS",
+        "ON_BILGILENDIRME",
+        "KVKK_AYDINLATMA",
+      ];
       // Ticari ileti (pazarlama) onayı verildiyse ayrıca kaydet — yalnızca
       // e-posta sahipliği kanıtlanmışsa (bkz. canRecordMarketingConsent).
       if (contact.emailMarketingConsent && canRecordMarketingConsent) {
-        await tx.consentLog.create({
-          data: {
-            userId: user.id,
-            email: contact.email,
-            consentType: "TICARI_ILETI",
-            textVersion: "v1.0",
-            granted: true,
-            ipAddress,
-            userAgent,
-            grantedAt: new Date(),
-          },
-        });
+        consentTypes.push("TICARI_ILETI");
       }
+      const grantedAt = new Date();
+      const consentUserId = user.id;
+      await tx.consentLog.createMany({
+        data: consentTypes.map((consentType) => ({
+          userId: consentUserId,
+          email: contact.email,
+          consentType,
+          textVersion: "v1.0",
+          granted: true,
+          ipAddress,
+          userAgent,
+          grantedAt,
+        })),
+      });
 
       /* ── 15. Increment coupon usedCount ── */
       if (coupon) {
@@ -493,18 +508,30 @@ export async function POST(req: NextRequest) {
       isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
     }));
 
-    // Sipariş onay e-postası (env-gated; hata sipariş akışını kırmaz).
-    try {
-      const { orderConfirmationEmail } = await import("@/lib/email/templates");
-      const { sendEmail } = await import("@/lib/email/resend");
-      const mail = orderConfirmationEmail({
-        orderNumber: result.orderNumber,
-        items: result.emailItems,
-        grandTotal: result.grandTotal,
-        paymentMethod,
-      });
-      await sendEmail({ to: result.customerEmail, subject: mail.subject, html: mail.html });
-    } catch { /* e-posta hatası yoksay */ }
+    /* Sipariş onay e-postası (env-gated; hata sipariş akışını kırmaz).
+     *
+     * ÖNEMLİ: Kart ödemesinde burada e-posta GÖNDERİLMEZ. Bu noktada müşteri
+     * henüz PayTR formunu bile görmedi; "siparişiniz alındı" maili almak
+     * yanıltıcıydı. Kart akışında onay maili, ödeme gerçekten başarıya
+     * geçtiğinde PayTR Bildirim URL'inden (ya da mutabakat cron'undan)
+     * `sendOrderPaidEmail` ile gönderilir.
+     *
+     * Havale/EFT'de tahsilat zaten sonradan elle yapılır; siparişin kaydedildiğini
+     * ve havale talimatını bildiren bu e-posta burada anlamlıdır. */
+    if (paymentMethod === "HAVALE_EFT") {
+      try {
+        const { orderConfirmationEmail } = await import("@/lib/email/templates");
+        const { sendEmail } = await import("@/lib/email/resend");
+        const mail = orderConfirmationEmail({
+          orderNumber: result.orderNumber,
+          items: result.emailItems,
+          grandTotal: result.grandTotal,
+          paymentMethod,
+          variant: "alindi",
+        });
+        await sendEmail({ to: result.customerEmail, subject: mail.subject, html: mail.html });
+      } catch { /* e-posta hatası yoksay */ }
+    }
 
     // Pazarlama izni (checkout'ta onaylandıysa ve e-posta sahipliği kanıtlıysa).
     if (result.marketingConsent) {
@@ -514,14 +541,21 @@ export async function POST(req: NextRequest) {
       } catch { /* izin hatası siparişi etkilemez */ }
     }
 
-    // Sipariş tamamlandı → kullanıcının AKTIF sepetini siparişe dönüştü olarak işaretle
-    // (terk-edilen-sepet hatırlatma cron'u bu sepeti atlasın).
-    try {
-      await prisma.cart.updateMany({
-        where: { userId: result.userId, status: "AKTIF" },
-        data: { status: "SIPARISE_DONUSTU" },
-      });
-    } catch { /* sepet işaretleme hatası siparişi etkilemez */ }
+    /* Sepeti "siparişe dönüştü" işaretle — yalnızca Havale/EFT'de.
+     *
+     * Kart ödemesinde sipariş bu noktada sadece BEKLIYOR durumundadır; müşteri
+     * ödemeden vazgeçerse sepetini kapatmış olmak yanlıştır (hem sepet
+     * hatırlatması gitmez hem de kullanıcı sepetini kaybetmiş görünür).
+     * Kart akışında bu işaretleme ödeme onaylanınca yapılır (bkz.
+     * lib/payment/notify.ts). */
+    if (paymentMethod === "HAVALE_EFT") {
+      try {
+        await prisma.cart.updateMany({
+          where: { userId: result.userId, status: "AKTIF" },
+          data: { status: "SIPARISE_DONUSTU" },
+        });
+      } catch { /* sepet işaretleme hatası siparişi etkilemez */ }
+    }
 
     // paymentMethod istemciye geri döner: kart ise PayTR iframe sayfasına yönlendirilir.
     // orderToken, sipariş durum sayfalarını açmak için gereken gizli anahtardır.

@@ -530,6 +530,7 @@ export default function CheckoutClient({
       return;
     }
 
+    let redirecting = false;
     try {
       const res = await fetch("/api/siparis", {
         method: "POST",
@@ -559,6 +560,10 @@ export default function CheckoutClient({
       // orderToken: sipariş durum sayfalarının gizli erişim anahtarı — sipariş
       // numarası tek başına o sayfaları açmaya yetmez.
       const tokenQuery = data.orderToken ? `t=${encodeURIComponent(data.orderToken)}` : "";
+      // Yönlendirme başladıktan sonra düğme tekrar aktifleşmemeli: ödeme
+      // sayfası açılana kadar geçen sürede kullanıcı ikinci kez basıp ikinci
+      // sipariş oluşturabiliyordu.
+      redirecting = true;
       if (data.paymentMethod === "KREDI_KARTI") {
         // Kart ödemesi: PayTR güvenli ödeme sayfasına yönlendir.
         // Sepet, ödeme onaylanana kadar TEMİZLENMEZ (başarısızlıkta tekrar denenebilsin).
@@ -569,7 +574,7 @@ export default function CheckoutClient({
         router.push(`/siparis-tamamlandi?no=${encodeURIComponent(data.orderNumber ?? "")}${tokenQuery ? `&${tokenQuery}` : ""}`);
       }
     } catch { setSubmitError("Bir hata oluştu. Lütfen tekrar deneyin."); }
-    finally { setIsSubmitting(false); }
+    finally { if (!redirecting) setIsSubmitting(false); }
   };
 
   const panelStyle: React.CSSProperties = { background: "var(--hl-bg-elev-1)", border: "1px solid var(--hl-line)", borderRadius: 14, padding: 24 };
@@ -918,7 +923,9 @@ export default function CheckoutClient({
               ) : (
                 <button type="submit" disabled={isSubmitting} aria-disabled={!consentChecked} style={{ width: "100%", padding: "15px 0", borderRadius: 10, background: !consentChecked || isSubmitting ? "var(--hl-bg-elev-3)" : "var(--hl-bronze-400)", border: "none", color: !consentChecked || isSubmitting ? "var(--hl-text-mute)" : "var(--hl-on-bronze)", fontFamily: "var(--hl-font-ui)", fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", cursor: isSubmitting ? "not-allowed" : "pointer", transition: "all 150ms ease" }}>
                   {isSubmitting
-                    ? "İşleniyor…"
+                    ? paymentMethod === "KREDI_KARTI"
+                      ? "Güvenli ödemeye yönlendiriliyorsunuz…"
+                      : "İşleniyor…"
                     : paymentMethod === "KREDI_KARTI"
                       ? `${formatPrice(total)} — Güvenli Ödemeye Geç →`
                       : `${formatPrice(total)} — Siparişi Tamamla`}

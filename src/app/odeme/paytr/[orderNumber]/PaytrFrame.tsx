@@ -12,6 +12,15 @@ import { useEffect, useRef, useState } from "react";
 
 const IFRAME_RESIZER_URL = "https://www.paytr.com/js/iframeResizer.min.js";
 
+/** 3D Secure ekranları 520 px'e sığmayabiliyor; taban yükseklik yükseltildi. */
+const MIN_HEIGHT = 620;
+
+/**
+ * Bu süre sonunda form hâlâ yüklenmediyse kullanıcıya açıklama gösterilir.
+ * Yavaş mobil bağlantılarda yanlış alarm vermemesi için bilinçli olarak uzun.
+ */
+const STALL_NOTICE_MS = 20_000;
+
 declare global {
   interface Window {
     iFrameResize?: (options: Record<string, unknown>, selector: string) => void;
@@ -24,7 +33,15 @@ interface PaytrFrameProps {
 
 export default function PaytrFrame({ iframeSrc }: PaytrFrameProps) {
   const [loaded, setLoaded] = useState(false);
+  const [stalled, setStalled] = useState(false);
   const resizedRef = useRef(false);
+
+  // Form belirli sürede gelmediyse kullanıcı boş kutuya bakmakla kalmasın.
+  useEffect(() => {
+    if (loaded) return;
+    const t = setTimeout(() => setStalled(true), STALL_NOTICE_MS);
+    return () => clearTimeout(t);
+  }, [loaded]);
 
   useEffect(() => {
     function applyResize() {
@@ -61,7 +78,7 @@ export default function PaytrFrame({ iframeSrc }: PaytrFrameProps) {
   }, []);
 
   return (
-    <div style={{ position: "relative", width: "100%", minHeight: 520 }}>
+    <div style={{ position: "relative", width: "100%", minHeight: MIN_HEIGHT }}>
       {!loaded && (
         <div
           style={{
@@ -73,6 +90,9 @@ export default function PaytrFrame({ iframeSrc }: PaytrFrameProps) {
             fontFamily: "var(--hl-font-ui)",
             fontSize: 13,
             color: "var(--hl-text-mute)",
+            /* Katman iframe'in üstünde duruyor: tıklamaları yutmamalı.
+               `onLoad` gecikirse müşteri kart alanlarına dokunamıyordu. */
+            pointerEvents: "none",
           }}
         >
           Güvenli ödeme formu yükleniyor…
@@ -83,10 +103,29 @@ export default function PaytrFrame({ iframeSrc }: PaytrFrameProps) {
         id="paytriframe"
         title="PayTR Güvenli Ödeme"
         frameBorder={0}
-        scrolling="no"
+        /* `scrolling="no"` DEĞİL: 3D Secure adımında iframe, bankanın kendi
+           sayfasına gider. O sayfa PayTR'nin iframeResizer istemcisini
+           içermediği için yükseklik ölçülemez; kaydırma da kapalıysa form
+           kırpılır ve müşteri "onayla" düğmesine ulaşamaz. */
+        scrolling="auto"
         onLoad={() => setLoaded(true)}
-        style={{ width: "100%", minHeight: 520, border: 0 }}
+        style={{ width: "100%", minHeight: MIN_HEIGHT, border: 0 }}
       />
+      {stalled && (
+        <p
+          style={{
+            marginTop: 10,
+            textAlign: "center",
+            fontFamily: "var(--hl-font-ui)",
+            fontSize: 11,
+            color: "var(--hl-text-mute)",
+            lineHeight: 1.7,
+          }}
+        >
+          Ödeme formu açılmadıysa sayfayı yenilemeyi deneyin. Tutar hesabınızdan
+          çekilmedi.
+        </p>
+      )}
     </div>
   );
 }

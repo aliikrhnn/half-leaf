@@ -3,6 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { LogOut } from "lucide-react";
+import { useCartStore } from "@/store/cart";
+import { useWishlistStore } from "@/store/wishlist";
+import { notifyAuthChanged } from "@/lib/auth/auth-events";
 
 export default function LogoutButton() {
   const router = useRouter();
@@ -13,6 +16,14 @@ export default function LogoutButton() {
     try {
       await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
     } finally {
+      // Sepet hesaba aittir: cihazda bırakılırsa aynı tarayıcıyı kullanan bir
+      // sonraki kişiye görünürdü. Sunucudaki kopyası hesapta durmaya devam
+      // eder, tekrar giriş yapıldığında geri yüklenir.
+      useCartStore.getState().resetForOwner(null);
+      // Favori listesi de kişiseldir ve yalnızca tarayıcıda tutuluyor; ortak
+      // cihazda bir sonraki kullanıcıya görünmemeli.
+      useWishlistStore.getState().clear();
+      notifyAuthChanged();
       router.push("/");
       router.refresh();
     }

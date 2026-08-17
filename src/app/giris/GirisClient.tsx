@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Lock, Eye, EyeOff } from "lucide-react";
 import HalfLeafLogo from "@/components/brand/HalfLeafLogo";
+import { notifyAuthChanged } from "@/lib/auth/auth-events";
 
 type Errors = Partial<Record<"email" | "password" | "general", string>>;
 
@@ -132,6 +133,10 @@ export default function GirisClient({ redirectTo }: { redirectTo: string }) {
         }
         return;
       }
+      // Sepet sahipliği denetimi (CartSync) yerleşimde kalıcı olarak monte
+      // olduğu için giriş sonrası kendiliğinden yeniden çalışmaz. Bu olay onu
+      // uyandırır: misafirken doldurulan sepet hemen hesaba birleştirilir.
+      notifyAuthChanged();
       router.push(safeRedirect);
       router.refresh();
     } catch {

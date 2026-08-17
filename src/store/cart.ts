@@ -30,11 +30,23 @@ interface CartState {
   items: CartItem[];
   isOpen: boolean;
   note: string;
+  /**
+   * Bu sepetin sahibi olan kullanıcı id'si; misafir sepetinde `null`.
+   *
+   * localStorage cihaza aittir, hesaba değil: bu alan olmadan aynı tarayıcıda
+   * çıkış yapan kullanıcının sepeti, sonradan giriş yapan başka bir kullanıcıya
+   * görünüyordu. `CartOwnerGuard` her açılışta bu değeri oturumla karşılaştırır.
+   */
+  ownerId: string | null;
   addItem: (product: Product, quantity?: number, variant?: { id: string; label: string; stock: number }) => void;
   removeItem: (productId: string, variantId?: string) => void;
   updateQuantity: (productId: string, quantity: number, variantId?: string) => void;
   setNote: (note: string) => void;
   clearCart: () => void;
+  /** Sepeti sunucudan gelen içerikle tamamen değiştirir ve sahibini işaretler. */
+  adoptServerCart: (items: CartItem[], ownerId: string | null) => void;
+  /** Sepeti boşaltıp sahipsiz hâle getirir (çıkış / sahip değişimi). */
+  resetForOwner: (ownerId: string | null) => void;
   openCart: () => void;
   closeCart: () => void;
   getTotalItems: () => number;
@@ -50,6 +62,7 @@ export const useCartStore = create<CartState>()(
       items: [],
       isOpen: false,
       note: "",
+      ownerId: null,
 
       addItem: (product, quantity = 1, variant) => {
         const vId = variant?.id;
@@ -107,6 +120,11 @@ export const useCartStore = create<CartState>()(
       setNote: (note) => set({ note }),
 
       clearCart: () => set({ items: [], note: "" }),
+
+      adoptServerCart: (items, ownerId) => set({ items, ownerId }),
+
+      resetForOwner: (ownerId) => set({ items: [], note: "", ownerId }),
+
       openCart: () => set({ isOpen: true }),
       closeCart: () => set({ isOpen: false }),
 
@@ -171,11 +189,13 @@ export const useCartStore = create<CartState>()(
     {
       name: "half-leaf-cart",
       skipHydration: true,
-      partialize: (state) => ({ items: state.items, note: state.note }),
+      partialize: (state) => ({ items: state.items, note: state.note, ownerId: state.ownerId }),
       merge: (persisted, current) => ({
         ...current,
         items: (persisted as { items?: CartItem[] }).items ?? current.items,
         note: (persisted as { note?: string }).note ?? current.note,
+        // Eski sürümden gelen kayıtta ownerId yoktur → misafir sepeti sayılır.
+        ownerId: (persisted as { ownerId?: string | null }).ownerId ?? null,
         // isOpen is never restored — cart always starts closed
       }),
     }

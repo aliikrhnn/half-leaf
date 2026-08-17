@@ -92,9 +92,59 @@ Bearer <CRON_SECRET>` gönderir). Tanımlı değilse uç nokta 401 döner.
 
 ## 5. Canlıya Geçiş
 
-- `PAYTR_TEST_MODE=0` yapın (gerçek tahsilat).
-- Bildirim URL'nin canlı domain ile https olarak tanımlı olduğunu doğrulayın.
-- `NEXT_PUBLIC_SITE_URL`'nin canlı https adres olduğunu doğrulayın.
+> **ÖNEMLİ:** Test ekranını (PayTR "TEST MODU" sarı uyarısı / örnek kart ekranı)
+> belirleyen tek şey **ortam değişkenidir** — kodda sabit test kodu YOKTUR.
+> Kod, güvenlik gereği `PAYTR_TEST_MODE` açıkça `0` değilse test moduna düşer.
+> **Canlı site Vercel'in env değişkenlerini okur; yereldeki `.env` canlıyı etkilemez.**
+
+**Vercel'de (Project → Settings → Environment Variables, Production):**
+
+1. `PAYTR_TEST_MODE = 0`  ← gerçek tahsilat (test ekranını kapatır)
+2. `NEXT_PUBLIC_SITE_URL = https://halfleafstore.com`  ← **https** (yönlendirme URL'leri buradan üretilir; `NEXT_PUBLIC_` değişkeni build'e gömülür)
+3. `PAYTR_MERCHANT_ID / PAYTR_MERCHANT_KEY / PAYTR_MERCHANT_SALT`'ın **canlı** değerlerle dolu olduğunu doğrulayın (PayTR canlıya alırken yeni değer verdiyse güncelleyin).
+4. Değişiklikten sonra **yeniden deploy** edin (Deployments → son deploy → Redeploy). Env değişikliği ancak yeni deploy ile yürürlüğe girer.
+
+**PayTR Mağaza Paneli'nde:**
+
+5. **Ayarlar → Bildirim URL** = `https://halfleafstore.com/api/odeme/paytr/callback` (https).
+6. Mağaza durumunun PayTR tarafında **canlı/onaylı** olduğunu doğrulayın. Hesap hâlâ onay bekliyorsa `test_mode=0` olsa bile test ekranı görünebilir (bu PayTR tarafıdır).
+
+Yerel geliştirme için `.env` zaten `PAYTR_TEST_MODE=0` + https olacak şekilde güncellendi.
+
+> **Bildirim URL artık kritik.** Sipariş onay e-postası kart ödemelerinde SADECE
+> buradan tetikleniyor (sipariş oluşturulurken değil). Bildirim URL yanlışsa
+> müşteri ödemesini yapar ama onay maili hiç gitmez. Yedek olarak
+> `/api/cron/reconcile-payments` mutabakat cron'u aynı maili telafi eder —
+> `CRON_SECRET` tanımlı değilse o da çalışmaz.
+
+---
+
+## 5.1 · Ödeme dönüş köprüsü (`/odeme/donus`)
+
+PayTR iFrame API'sinde ödeme bitince `merchant_ok_url` / `merchant_fail_url`
+**iframe'in içinde** açılır. Sitenin tamamı `X-Frame-Options: DENY` +
+`frame-ancestors 'none'` ile korunduğu için sonuç sayfası orada çizilemiyor ve
+müşteri kart bilgisini girdikten sonra **beyaz ekranda** kalıyordu.
+
+Bu yüzden PayTR'a artık sonuç sayfaları doğrudan verilmez; araya `/odeme/donus`
+köprüsü girer:
+
+- Çerçevelenmesine izin verilen **tek** adrestir (`frame-ancestors https://www.paytr.com`,
+  `X-Frame-Options` göndermez — bkz. `next.config.ts`).
+- Tek işi üst pencereyi `/siparis-tamamlandi` ya da `/odeme/hata` adresine taşımaktır.
+- Hedef adresi **sunucuda** kurar; dışarıdan tam URL kabul etmez (açık yönlendirme koruması).
+
+Ayrıca `/odeme/paytr/*` yolunda `frame-src 'self' https:` uygulanır: 3D Secure
+adımında iframe kartın bankasının adresine gidiyor, katı liste bunu engelliyordu.
+
+**Bu üç başlık kuralına dokunulursa** (`next.config.ts` → `headers()`), üç yolu da
+tekrar ölçün — genel kural negatif lookahead ile yazılıdır ve sessizce eşleşmezse
+tüm site CSP'siz kalır:
+
+```bash
+curl -sI https://halfleafstore.com/            | grep -iE "x-frame-options|content-security"
+curl -sI https://halfleafstore.com/odeme/donus | grep -iE "x-frame-options|content-security"
+```
 
 ---
 

@@ -42,40 +42,65 @@ const nextConfig: NextConfig = {
   },
 
   async headers() {
+    /*
+     * Ödeme rotaları için başlıklar AYRIŞTIRILDI.
+     *
+     * Sebep: PayTR iFrame akışında (a) 3D Secure adımında iframe, kartın
+     * bankasının ACS adresine gider ve (b) ödeme bitince PayTR, iframe'in
+     * İÇİNDE `merchant_ok_url`'e yönlenir. Tek ve katı bir politika bu iki
+     * adımı da engelliyordu: `frame-src` bankaları, `X-Frame-Options: DENY` +
+     * `frame-ancestors 'none'` ise kendi dönüş sayfamızı bloke ediyor,
+     * müşteri kart bilgisini girdikten sonra BEYAZ EKRANDA kalıyordu.
+     *
+     * Gevşetme yalnızca iki yola uygulanır; sitenin geri kalanı aynen katı
+     * kalır.
+     */
+    const commonHeaders = [
+      {
+        // 2 yıl HSTS; preload listine eklenmek için ayrı başvuru süreci gerekir
+        key: "Strict-Transport-Security",
+        value: "max-age=63072000; includeSubDomains; preload",
+      },
+      {
+        // Tarayıcının MIME sniffing yapmasını engeller
+        key: "X-Content-Type-Options",
+        value: "nosniff",
+      },
+      {
+        // Cross-origin geçişlerde yalnızca origin bilgisi paylaşılır
+        key: "Referrer-Policy",
+        value: "strict-origin-when-cross-origin",
+      },
+      {
+        // Kullanılmayan tarayıcı API'lerini kapat
+        key: "Permissions-Policy",
+        value: "camera=(), microphone=(), geolocation=(), payment=()",
+      },
+      {
+        key: "X-DNS-Prefetch-Control",
+        value: "on",
+      },
+    ];
+
+    const denyFraming = {
+      // Clickjacking koruması: site hiçbir iframe içine alınamaz
+      key: "X-Frame-Options",
+      value: "DENY",
+    };
+
     return [
       {
-        // Tüm rotalar için güvenlik başlıkları
-        source: "/(.*)",
+        /*
+         * Genel kural — ödeme köprü rotaları HARİÇ. Next.js aynı yola uyan
+         * TÜM kuralların başlıklarını eklediği için, gevşek politikanın
+         * geçerli olabilmesi adına bu rotaların genel kuralın dışında
+         * bırakılması şarttır (iki CSP başlığı gönderilirse tarayıcı ikisinin
+         * KESİŞİMİNİ uygular ve gevşetme hiçbir işe yaramaz).
+         */
+        source: "/((?!odeme/paytr|odeme/donus).*)",
         headers: [
-          {
-            // 2 yıl HSTS; preload listine eklenmek için ayrı başvuru süreci gerekir
-            key: "Strict-Transport-Security",
-            value: "max-age=63072000; includeSubDomains; preload",
-          },
-          {
-            // Clickjacking koruması: site hiçbir iframe içine alınamaz
-            key: "X-Frame-Options",
-            value: "DENY",
-          },
-          {
-            // Tarayıcının MIME sniffing yapmasını engeller
-            key: "X-Content-Type-Options",
-            value: "nosniff",
-          },
-          {
-            // Cross-origin geçişlerde yalnızca origin bilgisi paylaşılır
-            key: "Referrer-Policy",
-            value: "strict-origin-when-cross-origin",
-          },
-          {
-            // Kullanılmayan tarayıcı API'lerini kapat
-            key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=(), payment=()",
-          },
-          {
-            key: "X-DNS-Prefetch-Control",
-            value: "on",
-          },
+          ...commonHeaders,
+          denyFraming,
           {
             /*
              * CSP — ZORLAYICI mod (önceden yalnızca Report-Only idi, yani
@@ -118,6 +143,75 @@ const nextConfig: NextConfig = {
               "object-src 'none'",
               "frame-ancestors 'none'",
               "upgrade-insecure-requests",
+              "report-uri /api/csp-report",
+            ].join("; "),
+          },
+        ],
+      },
+
+      {
+        /*
+         * PayTR güvenli ödeme sayfası (/odeme/paytr/...).
+         *
+         * `frame-src` neden `https:`? 3D Secure adımında PayTR iframe'i,
+         * kartı veren bankanın ACS adresine yönlenir. Türkiye'de onlarca banka
+         * ve sürekli değişen ACS alan adı var; sabit bir liste ödemeleri
+         * rastgele kırar. Bu yol yalnızca sipariş sahibinin erişebildiği,
+         * indekslenmeyen, kullanıcı içeriği barındırmayan bir ödeme sayfasıdır;
+         * gevşetme buraya sınırlı tutulmuştur.
+         */
+        source: "/odeme/paytr/:path*",
+        headers: [
+          ...commonHeaders,
+          denyFraming,
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://www.paytr.com`,
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "font-src 'self' https://fonts.gstatic.com data:",
+              "img-src 'self' data: blob: https://*.supabase.co https://placehold.co",
+              `media-src 'self' blob: https://${supabaseHost}`,
+              // PayTR + 3D Secure banka sayfaları + kendi dönüş köprümüz ('self')
+              "frame-src 'self' https:",
+              "connect-src 'self' https://*.supabase.co https://www.paytr.com",
+              "form-action 'self' https:",
+              "worker-src 'self' blob:",
+              "manifest-src 'self'",
+              "base-uri 'self'",
+              "object-src 'none'",
+              "frame-ancestors 'none'",
+              "upgrade-insecure-requests",
+              "report-uri /api/csp-report",
+            ].join("; "),
+          },
+        ],
+      },
+
+      {
+        /*
+         * Ödeme dönüş köprüsü (/odeme/donus).
+         *
+         * PayTR ödeme bitince iframe'i bu adrese yönlendirir; sayfa tek işi
+         * yapar: üst pencereyi gerçek sonuç sayfasına taşır. Bu yüzden BU yol
+         * — ve yalnızca bu yol — paytr.com tarafından çerçevelenebilmelidir:
+         * `X-Frame-Options` gönderilmez, `frame-ancestors` yalnızca PayTR'a
+         * izin verir. Sayfa hiçbir müşteri verisi göstermez, bu nedenle
+         * clickjacking açısından değeri yoktur.
+         */
+        source: "/odeme/donus",
+        headers: [
+          ...commonHeaders,
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'none'",
+              "script-src 'unsafe-inline'",
+              "style-src 'unsafe-inline'",
+              "frame-ancestors https://www.paytr.com",
+              "base-uri 'none'",
+              "form-action 'none'",
               "report-uri /api/csp-report",
             ].join("; "),
           },

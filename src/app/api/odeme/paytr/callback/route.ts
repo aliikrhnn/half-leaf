@@ -17,9 +17,11 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import {
   verifyCallbackHash,
+  toKurus,
   type PaytrCallback,
 } from "@/lib/payment/paytr";
 import { finalizeSuccess, finalizeFailure, reReserveStock } from "@/lib/payment/fulfillment";
+import { sendOrderPaidEmail } from "@/lib/payment/notify";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -99,6 +101,27 @@ export async function POST(req: Request): Promise<Response> {
 
   const isSuccess = cb.status === "success";
 
+  /* Tutar denetimi.
+     `payment_amount` PayTR'a get-token'da GÖNDERDİĞİMİZ tutardır ve siparişin
+     toplamına eşit olmalıdır. (Taksitli işlemde müşteriden çekilen `total_amount`
+     komisyonla birlikte daha yüksek olabildiği için karşılaştırma ONA göre
+     yapılmaz — yoksa taksitli her ödeme yanlışlıkla şüpheli sayılırdı.)
+
+     Uyuşmazlıkta sipariş İPTAL EDİLMEZ: bildirim zaten gizli anahtarımızla
+     imzalı ve müşterinin parası çekilmiş olabilir; "para var, sipariş yok"
+     durumu yaratmak daha büyük zarardır. Bunun yerine sipariş onaylanır ve
+     denetim kaydı bırakılır — operatör panelden görüp inceler. */
+  const expectedKurus = toKurus(Number(order.grandTotal));
+  const reportedKurus = cb.payment_amount != null ? Number(cb.payment_amount) : null;
+  const amountMismatch =
+    reportedKurus != null && Number.isFinite(reportedKurus) && reportedKurus !== expectedKurus;
+
+  if (amountMismatch) {
+    console.error(
+      `[paytr-callback] tutar uyuşmazlığı: sipariş=${cb.merchant_oid} beklenen=${expectedKurus} bildirilen=${reportedKurus}`,
+    );
+  }
+
   /* ── 4. İdempotency / kurtarma ──
      Zaten ödenmiş: idempotent, sadece OK. */
   if (payment.status === "ODENDI") return ok();
@@ -109,9 +132,10 @@ export async function POST(req: Request): Promise<Response> {
        riski). Siparişi kurtar, stoğu yeniden rezerve et ve denetim kaydı bırak. */
   if (payment.status === "BASARISIZ") {
     if (!isSuccess) return ok();
+    let recovered = false;
     try {
       await prisma.$transaction(async (tx) => {
-        await finalizeSuccess(tx, {
+        recovered = await finalizeSuccess(tx, {
           orderId: order.id,
           paymentId: payment.id,
           merchantOid: cb.merchant_oid,
@@ -138,19 +162,38 @@ export async function POST(req: Request): Promise<Response> {
     } catch {
       return fail("PAYTR notification failed: recovery error", 500);
     }
+    // Commit sonrası: müşteriye ödeme onayı e-postası (yalnızca gerçek geçişte).
+    if (recovered) await sendOrderPaidEmail(order.id);
     return ok();
   }
 
   /* ── 5. Normal işlem (BEKLIYOR) ── */
+  let paidNow = false;
   try {
     await prisma.$transaction(async (tx) => {
       if (isSuccess) {
-        await finalizeSuccess(tx, {
+        paidNow = await finalizeSuccess(tx, {
           orderId: order.id,
           paymentId: payment.id,
           merchantOid: cb.merchant_oid,
           paymentType: cb.payment_type ?? null,
         });
+        if (paidNow && amountMismatch) {
+          await tx.auditLog.create({
+            data: {
+              action: "PAYMENT_AMOUNT_MISMATCH",
+              entityType: "Payment",
+              entityId: payment.id,
+              changes: JSON.parse(JSON.stringify({
+                orderNumber: cb.merchant_oid,
+                beklenenKurus: expectedKurus,
+                bildirilenKurus: reportedKurus,
+                totalAmount: cb.total_amount,
+                note: "PayTR bildirimindeki tutar sipariş toplamıyla eşleşmiyor. Sipariş onaylandı; tutarı elle doğrulayın.",
+              })),
+            },
+          });
+        }
       } else {
         const reason =
           [cb.failed_reason_code, cb.failed_reason_msg].filter(Boolean).join(" - ") ||
@@ -168,6 +211,12 @@ export async function POST(req: Request): Promise<Response> {
     // İşlem yazılamadıysa OK DÖNME → PayTR tekrar denesin, kayıp olmasın.
     return fail("PAYTR notification failed: processing error", 500);
   }
+
+  /* ── 6. Sipariş onay e-postası ──
+     Yalnızca ödeme BU çağrıda ODENDI'ye geçtiyse ve transaction commit
+     olduktan SONRA gönderilir. Sipariş oluşturulurken (henüz ödeme yapılmadan)
+     e-posta gönderilmesi bilinçli olarak kaldırıldı. */
+  if (paidNow) await sendOrderPaidEmail(order.id);
 
   return ok();
 }

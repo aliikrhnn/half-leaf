@@ -64,7 +64,15 @@ async function resolveInventoryTargets(
   return targets;
 }
 
-/** Başarılı ödeme: Payment=ODENDI, Order=ONAYLANDI. */
+/**
+ * Başarılı ödeme: Payment=ODENDI, Order=ONAYLANDI.
+ *
+ * @returns `true` yalnızca ödeme bu çağrıda ODENDI'ye GEÇTİYSE. Zaten ödenmiş
+ *   bir kayda ikinci kez gelen bildirim `false` döner. Çağıran taraf bunu
+ *   "ödeme onay e-postasını gönder" kararı için kullanır: PayTR aynı sipariş
+ *   için birden fazla bildirim gönderebildiğinden (ve mutabakat cron'u aynı
+ *   anda çalışabildiğinden) müşteriye mükerrer e-posta gitmemelidir.
+ */
 export async function finalizeSuccess(
   tx: Tx,
   args: {
@@ -73,9 +81,11 @@ export async function finalizeSuccess(
     merchantOid: string;
     paymentType?: string | null;
   },
-): Promise<void> {
-  await tx.payment.update({
-    where: { id: args.paymentId },
+): Promise<boolean> {
+  // Koşullu güncelleme: ODENDI olmayan kayıt yoksa hiçbir satır etkilenmez.
+  // Şema değişikliği gerektirmeyen idempotency anahtarı budur.
+  const res = await tx.payment.updateMany({
+    where: { id: args.paymentId, status: { not: "ODENDI" } },
     data: {
       status: "ODENDI",
       paidAt: new Date(),
@@ -83,15 +93,31 @@ export async function finalizeSuccess(
       maskedInfo: args.paymentType ?? null,
     },
   });
+  const transitioned = res.count > 0;
+
   await tx.order.update({
     where: { id: args.orderId },
     data: { status: "ONAYLANDI" },
   });
+
+  return transitioned;
 }
 
 /**
  * Başarısız/iptal ödeme: Payment=BASARISIZ, Order=IPTAL_EDILDI,
  * rezerve stok geri yüklenir (StockMovement IADE) ve kupon kullanımı geri alınır.
+ *
+ * Yalnızca BEKLIYOR durumundaki ödemeye uygulanır. Bu koşul iki ciddi hatayı
+ * birden kapatır:
+ *
+ *  1. "Para alındı, sipariş iptal edildi": mutabakat cron'u ile PayTR bildirimi
+ *     aynı anda çalışabiliyor. Cron, ödeme durumunu transaction DIŞINDA okuyup
+ *     "zaman aşımı" diye iptale gidiyor; arada bildirim gelip ödemeyi ODENDI
+ *     yaptıysa koşulsuz güncelleme ÖDENMİŞ siparişi iptal ediyordu.
+ *  2. Çift iade: aynı başarısızlık bildirimi iki kez işlenirse stok ve kupon
+ *     iki kez geri yüklenip envanteri şişiriyordu.
+ *
+ * @returns `true` yalnızca ödeme bu çağrıda BASARISIZ'a geçtiyse.
  */
 export async function finalizeFailure(
   tx: Tx,
@@ -102,13 +128,16 @@ export async function finalizeFailure(
     orderItems: ReadonlyArray<OrderItemRef>;
     reason: string;
   },
-): Promise<void> {
+): Promise<boolean> {
   const reason = args.reason.slice(0, 500);
 
-  await tx.payment.update({
-    where: { id: args.paymentId },
+  const res = await tx.payment.updateMany({
+    where: { id: args.paymentId, status: "BEKLIYOR" },
     data: { status: "BASARISIZ", failureReason: reason },
   });
+  // Ödeme araya girip ODENDI olduysa (ya da zaten iptalse) hiçbir şey yapma.
+  if (res.count === 0) return false;
+
   await tx.order.update({
     where: { id: args.orderId },
     data: { status: "IPTAL_EDILDI" },
@@ -120,6 +149,8 @@ export async function finalizeFailure(
     orderItems: args.orderItems,
     reason,
   });
+
+  return true;
 }
 
 /**

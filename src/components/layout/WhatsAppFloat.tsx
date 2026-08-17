@@ -19,6 +19,13 @@ export default function WhatsAppFloat() {
     return () => clearTimeout(t);
   }, [dismissed]);
 
+  // Balon göründükten 5 saniye sonra kendiliğinden kapansın.
+  useEffect(() => {
+    if (!bubble) return;
+    const t = setTimeout(() => setBubble(false), 5000);
+    return () => clearTimeout(t);
+  }, [bubble]);
+
   if (!whatsappNumber) return null;
   const digits = whatsappNumber.replace(/\D/g, "");
   if (!digits) return null;

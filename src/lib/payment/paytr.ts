@@ -210,11 +210,21 @@ export async function requestIframeToken(
     lang: params.lang ?? "tr",
   });
 
+  /* Zaman aşımı ŞART: bu istek ödeme sayfasının sunucu render'ını bloklar.
+     PayTR yanıt vermezse (ya da çok yavaşsa) müşteri, tarayıcıda hiçbir şey
+     görmeden dakikalarca boş sayfada bekliyordu. 12 sn sonra hata ekranına
+     düşmek — "Tekrar Dene" düğmesiyle — sonsuz beklemekten iyidir. */
   const res = await fetch(PAYTR_GET_TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: form.toString(),
     cache: "no-store",
+    signal: AbortSignal.timeout(12_000),
+  }).catch((err: unknown) => {
+    const timedOut = err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
+    throw new PaytrApiError(
+      timedOut ? "PayTR yanıt vermedi (zaman aşımı)" : "PayTR'a bağlanılamadı",
+    );
   });
 
   const data = (await res.json()) as

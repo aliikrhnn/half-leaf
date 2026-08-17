@@ -18,6 +18,7 @@ import {
   interpretStatus,
 } from "@/lib/payment/paytr";
 import { finalizeSuccess, finalizeFailure } from "@/lib/payment/fulfillment";
+import { sendOrderPaidEmail } from "@/lib/payment/notify";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -128,7 +129,7 @@ export async function GET(req: NextRequest) {
 
     try {
       if (verdict === "paid") {
-        await prisma.$transaction(
+        const transitioned = await prisma.$transaction(
           (tx) =>
             finalizeSuccess(tx, {
               orderId: order.id,
@@ -137,6 +138,9 @@ export async function GET(req: NextRequest) {
             }),
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
         );
+        // Bildirim URL'i kaybolduysa onay e-postası da gitmemiş olur; burada
+        // (yalnızca gerçek durum geçişinde) telafi edilir.
+        if (transitioned) await sendOrderPaidEmail(order.id);
         paid++;
       } else if (verdict === "no_payment") {
         await prisma.$transaction(

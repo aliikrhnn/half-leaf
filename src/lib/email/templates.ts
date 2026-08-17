@@ -119,18 +119,34 @@ export interface OrderEmailData {
   items: ReadonlyArray<{ name: string; quantity: number; lineTotal: number }>;
   grandTotal: number;
   paymentMethod?: "KREDI_KARTI" | "HAVALE_EFT" | string;
+  /**
+   * "alindi": sipariş kaydı oluştu ama tahsilat henüz yapılmadı (Havale/EFT).
+   * "odendi": tahsilat BAŞARIYLA tamamlandı (PayTR bildirimi ya da mutabakat).
+   *
+   * Kart ödemelerinde "alindi" e-postası GÖNDERİLMEZ: müşteri daha ödeme
+   * formunu doldurmadan "siparişiniz alındı" maili almamalı.
+   */
+  variant?: "alindi" | "odendi";
 }
 
-/** Sipariş onay e-postası. */
+/** Sipariş onay e-postası (alındı / ödendi varyantlı). */
 export function orderConfirmationEmail(data: OrderEmailData): { subject: string; html: string } {
   const trackUrl = `${SITE_URL}/siparis-takip?no=${encodeURIComponent(data.orderNumber)}`;
+  const paid = data.variant === "odendi";
   const havaleNote =
-    data.paymentMethod === "HAVALE_EFT"
+    !paid && data.paymentMethod === "HAVALE_EFT"
       ? `<div style="background:#faf7f0;border:1px solid #e8e1d2;border-radius:10px;padding:12px 14px;margin:16px 0;font-size:13px;color:${MUTE};">Havale/EFT ödemeniz hesabımıza ulaştığında siparişiniz onaylanır. Açıklamaya <b style="color:${INK};">${escapeHtml(data.orderNumber)}</b> sipariş numaranızı yazmayı unutmayın.</div>`
       : "";
+  const paidNote = paid
+    ? `<div style="background:#f2f7f0;border:1px solid #dbe6d5;border-radius:10px;padding:12px 14px;margin:16px 0;font-size:13px;color:${MUTE};">Ödemeniz <b style="color:${INK};">başarıyla alındı</b>. Siparişiniz hazırlanmaya başlıyor; kargoya verildiğinde sizi ayrıca bilgilendireceğiz.</div>`
+    : "";
+
+  const intro = paid
+    ? "Ödemeniz onaylandı ve siparişiniz kesinleşti. Aşağıda sipariş özetinizi bulabilirsiniz."
+    : "Siparişiniz başarıyla alındı. Aşağıda sipariş özetinizi bulabilirsiniz.";
 
   const body = `
-    <p style="font-size:14px;color:${MUTE};line-height:1.7;margin:0 0 16px;">Siparişiniz başarıyla alındı. Aşağıda sipariş özetinizi bulabilirsiniz.</p>
+    <p style="font-size:14px;color:${MUTE};line-height:1.7;margin:0 0 16px;">${intro}</p>
     <div style="background:#faf8f3;border:1px solid #ece7db;border-radius:10px;padding:12px 14px;margin-bottom:16px;">
       <span style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:${MUTE};">Sipariş No</span><br>
       <span style="font-size:17px;font-weight:700;color:${INK};">${escapeHtml(data.orderNumber)}</span>
@@ -140,10 +156,19 @@ export function orderConfirmationEmail(data: OrderEmailData): { subject: string;
       <span style="font-size:15px;font-weight:700;color:${INK};">Toplam</span>
       <span style="font-size:18px;font-weight:800;color:${BRONZE};">${formatPrice(data.grandTotal)}</span>
     </div>
+    ${paidNote}
     ${havaleNote}
     <div style="text-align:center;margin-top:22px;">${button(trackUrl, "Siparişini Takip Et")}</div>
   `;
-  return { subject: `Siparişiniz alındı · ${data.orderNumber}`, html: shell("Teşekkürler! Siparişiniz alındı", body) };
+  return paid
+    ? {
+        subject: `Ödemeniz alındı · ${data.orderNumber}`,
+        html: shell("Ödemeniz onaylandı", body),
+      }
+    : {
+        subject: `Siparişiniz alındı · ${data.orderNumber}`,
+        html: shell("Teşekkürler! Siparişiniz alındı", body),
+      };
 }
 
 export interface AbandonedCartEmailData {
