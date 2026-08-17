@@ -9,6 +9,16 @@ out/
 node_modules/
 npm-debug.log*
 
+# TypeScript artıklı derleme önbelleği — her build'de değişir, repoda işi yok
+tsconfig.tsbuildinfo
+
+# Claude Code yerel ayarları.
+# Bu dosya makineye özeldir ve verilen izinlerin TAM KOMUT metnini saklar;
+# içinde bağlantı dizesi/parola geçen komutlar birikebiliyor (bir kez
+# DATABASE_URL parolasıyla dolu hâlde commit edilmeye çok yaklaştı).
+# Paylaşılan ayarlar .claude/settings.json dosyasına yazılmalı.
+.claude/settings.local.json
+
 # Prisma
 prisma/generated/
 
