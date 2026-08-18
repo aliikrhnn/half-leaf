@@ -10,12 +10,12 @@ import HalfLeafLogo from "@/components/brand/HalfLeafLogo";
 import PayTrLogo from "@/components/layout/PayTrLogo";
 import CardSchemes from "@/components/layout/CardSchemes";
 import {
-  requestIframeToken,
   iframeUrl,
   getSiteBaseUrl,
   normalizeUserIp,
   type BasketLine,
 } from "@/lib/payment/paytr";
+import { getOrCreateIframeToken } from "@/lib/payment/iframe-token";
 import { rateLimiter } from "@/lib/rate-limit/limiter";
 import PaytrFrame from "./PaytrFrame";
 
@@ -173,8 +173,7 @@ export default async function PaytrPaymentPage({ params, searchParams }: Props) 
   let errorMessage: string | null = null;
 
   try {
-    token = await requestIframeToken({
-      merchantOid: order.orderNumber,
+    token = await getOrCreateIframeToken(order.orderNumber, {
       amountTRY: Number(order.grandTotal),
       email: order.User.email,
       userIp,
