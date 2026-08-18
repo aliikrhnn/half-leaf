@@ -3,8 +3,22 @@
 import { useEffect, useRef, useState } from "react";
 
 /**
- * PayTR güvenli ödeme formunu iframe içinde gösterir ve PayTR'nin
- * iframeResizer kütüphanesiyle yüksekliği içeriğe göre ayarlar.
+ * PayTR güvenli ödeme formu.
+ *
+ * MASAÜSTÜ: form iframe içinde gösterilir, yükseklik PayTR'nin iframeResizer
+ * kütüphanesiyle içeriğe göre ayarlanır.
+ *
+ * MOBİL: iframe KULLANILMAZ, sayfanın tamamı PayTR'ye taşınır. Sebep: mobil
+ * tarayıcılar (özellikle iOS Safari, varsayılan ayarlarıyla) çapraz-site
+ * iframe'lerde üçüncü taraf çerezlerini engelliyor. PayTR'nin ödeme oturumu o
+ * çereze bağlı olduğu için form "yükleniyor" yazısında asılı kalıyordu —
+ * aynı sipariş masaüstünde sorunsuz açılıyordu. Üstüne mobilde iframe
+ * yüksekliğinin ölçülememesi ve 3D Secure adımında bankanın sayfasının
+ * çerçeve içinde davranışı da ayrı birer risk.
+ *
+ * Tam sayfa açılış PayTR tarafından desteklenir; ödeme bitince PayTR üst
+ * pencereyi merchant_ok_url'e (bizim /odeme/donus köprümüz) götürür ve köprü
+ * hem iframe hem tam sayfa durumunu zaten karşılıyor.
  *
  * Not: Çekirdek `paytr.ts` (node:crypto kullanır) bu istemci bileşenine
  * import EDİLMEZ; iframe kaynağı sunucudan prop olarak gelir.
@@ -31,19 +45,43 @@ interface PaytrFrameProps {
   iframeSrc: string;
 }
 
+/** Dar ekran ya da dokunmatik işaretçi → iframe yerine tam sayfa ödeme. */
+function tamSayfaGerekli(): boolean {
+  if (typeof window === "undefined") return false;
+  return (
+    window.matchMedia("(max-width: 820px)").matches ||
+    window.matchMedia("(pointer: coarse)").matches
+  );
+}
+
 export default function PaytrFrame({ iframeSrc }: PaytrFrameProps) {
   const [loaded, setLoaded] = useState(false);
   const [stalled, setStalled] = useState(false);
+  const [yonlendiriliyor, setYonlendiriliyor] = useState(false);
   const resizedRef = useRef(false);
+
+  /* Mobil: tam sayfa ödemeye geç.
+     `replace` bilinçli: PayTR'den geri dönüldüğünde bu sayfa geçmişte
+     kalmadığı için "geri → tekrar yönlendirme" döngüsü oluşmaz. */
+  useEffect(() => {
+    if (!tamSayfaGerekli()) return;
+    // Karar yalnızca istemcide verilebilir (matchMedia sunucuda yok); sunucu
+    // ve istemcinin ilk render'ı aynı kalsın diye durum efektte değişiyor.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydration guard
+    setYonlendiriliyor(true);
+    window.location.replace(iframeSrc);
+  }, [iframeSrc]);
 
   // Form belirli sürede gelmediyse kullanıcı boş kutuya bakmakla kalmasın.
   useEffect(() => {
-    if (loaded) return;
+    if (loaded || yonlendiriliyor) return;
     const t = setTimeout(() => setStalled(true), STALL_NOTICE_MS);
     return () => clearTimeout(t);
-  }, [loaded]);
+  }, [loaded, yonlendiriliyor]);
 
   useEffect(() => {
+    if (yonlendiriliyor) return;
+
     function applyResize() {
       if (resizedRef.current) return;
       if (typeof window !== "undefined" && typeof window.iFrameResize === "function") {
@@ -75,8 +113,45 @@ export default function PaytrFrame({ iframeSrc }: PaytrFrameProps) {
     }
 
     return () => script.removeEventListener("load", onLoad);
-  }, []);
+  }, [yonlendiriliyor]);
 
+  /* ── Mobil: yönlendirme ekranı ── */
+  if (yonlendiriliyor) {
+    return (
+      <div
+        style={{
+          minHeight: 220,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 14,
+          fontFamily: "var(--hl-font-ui)",
+          textAlign: "center",
+          padding: 20,
+        }}
+      >
+        <div
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: "50%",
+            border: "3px solid var(--hl-line-strong)",
+            borderTopColor: "var(--hl-bronze-400)",
+            animation: "hl-spin 0.8s linear infinite",
+          }}
+        />
+        <p style={{ fontSize: 13, color: "var(--hl-text-mute)" }}>
+          Güvenli ödeme sayfasına yönlendiriliyorsunuz…
+        </p>
+        <a href={iframeSrc} style={{ fontSize: 12, color: "var(--hl-bronze-400)" }}>
+          Sayfa açılmadıysa buraya dokunun
+        </a>
+      </div>
+    );
+  }
+
+  /* ── Masaüstü: iframe ── */
   return (
     <div style={{ position: "relative", width: "100%", minHeight: MIN_HEIGHT }}>
       {!loaded && (
@@ -111,21 +186,22 @@ export default function PaytrFrame({ iframeSrc }: PaytrFrameProps) {
         onLoad={() => setLoaded(true)}
         style={{ width: "100%", minHeight: MIN_HEIGHT, border: 0 }}
       />
-      {stalled && (
-        <p
-          style={{
-            marginTop: 10,
-            textAlign: "center",
-            fontFamily: "var(--hl-font-ui)",
-            fontSize: 11,
-            color: "var(--hl-text-mute)",
-            lineHeight: 1.7,
-          }}
-        >
-          Ödeme formu açılmadıysa sayfayı yenilemeyi deneyin. Tutar hesabınızdan
-          çekilmedi.
-        </p>
-      )}
+      <p
+        style={{
+          marginTop: 10,
+          textAlign: "center",
+          fontFamily: "var(--hl-font-ui)",
+          fontSize: 11,
+          color: "var(--hl-text-mute)",
+          lineHeight: 1.7,
+        }}
+      >
+        {stalled ? "Ödeme formu açılmadı mı? " : ""}
+        <a href={iframeSrc} style={{ color: "var(--hl-bronze-400)" }}>
+          Güvenli ödeme sayfasını tam ekran aç
+        </a>
+        {stalled ? " · Tutar hesabınızdan çekilmedi." : ""}
+      </p>
     </div>
   );
 }
