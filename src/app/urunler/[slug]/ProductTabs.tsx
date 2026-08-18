@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ImgSlot from "@/components/ui/ImgSlot";
 import ReviewsSection, { type ReviewData } from "./ReviewsSection";
 import type { Product } from "@/lib/types";
@@ -22,6 +22,17 @@ type Tab = (typeof TABS)[number];
 export default function ProductTabs({ product, materialName, careInfo, weightGrams, slug, reviews, ratingAvg, reviewCount }: Props) {
   const [active, setActive] = useState<Tab>("Açıklama");
 
+  /* Adreste #yorumlar varsa Yorumlar sekmesi doğrudan açılır ve oraya kaydırılır.
+     Hesabındaki sipariş detayından "Yorum Yaz" bağlantısı buraya geliyor;
+     sekme kapalı kaldığında kullanıcı formu hiç bulamıyordu. */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash !== "#yorumlar") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- adres çubuğu yalnızca istemcide okunur
+    setActive("Yorumlar");
+    document.getElementById("yorumlar")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
   const specs: Array<[string, string]> = [
     ["SKU", product.sku],
     ...(materialName ? [["Malzeme", materialName] as [string, string]] : []),
@@ -30,7 +41,7 @@ export default function ProductTabs({ product, materialName, careInfo, weightGra
   ];
 
   return (
-    <div>
+    <div id="yorumlar">
       {/* Tab navigation */}
       <div style={{
         display: "flex",

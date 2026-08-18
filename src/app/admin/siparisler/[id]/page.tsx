@@ -9,7 +9,7 @@ import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import { formatPrice } from "@/lib/utils";
 
-type OrderStatus    = "BEKLEMEDE" | "ONAYLANDI" | "HAZIRLANIYOR" | "KARGODA" | "TESLIM_EDILDI" | "IPTAL_EDILDI";
+type OrderStatus    = "BEKLEMEDE" | "ONAYLANDI" | "HAZIRLANIYOR" | "TESLIME_HAZIR" | "KARGODA" | "TESLIM_EDILDI" | "IPTAL_EDILDI";
 type PaymentStatus  = "BEKLIYOR" | "ODENDI" | "BASARISIZ" | "IADE_EDILDI" | "KISMI_IADE";
 type ShipmentStatus = "HAZIRLANIYOR" | "KARGOYA_VERILDI" | "YOLDA" | "TESLIM_EDILDI" | "IADE_EDILDI";
 
@@ -52,6 +52,9 @@ interface OrderDetail {
     currency: string;
     paidAt: string | null;
   }>;
+  /** Mağazadan teslim siparişinde kargo adımları hiç gösterilmez. */
+  storePickup?: boolean;
+  shippingMethod?: string | null;
   shipments: Array<{
     id: string;
     provider: string;
@@ -61,6 +64,17 @@ interface OrderDetail {
     deliveredAt: string | null;
   }>;
 }
+
+/* Mağazadan teslim siparişinde "Kargoda" diye bir adım yok; kargolu siparişte
+   de "Teslime Hazır" yok. Sunucu da bunu ayrıca doğruluyor. */
+const PICKUP_STATUS_OPTIONS: { value: OrderStatus; label: string }[] = [
+  { value: "BEKLEMEDE",     label: "Beklemede"     },
+  { value: "ONAYLANDI",     label: "Onaylandı"     },
+  { value: "HAZIRLANIYOR",  label: "Hazırlanıyor"  },
+  { value: "TESLIME_HAZIR", label: "Hazır (mağazadan teslim alınabilir)" },
+  { value: "TESLIM_EDILDI", label: "Teslim Edildi" },
+  { value: "IPTAL_EDILDI",  label: "İptal Edildi"  },
+];
 
 const ORDER_STATUS_OPTIONS: { value: OrderStatus; label: string }[] = [
   { value: "BEKLEMEDE",     label: "Beklemede"     },
@@ -91,6 +105,7 @@ const ORDER_STATUS_BADGE: Record<OrderStatus, { label: string; variant: "default
   BEKLEMEDE:    { label: "Beklemede",    variant: "sale"     },
   ONAYLANDI:    { label: "Onaylandı",    variant: "new"      },
   HAZIRLANIYOR: { label: "Hazırlanıyor", variant: "featured" },
+  TESLIME_HAZIR:{ label: "Teslime Hazır", variant: "success"  },
   KARGODA:      { label: "Kargoda",      variant: "new"      },
   TESLIM_EDILDI:{ label: "Teslim Edildi",variant: "success"  },
   IPTAL_EDILDI: { label: "İptal Edildi", variant: "danger"   },
@@ -286,6 +301,16 @@ export default function SiparisDetayPage() {
   );
 
   const statusInfo = ORDER_STATUS_BADGE[order.status];
+
+  /* Kargo takip numarası zorunlu mu? "Kargoya verildi"ye ya da sipariş
+     durumunu "Kargoda"ya çekerken numara olmadan kaydetmeye izin verilmez —
+     aksi hâlde müşteriye takip edilemeyen bir kargo bildirimi gidiyordu.
+     Sunucu da aynı kuralı uyguluyor; bu yalnızca erken uyarı. */
+  const kargoKoduZorunlu =
+    !order.storePickup &&
+    (updateShipment === "KARGOYA_VERILDI" || updateStatus === "KARGODA") &&
+    !(order.shipments[0]?.trackingNumber ?? "");
+  const kaydetEngelli = kargoKoduZorunlu && !trackingNumber.trim();
   const addr       = order.shippingAddress;
 
   return (
@@ -516,7 +541,7 @@ export default function SiparisDetayPage() {
                     onChange={e => setUpdateStatus(e.target.value as OrderStatus)}
                     className="w-full px-3 py-2 text-sm bg-bg rounded-lg border border-border-default text-ink focus:outline-none focus:border-accent"
                   >
-                    {ORDER_STATUS_OPTIONS.map(o => (
+                    {(order.storePickup ? PICKUP_STATUS_OPTIONS : ORDER_STATUS_OPTIONS).map(o => (
                       <option key={o.value} value={o.value}>{o.label}</option>
                     ))}
                   </select>
@@ -541,33 +566,52 @@ export default function SiparisDetayPage() {
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-[10px] font-semibold uppercase tracking-widest text-ink-dim mb-1.5">
-                    Kargo Durumu
-                  </label>
-                  <select
-                    value={updateShipment}
-                    onChange={e => setUpdateShipment(e.target.value as ShipmentStatus)}
-                    className="w-full px-3 py-2 text-sm bg-bg rounded-lg border border-border-default text-ink focus:outline-none focus:border-accent"
-                  >
-                    {SHIPMENT_STATUS_OPTIONS.map(o => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
-                </div>
+                {/* Mağazadan teslim siparişinde kargo adımı YOKTUR — alanlar hiç
+                    çizilmez. Sunucu da bu siparişte kargo bilgisini reddeder. */}
+                {!order.storePickup && (
+                  <>
+                    <div>
+                      <label className="block text-[10px] font-semibold uppercase tracking-widest text-ink-dim mb-1.5">
+                        Kargo Durumu
+                      </label>
+                      <select
+                        value={updateShipment}
+                        onChange={e => setUpdateShipment(e.target.value as ShipmentStatus)}
+                        className="w-full px-3 py-2 text-sm bg-bg rounded-lg border border-border-default text-ink focus:outline-none focus:border-accent"
+                      >
+                        {SHIPMENT_STATUS_OPTIONS.map(o => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                      </select>
+                    </div>
 
-                <div>
-                  <label className="block text-[10px] font-semibold uppercase tracking-widest text-ink-dim mb-1.5">
-                    Kargo Takip No
-                  </label>
-                  <input
-                    type="text"
-                    value={trackingNumber}
-                    onChange={e => setTrackingNumber(e.target.value)}
-                    placeholder="Takip numarası girin…"
-                    className="w-full px-3 py-2 text-sm bg-bg rounded-lg border border-border-default text-ink placeholder-ink-dim focus:outline-none focus:border-accent font-mono"
-                  />
-                </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold uppercase tracking-widest text-ink-dim mb-1.5">
+                        Kargo Takip No {kargoKoduZorunlu && <span className="text-red-400">*</span>}
+                      </label>
+                      <input
+                        type="text"
+                        value={trackingNumber}
+                        onChange={e => setTrackingNumber(e.target.value)}
+                        placeholder="Takip numarası girin…"
+                        className="w-full px-3 py-2 text-sm bg-bg rounded-lg border border-border-default text-ink placeholder-ink-dim focus:outline-none focus:border-accent font-mono"
+                      />
+                      {kargoKoduZorunlu && !trackingNumber.trim() && (
+                        <p className="text-[10px] text-red-400 mt-1">
+                          Kargoya verildi olarak işaretlemek için takip numarası zorunludur.
+                        </p>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {order.storePickup && (
+                  <p className="text-[11px] text-ink-dim leading-relaxed">
+                    Bu sipariş <span className="text-ink">mağazadan teslim</span> — kargo adımı yok.
+                    &ldquo;Hazır&rdquo; olarak işaretlediğinizde müşteriye mağaza adresi ve çalışma
+                    saatleriyle birlikte bilgilendirme e-postası gider.
+                  </p>
+                )}
 
                 {saveErr && (
                   <div className="flex items-center gap-2 p-2.5 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs">
@@ -584,7 +628,7 @@ export default function SiparisDetayPage() {
                   variant="primary"
                   size="sm"
                   onClick={handleSave}
-                  disabled={saving}
+                  disabled={saving || kaydetEngelli}
                   className="w-full justify-center"
                 >
                   {saving ? "Kaydediliyor…" : "Değişiklikleri Kaydet"}

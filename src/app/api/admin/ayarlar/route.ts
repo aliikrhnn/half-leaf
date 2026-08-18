@@ -21,6 +21,10 @@ const UpdateSchema = z.object({
   facebookUrl:           z.string().url().nullable().optional(),
   twitterUrl:            z.string().url().nullable().optional(),
   whatsappNumber:        z.string().nullable().optional(),
+  /* Mağazadan teslim siparişlerinde "hazır" e-postasında gösterilir. */
+  storeHours:            z.string().max(200).nullable().optional(),
+  /* Yeni sipariş bildirimlerinin gideceği adres (boşsa koddaki yedek kullanılır). */
+  ownerNotificationEmail: z.string().email().nullable().optional(),
   announcementMessages:  z.array(z.string().max(200)).max(20).optional(),
 });
 

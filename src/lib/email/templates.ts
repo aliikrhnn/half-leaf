@@ -127,6 +127,8 @@ export interface OrderEmailData {
    * formunu doldurmadan "siparişiniz alındı" maili almamalı.
    */
   variant?: "alindi" | "odendi";
+  /** Mağazadan teslim siparişinde metin kargodan söz etmemeli. */
+  storePickup?: boolean;
 }
 
 /** Sipariş onay e-postası (alındı / ödendi varyantlı). */
@@ -137,8 +139,13 @@ export function orderConfirmationEmail(data: OrderEmailData): { subject: string;
     !paid && data.paymentMethod === "HAVALE_EFT"
       ? `<div style="background:#faf7f0;border:1px solid #e8e1d2;border-radius:10px;padding:12px 14px;margin:16px 0;font-size:13px;color:${MUTE};">Havale/EFT ödemeniz hesabımıza ulaştığında siparişiniz onaylanır. Açıklamaya <b style="color:${INK};">${escapeHtml(data.orderNumber)}</b> sipariş numaranızı yazmayı unutmayın.</div>`
       : "";
+  /* Sıradaki adım artık "hazırlanıyor" DEĞİL, mağaza onayı: her sipariş
+     panelden tek tek onaylanıyor. Metin bu yüzden söz vermiyor, bekletiyor. */
+  const sonrakiAdim = data.storePickup
+    ? "Siparişiniz onaylandığında sizi bilgilendireceğiz; hazır olduğunda mağazamızdan teslim alabilirsiniz."
+    : "Siparişiniz onaylandığında sizi bilgilendireceğiz; kargoya verildiğinde takip numarasını ileteceğiz.";
   const paidNote = paid
-    ? `<div style="background:#f2f7f0;border:1px solid #dbe6d5;border-radius:10px;padding:12px 14px;margin:16px 0;font-size:13px;color:${MUTE};">Ödemeniz <b style="color:${INK};">başarıyla alındı</b>. Siparişiniz hazırlanmaya başlıyor; kargoya verildiğinde sizi ayrıca bilgilendireceğiz.</div>`
+    ? `<div style="background:#f2f7f0;border:1px solid #dbe6d5;border-radius:10px;padding:12px 14px;margin:16px 0;font-size:13px;color:${MUTE};">Ödemeniz <b style="color:${INK};">başarıyla alındı</b>. ${sonrakiAdim}</div>`
     : "";
 
   const intro = paid
@@ -248,4 +255,145 @@ export function shippingNotificationEmail(data: ShippingEmailData): { subject: s
     <div style="text-align:center;margin-top:22px;">${button(trackUrl, "Siparişini Takip Et")}</div>
   `;
   return { subject: `Siparişiniz kargoda · ${data.orderNumber}`, html: shell("Siparişiniz yola çıktı 🚚", body) };
+}
+
+/* ─── Sipariş akışı bildirimleri ─────────────────────────────────────────────
+ *
+ * Müşterinin gördüğü sıra:
+ *   1. "Ödemeniz alındı"        → orderConfirmationEmail(variant: "odendi")
+ *   2. "Siparişiniz onaylandı"  → orderApprovedEmail        (mağaza onaylayınca)
+ *   3a. Mağazadan teslim: "Siparişiniz hazır" → pickupReadyEmail
+ *   3b. Kargo: "Kargoya verildi" → shippingNotificationEmail
+ */
+
+export interface OrderApprovedEmailData {
+  orderNumber: string;
+  /** Mağazadan teslim siparişlerinde metin "kargoya verilecek" demez. */
+  storePickup: boolean;
+}
+
+/** Mağaza siparişi onayladığında gönderilir: "onaylandı, hazırlanıyor". */
+export function orderApprovedEmail(
+  data: OrderApprovedEmailData,
+): { subject: string; html: string } {
+  const trackUrl = `${SITE_URL}/siparis-takip?no=${encodeURIComponent(data.orderNumber)}`;
+  const devam = data.storePickup
+    ? "Siparişiniz hazırlanıyor. Teslim alabileceğiniz duruma geldiğinde sizi ayrıca bilgilendireceğiz."
+    : "Siparişiniz hazırlanıyor. Kargoya verildiğinde takip numarasıyla birlikte sizi bilgilendireceğiz.";
+
+  const body = `
+    <p style="font-size:14px;color:${MUTE};line-height:1.7;margin:0 0 16px;">
+      <b style="color:${INK};">${escapeHtml(data.orderNumber)}</b> numaralı siparişiniz onaylandı.
+    </p>
+    <p style="font-size:14px;color:${MUTE};line-height:1.7;margin:0 0 16px;">${devam}</p>
+    <div style="text-align:center;margin-top:22px;">${button(trackUrl, "Siparişini Takip Et")}</div>
+  `;
+  return {
+    subject: `Siparişiniz onaylandı · ${data.orderNumber}`,
+    html: shell("Siparişiniz onaylandı", body),
+  };
+}
+
+export interface PickupReadyEmailData {
+  orderNumber: string;
+  /** Mağaza adresi (SiteSettings.contactAddress). */
+  address?: string | null;
+  /** Çalışma saatleri (SiteSettings.storeHours). Boşsa satır hiç basılmaz. */
+  hours?: string | null;
+  phone?: string | null;
+}
+
+/** Mağazadan teslim siparişi hazır olduğunda gönderilir. */
+export function pickupReadyEmail(
+  data: PickupReadyEmailData,
+): { subject: string; html: string } {
+  const trackUrl = `${SITE_URL}/siparis-takip?no=${encodeURIComponent(data.orderNumber)}`;
+
+  const satir = (etiket: string, deger?: string | null) =>
+    deger && deger.trim()
+      ? `<p style="font-size:14px;color:${MUTE};line-height:1.7;margin:0 0 6px;">
+           <span style="color:${INK};font-weight:700;">${etiket}:</span> ${escapeHtml(deger.trim())}
+         </p>`
+      : "";
+
+  const kutu =
+    satir("Adres", data.address) + satir("Çalışma saatleri", data.hours) + satir("Telefon", data.phone);
+
+  const body = `
+    <p style="font-size:14px;color:${MUTE};line-height:1.7;margin:0 0 16px;">
+      <b style="color:${INK};">${escapeHtml(data.orderNumber)}</b> numaralı siparişiniz hazır —
+      mağazamızdan teslim alabilirsiniz.
+    </p>
+    ${kutu ? `<div style="background:#faf8f3;border:1px solid #ece7db;border-radius:10px;padding:14px 16px;margin:16px 0;">${kutu}</div>` : ""}
+    <p style="font-size:13px;color:${MUTE};line-height:1.7;margin:0;">
+      Teslim alırken sipariş numaranızı belirtmeniz yeterlidir.
+    </p>
+    <div style="text-align:center;margin-top:22px;">${button(trackUrl, "Sipariş Detayı")}</div>
+  `;
+  return {
+    subject: `Siparişiniz hazır · ${data.orderNumber}`,
+    html: shell("Siparişiniz teslime hazır 🌿", body),
+  };
+}
+
+export interface OwnerOrderEmailData {
+  orderNumber: string;
+  items: ReadonlyArray<{ name: string; quantity: number; lineTotal: number }>;
+  grandTotal: number;
+  customerName?: string | null;
+  customerEmail?: string | null;
+  customerPhone?: string | null;
+  /** "Mağazadan Teslim" / "Yurt İçi Kargo" gibi okunur etiket. */
+  shippingLabel?: string | null;
+  address?: string | null;
+  customerNote?: string | null;
+  paymentLabel?: string | null;
+  /** Yönetim panelindeki sipariş detayının mutlak adresi. */
+  adminUrl?: string | null;
+}
+
+/**
+ * Mağaza sahibine yeni sipariş bildirimi.
+ * Müşteri e-postalarından farklı olarak İŞ bilgisi taşır: kim, ne, nereye,
+ * hangi ödeme — ve doğrudan panele giden bağlantı.
+ */
+export function newOrderOwnerEmail(
+  data: OwnerOrderEmailData,
+): { subject: string; html: string } {
+  const satir = (etiket: string, deger?: string | null) =>
+    deger && String(deger).trim()
+      ? `<div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid #f0ede5;">
+           <span style="font-size:12px;color:${MUTE};">${etiket}</span>
+           <span style="font-size:13px;color:${INK};text-align:right;">${escapeHtml(String(deger).trim())}</span>
+         </div>`
+      : "";
+
+  const body = `
+    <p style="font-size:14px;color:${MUTE};line-height:1.7;margin:0 0 16px;">
+      Yeni bir sipariş alındı ve <b style="color:${INK};">onayınızı bekliyor</b>.
+    </p>
+    <div style="background:#faf8f3;border:1px solid #ece7db;border-radius:10px;padding:12px 14px;margin-bottom:16px;">
+      <span style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:${MUTE};">Sipariş No</span><br>
+      <span style="font-size:17px;font-weight:700;color:${INK};">${escapeHtml(data.orderNumber)}</span>
+    </div>
+    ${itemsTable(data.items)}
+    <div style="display:flex;justify-content:space-between;padding:14px 0 0;margin-top:6px;border-top:2px solid #ece7db;">
+      <span style="font-size:15px;font-weight:700;color:${INK};">Toplam</span>
+      <span style="font-size:18px;font-weight:800;color:${BRONZE};">${formatPrice(data.grandTotal)}</span>
+    </div>
+    <div style="margin-top:18px;">
+      ${satir("Müşteri", data.customerName)}
+      ${satir("E-posta", data.customerEmail)}
+      ${satir("Telefon", data.customerPhone)}
+      ${satir("Teslimat", data.shippingLabel)}
+      ${satir("Adres", data.address)}
+      ${satir("Ödeme", data.paymentLabel)}
+      ${satir("Müşteri notu", data.customerNote)}
+    </div>
+    ${data.adminUrl ? `<div style="text-align:center;margin-top:22px;">${button(data.adminUrl, "Panelde Aç")}</div>` : ""}
+  `;
+  return {
+    subject: `Yeni sipariş · ${data.orderNumber} · ${formatPrice(data.grandTotal)}`,
+    html: shell("Yeni sipariş alındı", body),
+  };
 }

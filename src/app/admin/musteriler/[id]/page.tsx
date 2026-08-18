@@ -10,7 +10,7 @@ import {
 import AdminHeader from "@/components/admin/layout/AdminHeader";
 import { formatPrice } from "@/lib/utils";
 
-type OrderStatus    = "BEKLEMEDE" | "ONAYLANDI" | "HAZIRLANIYOR" | "KARGODA" | "TESLIM_EDILDI" | "IPTAL_EDILDI";
+type OrderStatus    = "BEKLEMEDE" | "ONAYLANDI" | "HAZIRLANIYOR" | "TESLIME_HAZIR" | "KARGODA" | "TESLIM_EDILDI" | "IPTAL_EDILDI";
 type PaymentStatus  = "BEKLIYOR"  | "ODENDI"   | "BASARISIZ"   | "IADE_EDILDI" | "KISMI_IADE";
 type ConsentType    = "KVKK_AYDINLATMA" | "TICARI_ILETI" | "CEREZ" | "MESAFELI_SATIS" | "ON_BILGILENDIRME";
 
@@ -54,6 +54,7 @@ const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   BEKLEMEDE:     "Beklemede",
   ONAYLANDI:     "Onaylandı",
   HAZIRLANIYOR:  "Hazırlanıyor",
+  TESLIME_HAZIR: "Teslime Hazır",
   KARGODA:       "Kargoda",
   TESLIM_EDILDI: "Teslim Edildi",
   IPTAL_EDILDI:  "İptal Edildi",
@@ -63,6 +64,7 @@ const ORDER_STATUS_COLORS: Record<OrderStatus, string> = {
   BEKLEMEDE:     "bg-yellow-500/15 text-yellow-400 border-yellow-500/20",
   ONAYLANDI:     "bg-blue-500/15 text-blue-400 border-blue-500/20",
   HAZIRLANIYOR:  "bg-purple-500/15 text-purple-400 border-purple-500/20",
+  TESLIME_HAZIR: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20",
   KARGODA:       "bg-orange-500/15 text-orange-400 border-orange-500/20",
   TESLIM_EDILDI: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20",
   IPTAL_EDILDI:  "bg-red-500/15 text-red-400 border-red-500/20",

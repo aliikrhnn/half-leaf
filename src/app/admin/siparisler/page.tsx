@@ -7,7 +7,7 @@ import AdminHeader from "@/components/admin/layout/AdminHeader";
 import Badge from "@/components/ui/Badge";
 import { formatPrice } from "@/lib/utils";
 
-type OrderStatus = "BEKLEMEDE" | "ONAYLANDI" | "HAZIRLANIYOR" | "KARGODA" | "TESLIM_EDILDI" | "IPTAL_EDILDI";
+type OrderStatus = "BEKLEMEDE" | "ONAYLANDI" | "HAZIRLANIYOR" | "TESLIME_HAZIR" | "KARGODA" | "TESLIM_EDILDI" | "IPTAL_EDILDI";
 type PaymentStatus = "BEKLIYOR" | "ODENDI" | "BASARISIZ" | "IADE_EDILDI" | "KISMI_IADE";
 
 interface OrderRow {
@@ -32,6 +32,7 @@ const ORDER_STATUS: Record<OrderStatus, { label: string; variant: "default" | "n
   BEKLEMEDE:    { label: "Beklemede",    variant: "sale"    },
   ONAYLANDI:    { label: "Onaylandı",    variant: "new"     },
   HAZIRLANIYOR: { label: "Hazırlanıyor", variant: "featured"},
+  TESLIME_HAZIR:{ label: "Teslime Hazır", variant: "success" },
   KARGODA:      { label: "Kargoda",      variant: "new"     },
   TESLIM_EDILDI:{ label: "Teslim Edildi",variant: "success" },
   IPTAL_EDILDI: { label: "İptal Edildi", variant: "danger"  },

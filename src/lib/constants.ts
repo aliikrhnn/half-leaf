@@ -7,6 +7,14 @@ export const FREE_SHIPPING_THRESHOLD = 2500;
 export const SHIPPING_COST = 150;
 
 export const CONTACT_EMAIL = "info@halfleafstore.com";
+
+/**
+ * Yeni sipariş bildirimlerinin gideceği mağaza sahibi adresi.
+ * Yönetim panelindeki `SiteSettings.ownerNotificationEmail` doluysa O kazanır;
+ * burası yalnızca yedektir. Ortam değişkeniyle de geçersiz kılınabilir.
+ */
+export const STORE_OWNER_EMAIL =
+  process.env.STORE_OWNER_EMAIL?.trim() || "sairmuhammedakdas@hotmail.com";
 export const CONTACT_PHONE = "+90 543 533 2998";
 /**
  * Mağaza adresi — yönetim panelinde ayarlanmamışsa kullanılan yedek değer.

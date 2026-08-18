@@ -6,7 +6,7 @@ import { requireAdmin, isResponse } from "@/lib/auth/middleware";
 import { restoreOrderStock } from "@/lib/payment/fulfillment";
 
 const UpdateSchema = z.object({
-  status: z.enum(["BEKLEMEDE", "ONAYLANDI", "HAZIRLANIYOR", "KARGODA", "TESLIM_EDILDI", "IPTAL_EDILDI"]).optional(),
+  status: z.enum(["BEKLEMEDE", "ONAYLANDI", "HAZIRLANIYOR", "TESLIME_HAZIR", "KARGODA", "TESLIM_EDILDI", "IPTAL_EDILDI"]).optional(),
   paymentStatus: z.enum(["BEKLIYOR", "ODENDI", "BASARISIZ", "IADE_EDILDI", "KISMI_IADE"]).optional(),
   shipmentStatus: z.enum(["HAZIRLANIYOR", "KARGOYA_VERILDI", "YOLDA", "TESLIM_EDILDI", "IADE_EDILDI"]).optional(),
   trackingNumber: z.string().trim().optional(),
@@ -62,6 +62,9 @@ export async function GET(
       shippingAddress: order.shippingAddress,
       billingAddress: order.billingAddress,
       customerNote: order.customerNote,
+      // Panel kargo bölümünü buna göre gizler.
+      shippingMethod: order.shippingMethod,
+      storePickup: order.shippingMethod === "DUKKAN_TESLIM",
       placedAt: order.placedAt,
       createdAt: order.createdAt,
       user: order.User,
@@ -109,6 +112,33 @@ export async function PATCH(
       },
     });
     if (!order) return notFound("Sipariş bulunamadı.");
+
+    /* ── Teslim yöntemine göre kurallar ──
+       Mağazadan teslim siparişinde kargo diye bir adım YOKTUR: kargo durumu ve
+       takip numarası alanları sunucuda da reddedilir (panelde gizli olmaları
+       tek başına yeterli değil). Kargolu siparişte de "teslime hazır" durumu
+       anlamsızdır — o yalnızca mağaza teslimine ait. */
+    const storePickup = order.shippingMethod === "DUKKAN_TESLIM";
+
+    if (storePickup && (shipmentStatus || trackingNumber !== undefined)) {
+      return badRequest("Bu sipariş mağazadan teslim; kargo bilgisi girilemez.");
+    }
+    if (storePickup && status === "KARGODA") {
+      return badRequest("Mağazadan teslim siparişi kargoya verilemez.");
+    }
+    if (!storePickup && status === "TESLIME_HAZIR") {
+      return badRequest("\"Teslime hazır\" yalnızca mağazadan teslim siparişlerinde kullanılır.");
+    }
+
+    /* Kargo takip numarası ZORUNLU: numarasız "kargoya verildi" müşteriye
+       takip edilemeyen bir bildirim gönderiyordu. */
+    const mevcutTakip = order.Shipment[0]?.trackingNumber ?? null;
+    const sonTakip = trackingNumber !== undefined ? (trackingNumber || null) : mevcutTakip;
+    const kargoyaVeriliyor =
+      shipmentStatus === "KARGOYA_VERILDI" || (status === "KARGODA" && order.status !== "KARGODA");
+    if (kargoyaVeriliyor && !sonTakip) {
+      return badRequest("Kargoya verildi olarak işaretlemek için kargo takip numarası zorunludur.");
+    }
 
     const before: Record<string, unknown> = {};
     const after:  Record<string, unknown> = {};
@@ -198,20 +228,51 @@ export async function PATCH(
       }
     });
 
-    // Kargo bildirimi e-postası: durum "kargoya verildi"ye geçtiyse (env-gated).
-    if (shipmentStatus === "KARGOYA_VERILDI" && order.User?.email) {
+    /* ── Müşteri bildirimleri (transaction sonrası, env-gated) ──
+       Sipariş akışı: ödeme alındı → MAĞAZA ONAYI → hazırlanıyor →
+       (mağaza teslimi) teslime hazır / (kargo) kargoya verildi.
+       Her adım yalnızca gerçekten O ADIMA GEÇİLDİĞİNDE bildirilir; aynı
+       durumun tekrar kaydedilmesi mükerrer e-posta üretmez. */
+    const musteriEposta = order.User?.email;
+    if (musteriEposta) {
       try {
-        const { shippingNotificationEmail } = await import("@/lib/email/templates");
         const { sendEmail } = await import("@/lib/email/resend");
-        const existing = order.Shipment[0];
-        const mail = shippingNotificationEmail({
-          orderNumber: order.orderNumber,
-          provider: existing?.provider ?? "Kargo",
-          trackingNumber: trackingNumber || existing?.trackingNumber || null,
-          trackingUrl: existing?.trackingUrl ?? null,
-        });
-        await sendEmail({ to: order.User.email, subject: mail.subject, html: mail.html });
-      } catch { /* e-posta hatası yoksay */ }
+
+        if (status === "ONAYLANDI" && order.status !== "ONAYLANDI") {
+          const { orderApprovedEmail } = await import("@/lib/email/templates");
+          const mail = orderApprovedEmail({ orderNumber: order.orderNumber, storePickup });
+          await sendEmail({ to: musteriEposta, subject: mail.subject, html: mail.html });
+        }
+
+        if (status === "TESLIME_HAZIR" && order.status !== "TESLIME_HAZIR") {
+          const [{ pickupReadyEmail }, settings] = await Promise.all([
+            import("@/lib/email/templates"),
+            prisma.siteSettings.findUnique({
+              where: { id: "site" },
+              select: { contactAddress: true, storeHours: true, contactPhone: true },
+            }),
+          ]);
+          const mail = pickupReadyEmail({
+            orderNumber: order.orderNumber,
+            address: settings?.contactAddress ?? null,
+            hours: settings?.storeHours ?? null,
+            phone: settings?.contactPhone ?? null,
+          });
+          await sendEmail({ to: musteriEposta, subject: mail.subject, html: mail.html });
+        }
+
+        if (kargoyaVeriliyor) {
+          const { shippingNotificationEmail } = await import("@/lib/email/templates");
+          const existing = order.Shipment[0];
+          const mail = shippingNotificationEmail({
+            orderNumber: order.orderNumber,
+            provider: existing?.provider ?? "Kargo",
+            trackingNumber: sonTakip,
+            trackingUrl: existing?.trackingUrl ?? null,
+          });
+          await sendEmail({ to: musteriEposta, subject: mail.subject, html: mail.html });
+        }
+      } catch { /* e-posta hatası panel işlemini bozmaz */ }
     }
 
     return ok({ updated: true });

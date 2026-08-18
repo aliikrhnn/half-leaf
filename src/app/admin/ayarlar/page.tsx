@@ -21,6 +21,8 @@ type SiteSettings = {
   facebookUrl: string | null;
   twitterUrl: string | null;
   whatsappNumber: string | null;
+  storeHours: string | null;
+  ownerNotificationEmail: string | null;
   announcementMessages: string[];
 };
 
@@ -726,6 +728,8 @@ export default function AdminAyarlarPage() {
                 <Field label="Facebook" value={settings.facebookUrl ?? ""} onChange={v => update("facebookUrl", v || null)} placeholder="https://facebook.com/sayfa" />
                 <Field label="Twitter / X" value={settings.twitterUrl ?? ""} onChange={v => update("twitterUrl", v || null)} placeholder="https://twitter.com/kullanici" />
                 <Field label="WhatsApp Numarası" value={settings.whatsappNumber ?? ""} onChange={v => update("whatsappNumber", v || null)} placeholder="+905000000000" />
+                <Field label="Çalışma Saatleri" value={settings.storeHours ?? ""} onChange={v => update("storeHours", v || null)} placeholder="Hafta içi 10:00-20:00 · Cumartesi 11:00-19:00" />
+                <Field label="Sipariş Bildirim E-postası" value={settings.ownerNotificationEmail ?? ""} onChange={v => update("ownerNotificationEmail", v || null)} placeholder="magaza@ornek.com" />
               </div>
               <SaveBar saving={saving} saved={saved} error={saveErr} onSave={handleSave} />
             </div>

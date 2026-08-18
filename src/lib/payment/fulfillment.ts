@@ -95,10 +95,18 @@ export async function finalizeSuccess(
   });
   const transitioned = res.count > 0;
 
-  await tx.order.update({
-    where: { id: args.orderId },
-    data: { status: "ONAYLANDI" },
-  });
+  /* Sipariş burada ONAYLANDI YAPILMAZ.
+     Mağaza sahibi her siparişi panelden tek tek onaylıyor; müşteri önce
+     "ödemeniz alındı", onaydan sonra "siparişiniz onaylandı, hazırlanıyor"
+     bildirimini alıyor. Ödemeyi almış ama henüz onaylanmamış sipariş
+     BEKLEMEDE kalır — iptal edilmiş bir siparişi ise ödeme geç gelmişse
+     tekrar BEKLEMEDE'ye çekmek gerekir (kurtarma yolu). */
+  if (args.orderId) {
+    await tx.order.updateMany({
+      where: { id: args.orderId, status: "IPTAL_EDILDI" },
+      data: { status: "BEKLEMEDE" },
+    });
+  }
 
   return transitioned;
 }

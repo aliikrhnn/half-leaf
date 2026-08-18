@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db/prisma";
 import { ok, serverError, paginationMeta } from "@/lib/api/response";
 import { requireAdmin, isResponse } from "@/lib/auth/middleware";
 
-const VALID_STATUSES = ["BEKLEMEDE", "ONAYLANDI", "HAZIRLANIYOR", "KARGODA", "TESLIM_EDILDI", "IPTAL_EDILDI"] as const;
+const VALID_STATUSES = ["BEKLEMEDE", "ONAYLANDI", "HAZIRLANIYOR", "TESLIME_HAZIR", "KARGODA", "TESLIM_EDILDI", "IPTAL_EDILDI"] as const;
 type OrderStatus = typeof VALID_STATUSES[number];
 
 export async function GET(req: NextRequest) {

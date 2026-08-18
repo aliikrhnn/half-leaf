@@ -368,6 +368,10 @@ export async function POST(req: NextRequest) {
           shippingAddress: addrJson,
           billingAddress: addrJson,
           customerNote: customerNote || null,
+          // Teslim yönteminin KODU saklanır: mağazadan teslim siparişlerinde
+          // yönetim panelinde kargo adımları hiç gösterilmemeli. Daha önce
+          // yalnızca Shipment.provider'da etiket olarak duruyordu.
+          shippingMethod,
           placedAt: new Date(),
         },
       });
@@ -495,6 +499,7 @@ export async function POST(req: NextRequest) {
       }
 
       return {
+        orderId: order.id,
         orderNumber,
         accessToken,
         customerEmail: user.email,
@@ -531,6 +536,15 @@ export async function POST(req: NextRequest) {
         });
         await sendEmail({ to: result.customerEmail, subject: mail.subject, html: mail.html });
       } catch { /* e-posta hatası yoksay */ }
+
+      /* Havale/EFT siparişi ödeme akışından geçmediği için mağaza sahibi
+         bildirimi burada gönderilir. Kart ödemelerinde bildirim, tahsilat
+         onaylandığında (lib/payment/notify.ts) gider — müşteri ödemeden
+         vazgeçtiyse mağaza sahibi boşuna haber almasın. */
+      try {
+        const { notifyOwnerNewOrder } = await import("@/lib/payment/notify");
+        await notifyOwnerNewOrder(result.orderId);
+      } catch { /* bildirim hatası siparişi etkilemez */ }
     }
 
     // Pazarlama izni (checkout'ta onaylandıysa ve e-posta sahipliği kanıtlıysa).

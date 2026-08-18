@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Package, Truck, Search, CheckCircle, Clock, XCircle } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 
-type OrderStatus = "BEKLEMEDE" | "ONAYLANDI" | "HAZIRLANIYOR" | "KARGODA" | "TESLIM_EDILDI" | "IPTAL_EDILDI";
+type OrderStatus = "BEKLEMEDE" | "ONAYLANDI" | "HAZIRLANIYOR" | "TESLIME_HAZIR" | "KARGODA" | "TESLIM_EDILDI" | "IPTAL_EDILDI";
 
 interface TrackResult {
   orderNumber: string;
@@ -29,6 +29,7 @@ interface TrackResult {
 const ORDER_STEPS: { key: OrderStatus; label: string }[] = [
   { key: "ONAYLANDI", label: "Onaylandı" },
   { key: "HAZIRLANIYOR", label: "Hazırlanıyor" },
+  { key: "TESLIME_HAZIR", label: "Teslime Hazır" },
   { key: "KARGODA", label: "Kargoda" },
   { key: "TESLIM_EDILDI", label: "Teslim Edildi" },
 ];
@@ -37,6 +38,7 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   BEKLEMEDE: "Sipariş Alındı",
   ONAYLANDI: "Onaylandı",
   HAZIRLANIYOR: "Hazırlanıyor",
+  TESLIME_HAZIR: "Teslime Hazır",
   KARGODA: "Kargoda",
   TESLIM_EDILDI: "Teslim Edildi",
   IPTAL_EDILDI: "İptal Edildi",

@@ -78,22 +78,22 @@ model Banner {
 }
 
 model HeroSlide {
-  id        String    @id @default(cuid())
-  title     String
-  subtitle  String?
-  eyebrow   String?
-  ctaLabel  String    @default("Keşfet")
-  ctaHref   String
-  leftImage  String?
-  rightImage String?
-  image      String?
+  id          String    @id @default(cuid())
+  title       String
+  subtitle    String?
+  eyebrow     String?
+  ctaLabel    String    @default("Keşfet")
+  ctaHref     String
+  leftImage   String?
+  rightImage  String?
+  image       String?
   mobileImage String?
-  sortOrder Int       @default(0)
-  isActive  Boolean   @default(true)
-  startsAt  DateTime?
-  endsAt    DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model Cart {
@@ -148,17 +148,17 @@ model Category {
 }
 
 model ContactMessage {
-  id          String   @id @default(cuid())
-  name        String
-  email       String
-  phone       String?
-  subject     String?
-  message     String
-  isRead      Boolean  @default(false)
-  adminNote   String?
-  ipAddress   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String?
+  message   String
+  isRead    Boolean  @default(false)
+  adminNote String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([isRead])
   @@index([createdAt])
@@ -256,6 +256,10 @@ model Order {
   shippingAddress Json
   billingAddress  Json
   customerNote    String?
+  /// Teslimat yönteminin KODU: "AYNI_GUN" | "YURT_ICI" | "DUKKAN_TESLIM".
+  /// Daha önce yalnızca Shipment.provider'da etiket olarak duruyordu; mağazadan
+  /// teslim siparişlerinde kargo adımlarının gizlenebilmesi için koda gerek var.
+  shippingMethod  String?
   placedAt        DateTime?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
@@ -342,50 +346,50 @@ model Product {
   ProductReel      ProductReel?
   ProductVariant   ProductVariant[]
   Review           Review[]
+  // Partial index'ler (WHERE clause'lu) doğrudan DB'de yönetilir — migration: add_product_filter_indexes
+  // Product_isActive_idx, Product_brand_idx, Product_compareAtPrice_idx,
+  // Product_basePrice_idx, Product_isFeatured_idx, Product_isBestseller_idx
 
   @@index([categoryId])
   @@index([materialId])
   @@index([sku])
   @@index([slug])
-  // Partial index'ler (WHERE clause'lu) doğrudan DB'de yönetilir — migration: add_product_filter_indexes
-  // Product_isActive_idx, Product_brand_idx, Product_compareAtPrice_idx,
-  // Product_basePrice_idx, Product_isFeatured_idx, Product_isBestseller_idx
 }
 
 model ProductImage {
-  id               String    @id @default(cuid())
-  productId        String
-  url              String
-  altText          String
-  sortOrder        Int       @default(0)
-  isPrimary        Boolean   @default(false)
-  colorName        String?
-  colorHex         String?
-  originalUrl      String?
-  processedUrl     String?
-  isProcessed      Boolean   @default(false)
-  processedAt      DateTime?
-  processingError  String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  Product          Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id              String    @id @default(cuid())
+  productId       String
+  url             String
+  altText         String
+  sortOrder       Int       @default(0)
+  isPrimary       Boolean   @default(false)
+  colorName       String?
+  colorHex        String?
+  originalUrl     String?
+  processedUrl    String?
+  isProcessed     Boolean   @default(false)
+  processedAt     DateTime?
+  processingError String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  Product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
 }
 
 model ImageProcessingJob {
-  id              String               @id @default(cuid())
-  status          ImageJobStatus       @default(BEKLEMEDE)
-  totalImages     Int                  @default(0)
-  processedImages Int                  @default(0)
-  failedImages    Int                  @default(0)
+  id              String         @id @default(cuid())
+  status          ImageJobStatus @default(BEKLEMEDE)
+  totalImages     Int            @default(0)
+  processedImages Int            @default(0)
+  failedImages    Int            @default(0)
   startedAt       DateTime?
   finishedAt      DateTime?
   triggeredBy     String
   errorLog        Json?
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
-  User            User                 @relation(fields: [triggeredBy], references: [id])
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  User            User           @relation(fields: [triggeredBy], references: [id])
 
   @@index([status])
   @@index([triggeredBy])
@@ -493,39 +497,39 @@ model StockMovement {
 }
 
 model User {
-  id              String          @id @default(cuid())
-  email           String          @unique
-  passwordHash    String
-  fullName        String
-  phone           String?
-  birthDate       DateTime?
-  ageVerified     Boolean         @default(false)
-  role            UserRole        @default(MUSTERI)
-  isActive        Boolean         @default(true)
-  emailVerifiedAt DateTime?
-  lastLoginAt     DateTime?
-  marketingOptIn  Boolean         @default(false)
-  marketingOptInAt DateTime?
-  unsubscribeToken String?         @unique
+  id                     String                   @id @default(cuid())
+  email                  String                   @unique
+  passwordHash           String
+  fullName               String
+  phone                  String?
+  birthDate              DateTime?
+  ageVerified            Boolean                  @default(false)
+  role                   UserRole                 @default(MUSTERI)
+  isActive               Boolean                  @default(true)
+  emailVerifiedAt        DateTime?
+  lastLoginAt            DateTime?
+  marketingOptIn         Boolean                  @default(false)
+  marketingOptInAt       DateTime?
+  unsubscribeToken       String?                  @unique
   /// Oturum iptali. JWT içine gömülür; artırıldığında o kullanıcının
   /// dolaşımdaki TÜM token'ları anında geçersizleşir (pasifleştirme,
   /// rol değişimi, "tüm cihazlardan çık").
-  tokenVersion    Int             @default(0)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  Account              Account[]
-  Address              Address[]
-  AuditLog             AuditLog[]
-  PasswordResetToken   PasswordResetToken[]
+  tokenVersion           Int                      @default(0)
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  Account                Account[]
+  Address                Address[]
+  AuditLog               AuditLog[]
+  PasswordResetToken     PasswordResetToken[]
   EmailVerificationToken EmailVerificationToken[]
-  Cart                 Cart[]
-  ConsentLog           ConsentLog[]
-  ImageProcessingJob   ImageProcessingJob[]
-  Order                Order[]
-  Review               Review[]
-  ReturnRequest        ReturnRequest[]
-  Session              Session[]
-  StockMovement        StockMovement[]
+  Cart                   Cart[]
+  ConsentLog             ConsentLog[]
+  ImageProcessingJob     ImageProcessingJob[]
+  Order                  Order[]
+  Review                 Review[]
+  ReturnRequest          ReturnRequest[]
+  Session                Session[]
+  StockMovement          StockMovement[]
 
   @@index([unsubscribeToken])
 }
@@ -602,29 +606,34 @@ model Review {
 }
 
 model SiteSettings {
-  id                    String   @id @default("site")
-  maintenanceMode       Boolean  @default(false)
-  ecommerceEnabled      Boolean  @default(true)
-  freeShippingThreshold Decimal  @default(2500) @db.Decimal(10, 2)
-  shippingCost          Decimal  @default(150) @db.Decimal(10, 2)
-  bankTransferEnabled   Boolean  @default(true)
-  giftBoxEnabled        Boolean  @default(true)
-  contactEmail          String   @default("info@halfleafstore.com")
-  contactPhone          String   @default("+90 212 000 00 00")
-  contactAddress        String   @default("")
+  id                     String    @id @default("site")
+  maintenanceMode        Boolean   @default(false)
+  ecommerceEnabled       Boolean   @default(true)
+  freeShippingThreshold  Decimal   @default(2500) @db.Decimal(10, 2)
+  shippingCost           Decimal   @default(150) @db.Decimal(10, 2)
+  bankTransferEnabled    Boolean   @default(true)
+  giftBoxEnabled         Boolean   @default(true)
+  contactEmail           String    @default("info@halfleafstore.com")
+  contactPhone           String    @default("+90 212 000 00 00")
+  contactAddress         String    @default("")
   /// Mağazanın Google Haritalar bağlantısı ("Paylaş" → bağlantı). Boşsa adresten üretilir.
-  mapsUrl               String?
+  mapsUrl                String?
   /// Google Haritalar "Haritayı yerleştir" iframe src'si. Boşsa adresten üretilir.
-  mapEmbedUrl           String?
-  instagramUrl          String?
-  facebookUrl           String?
-  twitterUrl            String?
-  whatsappNumber        String?
-  usdTryRate            Decimal?  @db.Decimal(10, 4)
-  usdTryRateUpdatedAt   DateTime?
-  usdTryRateLocked      Boolean   @default(false)
-  announcementMessages  String[]  @default([])
-  updatedAt             DateTime  @updatedAt
+  mapEmbedUrl            String?
+  instagramUrl           String?
+  facebookUrl            String?
+  twitterUrl             String?
+  whatsappNumber         String?
+  /// Mağaza çalışma saatleri (serbest metin). "Hazır, mağazadan teslim
+  /// alabilirsiniz" e-postasında müşteriye gösterilir.
+  storeHours             String?
+  /// Yeni sipariş bildirimlerinin gideceği mağaza sahibi adresi.
+  ownerNotificationEmail String?
+  usdTryRate             Decimal?  @db.Decimal(10, 4)
+  usdTryRateUpdatedAt    DateTime?
+  usdTryRateLocked       Boolean   @default(false)
+  announcementMessages   String[]  @default([])
+  updatedAt              DateTime  @updatedAt
 }
 
 model ShippingOption {
@@ -668,6 +677,8 @@ enum OrderStatus {
   BEKLEMEDE
   ONAYLANDI
   HAZIRLANIYOR
+  /// Mağazadan teslim siparişleri için: hazırlandı, müşteri gelip alabilir.
+  TESLIME_HAZIR
   KARGODA
   TESLIM_EDILDI
   IPTAL_EDILDI

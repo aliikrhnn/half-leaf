@@ -17,6 +17,7 @@ const STATUS_LABEL: Record<string, string> = {
   BEKLEMEDE: "Beklemede",
   ONAYLANDI: "Onaylandı",
   HAZIRLANIYOR: "Hazırlanıyor",
+  TESLIME_HAZIR: "Mağazadan Teslim Alınabilir",
   KARGODA: "Kargoda",
   TESLIM_EDILDI: "Teslim Edildi",
   IPTAL_EDILDI: "İptal Edildi",
@@ -26,6 +27,7 @@ const STATUS_COLOR: Record<string, string> = {
   BEKLEMEDE: "var(--hl-text-mute)",
   ONAYLANDI: "#7ab87a",
   HAZIRLANIYOR: "#e0a840",
+  TESLIME_HAZIR: "#5f9a52",
   KARGODA: "var(--hl-bronze-400)",
   TESLIM_EDILDI: "#7ab87a",
   IPTAL_EDILDI: "#e05252",
@@ -198,6 +200,8 @@ export default async function HesabimPage() {
                     flexWrap: "wrap", gap: 10,
                   }}>
                     <div>
+                      {/* Satırın tamamı değil başlığı bağlanır: içeride iade/detay
+                          gibi başka bağlantılar var, iç içe <a> geçersiz olurdu. */}
                       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
                         <span style={{ fontSize: 13, fontWeight: 700, color: "var(--hl-text)", letterSpacing: "0.02em" }}>
                           #{order.orderNumber}
@@ -232,6 +236,14 @@ export default async function HesabimPage() {
                       <span style={{ fontSize: 18, fontWeight: 700, color: "var(--hl-bronze-400)", whiteSpace: "nowrap" }}>
                         {formatPrice(Number(order.grandTotal))}
                       </span>
+                      <Link href={`/hesabim/siparisler/${encodeURIComponent(order.orderNumber)}`} style={{
+                        fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+                        textTransform: "uppercase", color: "var(--hl-text-soft)",
+                        padding: "3px 8px", borderRadius: 99,
+                        border: "1px solid var(--hl-line-strong)", textDecoration: "none",
+                      }}>
+                        Detay →
+                      </Link>
                       {order.status === "TESLIM_EDILDI" && (() => {
                         const deliveredAt = order.Shipment[0]?.deliveredAt ?? order.placedAt;
                         const daysSince = deliveredAt
