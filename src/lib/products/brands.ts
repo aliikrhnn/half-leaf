@@ -21,19 +21,27 @@ export interface BrandCatalogEntry {
 // Yalnızca donanım/nargile üreticisi markalar. Öncelikli olarak tütünle
 // anılan markalar (ör. Darkside) vitrine alınmaz — mağaza tütün/nikotin
 // tanıtımı yapmaz.
+// `key` DB'deki `Product.brand` değeriyle BİREBİR eşleşmelidir — vitrin
+// sorgusu tam eşleşme (`brand in [...]`) yapar. Eşleşmeyen anahtar sessizce
+// hiçbir şey göstermez: "Cosmo", "Maxx" ve "Hoob" anahtarları veride
+// karşılıksızdı (veri "Cosmo Bowl", "Maxx Royal", "Xhoob" tutuyor) ve bu üç
+// marka vitrinde hiç çıkmıyordu. Anahtarlar gerçek değerlere çekildi;
+// görünen ad (`name`) serbesttir.
 export const BRAND_CATALOG: readonly BrandCatalogEntry[] = [
   { key: "Alpha", name: "Alpha Hookah", tagline: "Rus Mühendisliği" },
   { key: "Amotion", name: "Amotion", tagline: "Kompakt Tasarım" },
   { key: "Moze", name: "Moze", tagline: "Alman Tasarımı" },
-  { key: "Cosmo", name: "Cosmo", tagline: "Seramik Lüle" },
-  { key: "Maxx", name: "Maxx Royal", tagline: "Royal Seri" },
+  { key: "Cosmo Bowl", name: "Cosmo", tagline: "Seramik Lüle" },
+  { key: "Maxx Royal", name: "Maxx Royal", tagline: "Royal Seri" },
   { key: "Blade", name: "Blade Hookah", tagline: "Modern Çizgi" },
-  { key: "Hoob", name: "HOOB", tagline: "Alman Mühendisliği" },
+  { key: "Xhoob", name: "XHOOB", tagline: "Modern Seri" },
   { key: "Japona", name: "Japona", tagline: "Lüle Sanatı" },
   { key: "Quasar", name: "Quasar", tagline: "İnce İşçilik" },
   { key: "Amy", name: "Amy Deluxe", tagline: "Klasik Zarafet" },
   { key: "Union", name: "Union Hookah", tagline: "Modern Seri" },
   { key: "Mattpear", name: "Mattpear", tagline: "Modern Silüet" },
+  { key: "MAKLAUD", name: "Maklaud", tagline: "Rus Üretimi" },
+  { key: "KONG Bowl", name: "KONG", tagline: "Lüle Serisi" },
 ] as const;
 
 export interface ShowcaseBrand {
@@ -107,4 +115,28 @@ export async function getShowcaseBrands(): Promise<ShowcaseBrand[]> {
   } catch {
     return [];
   }
+}
+
+/**
+ * Marka filtresi için Prisma koşulu üretir.
+ *
+ * NEDEN tam eşleşme (`brand in [...]`) değil: filtre değeri URL'de ham marka
+ * metni olarak taşınıyor (`/urunler?marka=Alpha`). Veri normalize edildiğinde
+ * ("ALPHA", "Alpha " → "Alpha") daha önce paylaşılmış ya da arama motorunun
+ * indekslediği bağlantılar tam eşleşmeyi kaçırıp SESSİZCE 0 sonuç dönerdi.
+ * Harf farkını yok sayarak eşleştirmek bu bağlantıları çalışır tutar.
+ *
+ * Koşul `AND` listesine eklenmelidir: `where.OR` arama tarafından kullanılıyor
+ * ve doğrudan atanırsa üzerine yazılır.
+ *
+ * @returns Eşleşecek marka yoksa `null`.
+ */
+export function brandFilterCondition(
+  marcas: ReadonlyArray<string>,
+): { OR: Array<{ brand: { equals: string; mode: "insensitive" } }> } | null {
+  const temiz = [...new Set(marcas.map((m) => m.trim()).filter(Boolean))];
+  if (temiz.length === 0) return null;
+  return {
+    OR: temiz.map((m) => ({ brand: { equals: m, mode: "insensitive" as const } })),
+  };
 }

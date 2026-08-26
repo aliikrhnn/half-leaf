@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { z } from "zod";
 
@@ -47,8 +48,58 @@ export async function getCategoryById(id: string) {
   });
 }
 
+/**
+ * Bir kategoriyi kardeşleri arasında istenen KONUMA yerleştirir ve tüm
+ * kardeşleri 1..N olarak yeniden numaralandırır.
+ *
+ * NEDEN: `sortOrder` serbest bir ağırlıktı ve panelde "Sıra" diye sunuluyordu.
+ * Mağaza sahibi oraya "kaçıncı sırada görünsün" diye yazıyor; mevcut kayıtlar
+ * ise 10'ar 10'ar arttığı için (10, 20, 30…) "8" yazılan kategori listenin
+ * BAŞINA geçiyordu. Artık girilen sayı gerçek konumdur: 1 = ilk sıra.
+ *
+ * Kardeş kümesi `parentId`'ye göre belirlenir; kök kategoriler için
+ * `parentId IS NULL`. Numaralandırma tek transaction içinde yapılır ki
+ * yarıda kalan bir güncelleme sırayı bozuk bırakmasın.
+ *
+ * @param position 1 tabanlı hedef konum. Aralık dışı değerler kırpılır.
+ */
+async function reorderSiblings(
+  tx: Prisma.TransactionClient,
+  args: { id: string; parentId: string | null; position: number },
+): Promise<void> {
+  const siblings = await tx.category.findMany({
+    where: { parentId: args.parentId, id: { not: args.id } },
+    select: { id: true },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+  });
+
+  const hedef = Math.min(Math.max(Math.trunc(args.position), 1), siblings.length + 1) - 1;
+  const sirali = [...siblings.map((c) => c.id)];
+  sirali.splice(hedef, 0, args.id);
+
+  // Sıra numaraları 1'den başlar: panelde görünen değer ile gerçek konum aynı olsun.
+  await Promise.all(
+    sirali.map((catId, index) =>
+      tx.category.update({ where: { id: catId }, data: { sortOrder: index + 1 } }),
+    ),
+  );
+}
+
 export async function createCategory(data: CreateCategoryInput) {
-  return prisma.category.create({ data });
+  const { sortOrder, ...rest } = data;
+  return prisma.$transaction(async (tx) => {
+    const created = await tx.category.create({
+      // Geçici değer; gerçek konum hemen ardından reorderSiblings ile veriliyor.
+      data: { ...rest, sortOrder: 9999 },
+    });
+    await reorderSiblings(tx, {
+      id: created.id,
+      parentId: rest.parentId ?? null,
+      // Sıra girilmediyse (0/boş) sona eklenir.
+      position: sortOrder && sortOrder > 0 ? sortOrder : Number.MAX_SAFE_INTEGER,
+    });
+    return tx.category.findUniqueOrThrow({ where: { id: created.id } });
+  });
 }
 
 /**
@@ -82,7 +133,23 @@ export async function updateCategory(id: string, data: UpdateCategoryInput) {
   } else if (data.parentId === id) {
     safe = { ...data, parentId: null };
   }
-  return prisma.category.update({ where: { id }, data: safe });
+
+  const { sortOrder, ...rest } = safe;
+
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.category.update({ where: { id }, data: rest });
+
+    // Sıra verildiyse (ya da ebeveyn değiştiyse) kardeşler yeniden numaralanır.
+    if (sortOrder !== undefined || rest.parentId !== undefined) {
+      await reorderSiblings(tx, {
+        id,
+        parentId: updated.parentId,
+        position: sortOrder && sortOrder > 0 ? sortOrder : Number.MAX_SAFE_INTEGER,
+      });
+    }
+
+    return tx.category.findUniqueOrThrow({ where: { id } });
+  });
 }
 
 export async function deleteCategory(id: string) {

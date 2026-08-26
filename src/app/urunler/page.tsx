@@ -7,6 +7,7 @@ import { getUsdTryRate } from "@/lib/pricing";
 import ProductsClient from "./ProductsClient";
 import ProductGridSkeleton from "@/components/product/ProductGridSkeleton";
 import { isDefaultSort, interleaveByCategory } from "@/lib/products/list-query";
+import { brandFilterCondition } from "@/lib/products/brands";
 import type { Product } from "@/lib/types";
 import type { MaterialOption, BrandOption } from "./FilterPanel";
 
@@ -187,7 +188,6 @@ export async function fetchAll(sp: SearchParams) {
   if (cokSatanlar) where.isBestseller = true;
   if (oneCikan) where.isFeatured = true;
   if (materyals.length > 0) where.Material = { slug: { in: materyals } };
-  if (marcas.length > 0) where.brand = { in: marcas };
 
   const priceRange = PRICE_RANGE_MAP[fiyat];
   if (priceRange) {
@@ -199,6 +199,9 @@ export async function fetchAll(sp: SearchParams) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const andFilters: any[] = [];
+  // Marka koşulu AND listesine girer: where.OR arama tarafından kullanılıyor.
+  const brandCond = brandFilterCondition(marcas);
+  if (brandCond) andFilters.push(brandCond);
   if (boy) {
     andFilters.push({
       ProductVariant: {

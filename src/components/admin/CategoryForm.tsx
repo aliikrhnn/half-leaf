@@ -38,7 +38,7 @@ export default function CategoryForm({ category }: CategoryFormProps) {
     imageUrl: category?.imageUrl ?? "",
     parentId: category?.parentId ?? "",
     isActive: category?.isActive ?? true,
-    sortOrder: String(category?.sortOrder ?? 0),
+    sortOrder: category ? String(category.sortOrder) : "",
   });
   const [parentOptions, setParentOptions] = useState<{ id: string; name: string }[]>([]);
   const [saving, setSaving] = useState(false);
@@ -74,7 +74,7 @@ export default function CategoryForm({ category }: CategoryFormProps) {
       imageUrl: form.imageUrl || undefined,
       parentId: form.parentId || null,
       isActive: form.isActive,
-      sortOrder: parseInt(form.sortOrder),
+      sortOrder: Number.parseInt(form.sortOrder, 10) || 0,
     };
 
     try {
@@ -174,14 +174,20 @@ export default function CategoryForm({ category }: CategoryFormProps) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs text-ink-muted mb-1">Sıra</label>
+          <label className="block text-xs text-ink-muted mb-1">Sıra (kaçıncı sırada)</label>
           <input
             type="number"
-            min="0"
+            min="1"
+            step="1"
             value={form.sortOrder}
             onChange={(e) => set("sortOrder", e.target.value)}
             className={inputClass}
+            placeholder="1"
           />
+          <p className="text-[11px] text-ink-dim mt-1 leading-relaxed">
+            1 = en başta. Kategori aynı seviyedeki kardeşleri arasında bu konuma
+            yerleştirilir, diğerleri otomatik kayar. Boş/0 bırakırsanız sona eklenir.
+          </p>
         </div>
         <div className="flex items-end pb-1">
           <label className="flex items-center gap-2 cursor-pointer">

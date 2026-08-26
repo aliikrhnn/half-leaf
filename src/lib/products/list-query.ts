@@ -6,6 +6,7 @@
  */
 
 import { unstable_cache } from "next/cache";
+import { brandFilterCondition } from "@/lib/products/brands";
 import { prisma } from "@/lib/db/prisma";
 import { mapProduct } from "@/lib/db/mappers";
 import { getUsdTryRate } from "@/lib/pricing";
@@ -92,7 +93,6 @@ export function buildProductWhere(
   if (sp.cokSatanlar === "1") where.isBestseller = true;
   if (sp.oneCikan === "1") where.isFeatured = true;
   if (materyals.length > 0) where.Material = { slug: { in: materyals } };
-  if (marcas.length > 0) where.brand = { in: marcas };
 
   const priceRange = PRICE_RANGE_MAP[sp.fiyat ?? ""];
   if (priceRange) {
@@ -101,6 +101,9 @@ export function buildProductWhere(
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const andFilters: any[] = [];
+  // Marka koşulu AND listesine girer (bkz. brandFilterCondition).
+  const brandCond = brandFilterCondition(marcas);
+  if (brandCond) andFilters.push(brandCond);
   if (sp.boy) andFilters.push({ ProductVariant: { some: { isActive: true, attributes: { path: ["boy"], equals: sp.boy } } } });
   if (sp.renk) andFilters.push({ ProductVariant: { some: { isActive: true, attributes: { path: ["renk"], equals: sp.renk } } } });
   if (andFilters.length > 0) where.AND = andFilters;

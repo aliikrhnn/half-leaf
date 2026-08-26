@@ -120,6 +120,7 @@ export default function ProductForm({ product }: ProductFormProps) {
   const router = useRouter();
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [brandOptions, setBrandOptions] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [uploadError, setUploadError] = useState("");
   const [dragging, setDragging] = useState(false);
@@ -143,6 +144,12 @@ export default function ProductForm({ product }: ProductFormProps) {
     fetch("/api/categories").then((r) => r.json()).then((j) => {
       if (j.success) setCategories(j.data);
     });
+    // Mevcut markalar: alan serbest metin kaldı ama artık öneri listesi var.
+    // Markayı elle yeniden yazmak "Alpha" / "Alpha " gibi varyantlar üretip
+    // ürünler sayfasındaki filtreyi çiftliyordu.
+    fetch("/api/admin/markalar").then((r) => r.json()).then((j: { success: boolean; data?: { brands?: { name: string }[] } }) => {
+      if (j.success && j.data?.brands) setBrandOptions(j.data.brands.map((b) => b.name));
+    }).catch(() => {});
     fetch("/api/admin/kur").then((r) => r.json()).then((j: { success: boolean; data?: { usdTryRate: number | null } }) => {
       if (j.success && j.data?.usdTryRate != null) setUsdTryRate(j.data.usdTryRate);
     }).catch(() => { /* ignore — rate preview is optional */ });
@@ -449,12 +456,21 @@ export default function ProductForm({ product }: ProductFormProps) {
             <label className="block text-xs text-ink-muted mb-1">Marka</label>
             <input
               type="text"
+              list="hl-marka-listesi"
               value={form.brand}
               onChange={(e) => set("brand", e.target.value)}
+              onBlur={(e) => set("brand", e.target.value.trim())}
               className={inputClass}
               placeholder="Half Leaf"
               maxLength={200}
             />
+            <datalist id="hl-marka-listesi">
+              {brandOptions.map((b) => <option key={b} value={b} />)}
+            </datalist>
+            <p className="text-[11px] text-ink-dim mt-1">
+              Mevcut markalardan seçin. Yeni marka yazarsanız listeye eklenir —
+              aynı markayı farklı yazmak filtrede çift kayıt oluşturur.
+            </p>
           </div>
 
           <div className="sm:col-span-2">

@@ -35,7 +35,9 @@ export const CreateProductSchema = z.object({
   isActive: z.boolean().default(true),
   isFeatured: z.boolean().default(false),
   isBestseller: z.boolean().default(false),
-  brand: z.string().max(200).optional(),
+  // .trim() ŞART: marka filtresindeki çift kayıtların ana kaynağı sondaki
+  // boşluktu ("Alpha " ile "Alpha" ayrı iki marka gibi listeleniyordu).
+  brand: z.string().trim().max(200).optional(),
   categoryId: z.string().min(1, "Geçerli bir kategori seçiniz."),
   materialId: z.string().optional(),
   careInfo: z.string().max(2000).optional(),
