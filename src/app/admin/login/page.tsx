@@ -78,7 +78,6 @@ export default function AdminLoginPage() {
               required
               autoComplete="email"
               className="w-full bg-bg-elevated border border-border-default text-ink rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-accent transition-colors"
-              placeholder="admin@halfleafstore.com"
             />
           </div>
 
