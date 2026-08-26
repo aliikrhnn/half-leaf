@@ -26,7 +26,11 @@ export async function listCategories(activeOnly = true) {
     include: {
       _count: { select: { Product: { where: { isActive: true } } } },
     },
-    orderBy: { sortOrder: "asc" },
+    // Kardeş grupları 1..N numaralandığı için FARKLI ebeveynlerin çocukları
+    // aynı sortOrder'ı paylaşır (7 kategori birden sortOrder=1). Düz liste tek
+    // anahtarla sıralanınca bu satırlar rastgele düzende geliyordu — ada göre
+    // ikincil sıralama sonucu deterministik yapar.
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
 }
 
@@ -69,20 +73,23 @@ async function reorderSiblings(
 ): Promise<void> {
   const siblings = await tx.category.findMany({
     where: { parentId: args.parentId, id: { not: args.id } },
-    select: { id: true },
+    select: { id: true, sortOrder: true },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
+  const mevcutSira = new Map(siblings.map((c) => [c.id, c.sortOrder]));
 
   const hedef = Math.min(Math.max(Math.trunc(args.position), 1), siblings.length + 1) - 1;
   const sirali = [...siblings.map((c) => c.id)];
   sirali.splice(hedef, 0, args.id);
 
-  // Sıra numaraları 1'den başlar: panelde görünen değer ile gerçek konum aynı olsun.
-  await Promise.all(
-    sirali.map((catId, index) =>
-      tx.category.update({ where: { id: catId }, data: { sortOrder: index + 1 } }),
-    ),
-  );
+  /* Sıra numaraları 1'den başlar: panelde görünen değer ile gerçek konum aynı olsun.
+     Güncellemeler SIRAYLA yapılır — Prisma'nın interactive transaction'ında
+     paralel sorgular tek bağlantıyı paylaşır ve kalabalık gruplarda varsayılan
+     zaman aşımını zorlar. Değeri zaten doğru olan satır atlanır. */
+  for (const [index, catId] of sirali.entries()) {
+    if (mevcutSira.get(catId) === index + 1) continue;
+    await tx.category.update({ where: { id: catId }, data: { sortOrder: index + 1 } });
+  }
 }
 
 export async function createCategory(data: CreateCategoryInput) {

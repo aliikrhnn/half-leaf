@@ -83,7 +83,8 @@ async function getNavCategories(): Promise<NavCategory[]> {
         description: true,
         _count: { select: { Product: { where: { isActive: true } } } },
       },
-      orderBy: { sortOrder: "asc" },
+      // Eşit sortOrder'da rastgeleleşmesin (bkz. category.service.ts).
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     });
 
     const rootIds = new Set(catRows.filter(c => !c.parentId).map(c => c.id));

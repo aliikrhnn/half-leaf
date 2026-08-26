@@ -44,7 +44,8 @@ export const getCachedCategories = unstable_cache(
     prisma.category.findMany({
       where: { isActive: true },
       include: { _count: { select: { Product: { where: { isActive: true } } } } },
-      orderBy: { sortOrder: "asc" },
+      // Eşit sortOrder'da rastgeleleşmesin (bkz. category.service.ts).
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     }),
   ["urunler-categories"],
   { revalidate: 60 },
