@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Instagram, Facebook } from "lucide-react";
 import { SITE_NAME, FOOTER_LINKS, CONTACT_ADDRESS } from "@/lib/constants";
-import { prisma } from "@/lib/db/prisma";
+import { getPublicSiteSettings } from "@/lib/site/settings";
 import { jsonLd } from "@/lib/utils";
 import { buildStoreLocation } from "@/lib/store-location";
 import HalfLeafLogo from "@/components/brand/HalfLeafLogo";
@@ -11,27 +11,10 @@ import CardSchemes from "./CardSchemes";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://halfleafstore.com";
 
-async function getSiteSettings() {
-  try {
-    return await prisma.siteSettings.findUnique({
-      where: { id: "site" },
-      select: {
-        contactEmail: true,
-        contactPhone: true,
-        contactAddress: true,
-        mapsUrl: true,
-        mapEmbedUrl: true,
-        instagramUrl: true,
-        facebookUrl: true,
-      },
-    });
-  } catch {
-    return null;
-  }
-}
-
 export default async function Footer() {
-  const s = await getSiteSettings();
+  // Ayar satırı layout ile PAYLAŞILAN cache'ten gelir; footer bu yüzden
+  // her sayfada ikinci bir veritabanı sorgusu açmaz.
+  const s = await getPublicSiteSettings();
 
   const contactPhone   = s?.contactPhone   ?? "+90 543 533 2998";
   const contactEmail   = s?.contactEmail   ?? "info@halfleafstore.com";

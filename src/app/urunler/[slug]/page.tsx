@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -19,16 +20,35 @@ interface Props {
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://halfleafstore.com";
 const SIXTY_DAYS_MS = 60 * 24 * 60 * 60 * 1000;
 
+/**
+ * Ürünü tek seferde yükler.
+ *
+ * `generateMetadata` ile sayfa gövdesi aynı istekte ÇALIŞIR ve ikisi de aynı
+ * ürünü sorguluyordu — her ürün sayfası veritabanına iki kez gidiyordu.
+ * React `cache` sarmalayıcısı istek başına tekilleştirir: tek sorgu, iki
+ * tüketici. (Bağlantı havuzu tükenmesinin nedenlerinden biriydi; bkz.
+ * lib/db/prisma.ts)
+ */
+const getProduct = cache((slug: string) =>
+  prisma.product.findUnique({
+    where: { slug, isActive: true },
+    include: {
+      Category: { select: { id: true, slug: true, name: true } },
+      ProductImage: { orderBy: { sortOrder: "asc" } },
+      Inventory: { select: { quantity: true, lowStockThreshold: true } },
+      ProductVariant: {
+        where: { isActive: true },
+        include: { Inventory: { select: { quantity: true } } },
+        orderBy: { createdAt: "asc" },
+      },
+      Material: { select: { name: true } },
+    },
+  }),
+);
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const p = await prisma.product.findUnique({
-    where: { slug, isActive: true },
-    select: {
-      name: true, shortDescription: true, description: true, basePrice: true, brand: true,
-      Category: { select: { name: true } },
-      ProductImage: { orderBy: { sortOrder: "asc" }, take: 1, select: { url: true, altText: true } },
-    },
-  });
+  const p = await getProduct(slug);
   if (!p) return {};
 
   // Meta açıklama: önce shortDescription (zorunlu, öz), sonra description; ~155 karakterde kelime sınırında kes.
@@ -64,20 +84,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ProductDetailPage({ params }: Props) {
   const { slug } = await params;
 
-  const dbProduct = await prisma.product.findUnique({
-    where: { slug, isActive: true },
-    include: {
-      Category: { select: { id: true, slug: true, name: true } },
-      ProductImage: { orderBy: { sortOrder: "asc" } },
-      Inventory: { select: { quantity: true, lowStockThreshold: true } },
-      ProductVariant: {
-        where: { isActive: true },
-        include: { Inventory: { select: { quantity: true } } },
-        orderBy: { createdAt: "asc" },
-      },
-      Material: { select: { name: true } },
-    },
-  });
+  const dbProduct = await getProduct(slug);
 
   if (!dbProduct) notFound();
 

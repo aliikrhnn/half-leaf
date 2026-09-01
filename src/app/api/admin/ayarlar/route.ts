@@ -1,8 +1,10 @@
 import { NextRequest } from "next/server";
+import { revalidateTag } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
 import { ok, badRequest, serverError } from "@/lib/api/response";
 import { requireAdmin, isResponse } from "@/lib/auth/middleware";
+import { SITE_SETTINGS_TAG } from "@/lib/site/tags";
 
 const UpdateSchema = z.object({
   maintenanceMode:       z.boolean().optional(),
@@ -65,6 +67,9 @@ export async function PATCH(req: NextRequest) {
       create: { id: "site", ...data },
       update: data,
     });
+    // Duyuru şeridi ve footer iletişim bilgileri cache'li okunur; kayıttan
+    // sonra beklemeden yayına geçsin.
+    revalidateTag(SITE_SETTINGS_TAG, "max");
     return ok(settings);
   } catch {
     return serverError();

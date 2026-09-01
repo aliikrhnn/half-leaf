@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
+import { revalidateNavCache } from "@/lib/site/tags";
 import { paginationMeta } from "@/lib/api/response";
 import type { ProductQuery, CreateProductInput, UpdateProductInput } from "@/lib/validations/product.schema";
 
@@ -123,7 +124,7 @@ export async function createProduct(data: CreateProductInput) {
     ? new Set((await prisma.productVariant.findMany({ select: { sku: true } })).map((v) => v.sku))
     : undefined;
 
-  return prisma.product.create({
+  const created = await prisma.product.create({
     data: {
       ...rest,
       // Inventory'yi her zaman oluştur (0 olsa bile) — okuma tarafı ve sonraki
@@ -141,6 +142,11 @@ export async function createProduct(data: CreateProductInput) {
     },
     include: PRODUCT_INCLUDE,
   });
+  /* Menü, alt ağacında aktif ürünü olmayan kategoriyi gizler ve her kök
+     kategoriye bir vitrin ürünü seçer — yani ürün yazmaları da menüyü
+     değiştirir. Cache'lendiği için açıkça tazelenmesi gerekir. */
+  revalidateNavCache();
+  return created;
 }
 
 export async function updateProduct(id: string, data: UpdateProductInput) {
@@ -151,7 +157,7 @@ export async function updateProduct(id: string, data: UpdateProductInput) {
     originalUrl: img.url,
   }));
 
-  return prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx) => {
     if (imagesWithOriginal !== undefined) {
       await tx.productImage.deleteMany({ where: { productId: id } });
     }
@@ -214,10 +220,14 @@ export async function updateProduct(id: string, data: UpdateProductInput) {
       include: PRODUCT_INCLUDE,
     });
   }, { maxWait: 15000, timeout: 30000 }); // çok renk/görselli üründe varsayılan 5sn yetmiyordu (P2028)
+  revalidateNavCache();
+  return updated;
 }
 
 export async function deleteProduct(id: string) {
-  return prisma.product.delete({ where: { id } });
+  const silinen = await prisma.product.delete({ where: { id } });
+  revalidateNavCache();
+  return silinen;
 }
 
 export async function getFeaturedProducts(limit = 8) {

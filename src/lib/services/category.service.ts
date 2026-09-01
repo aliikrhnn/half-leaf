@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
+import { revalidateNavCache } from "@/lib/site/tags";
 import { z } from "zod";
 
 // Baştan/sondan ve ardışık tireye izin verilmez — aksi hâlde "/kategori/-el-bomber"
@@ -94,7 +95,7 @@ async function reorderSiblings(
 
 export async function createCategory(data: CreateCategoryInput) {
   const { sortOrder, ...rest } = data;
-  return prisma.$transaction(async (tx) => {
+  const kategori = await prisma.$transaction(async (tx) => {
     const created = await tx.category.create({
       // Geçici değer; gerçek konum hemen ardından reorderSiblings ile veriliyor.
       data: { ...rest, sortOrder: 9999 },
@@ -107,6 +108,8 @@ export async function createCategory(data: CreateCategoryInput) {
     });
     return tx.category.findUniqueOrThrow({ where: { id: created.id } });
   });
+  revalidateNavCache();
+  return kategori;
 }
 
 /**
@@ -143,7 +146,7 @@ export async function updateCategory(id: string, data: UpdateCategoryInput) {
 
   const { sortOrder, ...rest } = safe;
 
-  return prisma.$transaction(async (tx) => {
+  const sonuc = await prisma.$transaction(async (tx) => {
     const updated = await tx.category.update({ where: { id }, data: rest });
 
     // Sıra verildiyse (ya da ebeveyn değiştiyse) kardeşler yeniden numaralanır.
@@ -157,6 +160,8 @@ export async function updateCategory(id: string, data: UpdateCategoryInput) {
 
     return tx.category.findUniqueOrThrow({ where: { id } });
   });
+  revalidateNavCache();
+  return sonuc;
 }
 
 export async function deleteCategory(id: string) {
@@ -175,5 +180,7 @@ export async function deleteCategory(id: string) {
       `Bu kategorinin ${childCount} alt kategorisi var. Silmeden önce alt kategorileri taşıyın veya silin.`,
     );
   }
-  return prisma.category.delete({ where: { id } });
+  const silinen = await prisma.category.delete({ where: { id } });
+  revalidateNavCache();
+  return silinen;
 }

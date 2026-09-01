@@ -7,9 +7,8 @@ import AgeGate from "@/components/layout/AgeGate";
 import Footer from "@/components/layout/Footer";
 import { SITE_NAME, SITE_DESCRIPTION, CONTACT_EMAIL, CONTACT_PHONE, SOCIAL_LINKS } from "@/lib/constants";
 import { jsonLd } from "@/lib/utils";
-import { prisma } from "@/lib/db/prisma";
-import type { NavCategory, NavFeaturedProduct } from "@/lib/types";
-import { getUsdTryRate, toTRY, type PriceCurrency } from "@/lib/pricing";
+import { getNavCategories } from "@/lib/site/nav";
+import { getPublicSiteSettings } from "@/lib/site/settings";
 
 // Tek tipografi ailesi — "Üye ol, fırsatları kaçırma" pop-up'ındaki fontla
 // (Manrope) tüm site birebir aynı. Başlıklar dahil her yer bu aileyi kullanır.
@@ -71,130 +70,17 @@ export const metadata: Metadata = {
   },
 };
 
-async function getNavCategories(): Promise<NavCategory[]> {
-  try {
-    const catRows = await prisma.category.findMany({
-      where: { isActive: true },
-      select: {
-        id: true,
-        slug: true,
-        name: true,
-        parentId: true,
-        description: true,
-        _count: { select: { Product: { where: { isActive: true } } } },
-      },
-      // Eşit sortOrder'da rastgeleleşmesin (bkz. category.service.ts).
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    });
-
-    const rootIds = new Set(catRows.filter(c => !c.parentId).map(c => c.id));
-
-    // Build categoryId → rootCategoryId map.
-    // Yönetim panelinden yanlışlıkla döngüsel bir ebeveyn zinciri kurulursa
-    // (A→B→A) burası sonsuz döngüye girip TÜM siteyi kilitler; ziyaret edilen
-    // id'ler takip edilerek döngü kırılır.
-    const catIdToRoot = new Map<string, string>();
-    for (const cat of catRows) {
-      let cur: typeof cat | undefined = cat;
-      const seen = new Set<string>([cat.id]);
-      while (cur?.parentId) {
-        const next = catRows.find(c => c.id === cur!.parentId);
-        if (!next || seen.has(next.id)) break;
-        seen.add(next.id);
-        cur = next;
-      }
-      if (cur) catIdToRoot.set(cat.id, cur.id);
-    }
-
-    const [productRows, usdTryRate] = await Promise.all([
-      prisma.product.findMany({
-        where: { isActive: true },
-        select: {
-          id: true,
-          slug: true,
-          name: true,
-          basePrice: true,
-          compareAtPrice: true,
-          priceCurrency: true,
-          categoryId: true,
-          Category: { select: { name: true } },
-          ProductImage: {
-            orderBy: { sortOrder: "asc" as const },
-            take: 1,
-            select: { url: true },
-          },
-        },
-        orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
-      }),
-      getUsdTryRate(),
-    ]);
-
-    const featuredByRoot = new Map<string, NavFeaturedProduct>();
-    for (const p of productRows) {
-      const rootId = catIdToRoot.get(p.categoryId);
-      if (rootId && rootIds.has(rootId) && !featuredByRoot.has(rootId)) {
-        const cur = (p.priceCurrency ?? "TRY") as PriceCurrency;
-        featuredByRoot.set(rootId, {
-          id: p.id,
-          slug: p.slug,
-          name: p.name,
-          basePrice: toTRY(Number(p.basePrice), cur, usdTryRate),
-          compareAtPrice: p.compareAtPrice != null ? toTRY(Number(p.compareAtPrice), cur, usdTryRate) : undefined,
-          priceCurrency: cur,
-          imageUrl: p.ProductImage[0]?.url ?? null,
-          categoryName: p.Category.name,
-        });
-        if (featuredByRoot.size === rootIds.size) break;
-      }
-    }
-
-    // Alt ağacında (kendisi + tüm alt kategoriler) aktif ürünü olmayan kategorileri
-    // navigasyondan gizle (silme değil — ürün eklenince yeniden görünür).
-    const directCount = new Map(catRows.map(c => [c.id, c._count.Product]));
-    const subtreeCache = new Map<string, number>();
-    // `visiting` döngüsel ebeveynlikte sonsuz özyinelemeyi (stack overflow) önler.
-    const subtreeCount = (catId: string, visiting = new Set<string>()): number => {
-      const cached = subtreeCache.get(catId);
-      if (cached !== undefined) return cached;
-      if (visiting.has(catId)) return 0;
-      visiting.add(catId);
-      let sum = directCount.get(catId) ?? 0;
-      for (const c of catRows) if (c.parentId === catId) sum += subtreeCount(c.id, visiting);
-      visiting.delete(catId);
-      subtreeCache.set(catId, sum);
-      return sum;
-    };
-
-    return catRows
-      .filter(r => subtreeCount(r.id) > 0)
-      .map(r => ({
-        id: r.id,
-        slug: r.slug,
-        name: r.name,
-        parentId: r.parentId,
-        productCount: r._count.Product,
-        description: r.description ?? undefined,
-        featuredProduct: !r.parentId ? (featuredByRoot.get(r.id) ?? undefined) : undefined,
-      }));
-  } catch {
-    return [];
-  }
-}
-
+/**
+ * Duyuru şeridi + WhatsApp gibi yerleşim düzeyi ayarlar.
+ * Sorgu `lib/site/settings.ts` içinde cache'lenir; Footer da aynı satırı okur.
+ */
 async function getSiteData(): Promise<{ announcementMessages: string[]; giftBoxEnabled: boolean; whatsappNumber: string | null }> {
-  try {
-    const s = await prisma.siteSettings.findUnique({
-      where:  { id: "site" },
-      select: { announcementMessages: true, giftBoxEnabled: true, whatsappNumber: true },
-    });
-    return {
-      announcementMessages: s?.announcementMessages ?? [],
-      giftBoxEnabled: s?.giftBoxEnabled ?? true,
-      whatsappNumber: s?.whatsappNumber ?? CONTACT_PHONE,
-    };
-  } catch {
-    return { announcementMessages: [], giftBoxEnabled: true, whatsappNumber: CONTACT_PHONE };
-  }
+  const s = await getPublicSiteSettings();
+  return {
+    announcementMessages: s?.announcementMessages ?? [],
+    giftBoxEnabled: s?.giftBoxEnabled ?? true,
+    whatsappNumber: s?.whatsappNumber ?? CONTACT_PHONE,
+  };
 }
 
 export default async function RootLayout({

@@ -8,6 +8,7 @@
 import { unstable_cache } from "next/cache";
 import { brandFilterCondition } from "@/lib/products/brands";
 import { prisma } from "@/lib/db/prisma";
+import { NAV_CATEGORIES_TAG } from "@/lib/site/tags";
 import { mapProduct } from "@/lib/db/mappers";
 import { getUsdTryRate } from "@/lib/pricing";
 import type { Product } from "@/lib/types";
@@ -48,7 +49,8 @@ export const getCachedCategories = unstable_cache(
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     }),
   ["urunler-categories"],
-  { revalidate: 60 },
+  // Panelden kategori değişince beklemeden tazelensin (bkz. category.service.ts).
+  { revalidate: 60, tags: [NAV_CATEGORIES_TAG] },
 );
 
 /** `slug` + tüm alt kategori ID'leri. */
