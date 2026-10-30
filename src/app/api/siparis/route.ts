@@ -31,7 +31,9 @@ const bodySchema = z.object({
     sehir: z.string().max(80).default(""),
     postaKodu: z.string().max(20).optional(),
   }),
-  shippingMethod: z.enum(["AYNI_GUN", "YURT_ICI", "DUKKAN_TESLIM"]),
+  // Teslimat kodları admin panelinden eklenebilir; sabit enum canlıdaki
+  // geçerli özel seçenekleri gereksiz yere 400 ile reddediyordu.
+  shippingMethod: z.string().trim().min(1).max(40),
   paymentMethod: z.enum(["KREDI_KARTI", "HAVALE_EFT"]),
   // Üst sınırlar: tek istekle SERIALIZABLE transaction içinde binlerce yazma
   // tetiklenmesini (DoS) engeller.
@@ -45,6 +47,24 @@ const bodySchema = z.object({
   couponCode: z.string().trim().max(40).optional(),
   customerNote: z.string().trim().max(1000).optional(),
 });
+
+const CHECKOUT_FIELD_LABELS: Record<string, string> = {
+  "contact.email": "e-posta",
+  "contact.phone": "telefon",
+  "contact.smsConsent": "SMS tercihi",
+  "contact.emailMarketingConsent": "e-posta ileti izni",
+  "address.ad": "ad",
+  "address.soyad": "soyad",
+  "address.adres": "adres",
+  "address.ilce": "ilçe",
+  "address.sehir": "il",
+  "address.postaKodu": "posta kodu",
+  shippingMethod: "teslimat yöntemi",
+  paymentMethod: "ödeme yöntemi",
+  items: "sepet",
+  couponCode: "kupon kodu",
+  customerNote: "sipariş notu",
+};
 
 /** Aynı ürün/varyant birden fazla satırda gelebilir — stok kontrolü için toplanır. */
 function stockKey(productId: string, variantId?: string | null): string {
@@ -116,7 +136,15 @@ export async function POST(req: NextRequest) {
 
   const parsed = bodySchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Eksik veya hatalı alanlar." }, { status: 400 });
+    const fields = [...new Set(parsed.error.issues.map((issue) => {
+      const path = issue.path.join(".");
+      return CHECKOUT_FIELD_LABELS[path]
+        ?? (issue.path[0] === "items" ? "sepet" : "sipariş bilgileri");
+    }))];
+    return NextResponse.json(
+      { error: `Kontrol edilmesi gereken alanlar: ${fields.join(", ")}.` },
+      { status: 400 },
+    );
   }
 
   const { contact, address, shippingMethod, paymentMethod, items, couponCode, customerNote } = parsed.data;
@@ -139,11 +167,19 @@ export async function POST(req: NextRequest) {
       }),
       prisma.shippingOption.findUnique({
         where:  { code: shippingMethod },
-        select: { alwaysFree: true, price: true, label: true },
+        select: { alwaysFree: true, price: true, label: true, isActive: true },
       }),
       // bcrypt tek başına ~100 ms CPU harcar; yalnızca misafir akışında gerekir.
       authUser ? Promise.resolve<string | null>(null) : bcrypt.hash(randomUUID(), 10),
     ]);
+
+    const fallbackShippingCodes = new Set(["AYNI_GUN", "YURT_ICI", "DUKKAN_TESLIM"]);
+    if (shippingOpt && !shippingOpt.isActive) {
+      throw new CheckoutError("Seçilen teslimat yöntemi artık kullanılamıyor.");
+    }
+    if (!shippingOpt && !fallbackShippingCodes.has(shippingMethod)) {
+      throw new CheckoutError("Seçilen teslimat yöntemi artık kullanılamıyor.");
+    }
 
     // "Satışı kapat" anahtarı panelde vardı ama sunucuda uygulanmıyordu.
     if (siteSettings && siteSettings.ecommerceEnabled === false) {
