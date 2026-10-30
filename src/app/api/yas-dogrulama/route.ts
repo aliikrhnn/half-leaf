@@ -18,7 +18,7 @@ import { getAuthUser } from "@/lib/auth/middleware";
 
 export const runtime = "nodejs";
 
-export const AGE_COOKIE = "hl-age";
+const AGE_COOKIE = "hl-age";
 const ONE_YEAR = 60 * 60 * 24 * 365;
 
 export async function POST(req: NextRequest) {

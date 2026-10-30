@@ -29,7 +29,7 @@ const ValidateSchema = z.object({
     .max(100),
 });
 
-export interface StockLine {
+interface StockLine {
   productId: string;
   variantId: string | null;
   /** Bu satır için satılabilir güncel adet (varyant varsa varyant stoğu). */

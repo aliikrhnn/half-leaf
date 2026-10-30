@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
 import { ok, badRequest, serverError } from "@/lib/api/response";
 import { requireAdmin, isResponse } from "@/lib/auth/middleware";
-import { runUpdate } from "@/app/api/cron/update-exchange-rate/route";
+import { runExchangeRateUpdate } from "@/lib/exchange-rate";
 
 const PatchSchema = z.object({
   usdTryRate:       z.number().positive().optional(),
@@ -65,5 +65,5 @@ export async function POST(req: NextRequest) {
   const auth = await requireAdmin(req);
   if (isResponse(auth)) return auth;
 
-  return runUpdate();
+  return runExchangeRateUpdate();
 }

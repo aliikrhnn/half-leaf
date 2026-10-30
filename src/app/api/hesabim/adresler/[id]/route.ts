@@ -7,7 +7,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { ok, badRequest, notFound, serverError } from "@/lib/api/response";
 import { requireAuth, isResponse } from "@/lib/auth/middleware";
-import { AddressSchema } from "../route";
+import { AddressBookSchema } from "@/lib/validations/address-book.schema";
 
 export const runtime = "nodejs";
 
@@ -27,7 +27,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   let raw: unknown;
   try { raw = await req.json(); } catch { return badRequest("Geçersiz istek."); }
-  const parsed = AddressSchema.partial().safeParse(raw);
+  const parsed = AddressBookSchema.partial().safeParse(raw);
   if (!parsed.success) return badRequest(parsed.error.issues[0]?.message ?? "Geçersiz alanlar.");
   const data = parsed.data;
 
