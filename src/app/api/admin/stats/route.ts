@@ -14,10 +14,10 @@ function istanbulDateKey(date: Date): string {
   return `${value("year")}-${value("month")}-${value("day")}`;
 }
 
-function lastSevenIstanbulDays(now: Date): string[] {
+function lastIstanbulDays(now: Date, count: number): string[] {
   const [year, month, day] = istanbulDateKey(now).split("-").map(Number);
-  return Array.from({ length: 7 }, (_, offset) => {
-    const date = new Date(Date.UTC(year, month - 1, day - (6 - offset)));
+  return Array.from({ length: count }, (_, offset) => {
+    const date = new Date(Date.UTC(year, month - 1, day - (count - 1 - offset)));
     return date.toISOString().slice(0, 10);
   });
 }
@@ -27,7 +27,9 @@ export async function GET(req: NextRequest) {
   if (isResponse(auth)) return auth;
 
   try {
-    const dayKeys = lastSevenIstanbulDays(new Date());
+    const requestedDays = Number(req.nextUrl.searchParams.get("days"));
+    const periodDays = requestedDays === 7 ? 7 : 30;
+    const dayKeys = lastIstanbulDays(new Date(), periodDays);
     const startDate = new Date(`${dayKeys[0]}T00:00:00+03:00`);
     const [
       totalProducts,
@@ -37,6 +39,9 @@ export async function GET(req: NextRequest) {
       revenueResult,
       stockRecords,
       recentOrders,
+      ordersByStatus,
+      topProducts,
+      latestOrders,
     ] = await Promise.all([
       prisma.product.count({ where: { isActive: true } }),
       prisma.order.count(),
@@ -60,6 +65,36 @@ export async function GET(req: NextRequest) {
       prisma.order.findMany({
         where: { createdAt: { gte: startDate } },
         select: { createdAt: true, status: true, grandTotal: true },
+      }),
+      prisma.order.groupBy({
+        by: ["status"],
+        where: { createdAt: { gte: startDate } },
+        _count: { _all: true },
+      }),
+      prisma.orderItem.groupBy({
+        by: ["productName"],
+        where: {
+          Order: {
+            status: { not: "IPTAL_EDILDI" },
+            createdAt: { gte: startDate },
+          },
+        },
+        _sum: { quantity: true, lineTotal: true },
+        orderBy: { _sum: { quantity: "desc" } },
+        take: 5,
+      }),
+      prisma.order.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 6,
+        select: {
+          id: true,
+          orderNumber: true,
+          status: true,
+          grandTotal: true,
+          createdAt: true,
+          User: { select: { fullName: true } },
+          OrderItem: { select: { quantity: true } },
+        },
       }),
     ]);
 
@@ -99,7 +134,26 @@ export async function GET(req: NextRequest) {
       pendingOrders,
       totalRevenue: Number(revenueResult._sum?.grandTotal ?? 0),
       lowStockItems,
+      periodDays,
       dailyStats,
+      ordersByStatus: ordersByStatus.map((item) => ({
+        status: item.status,
+        count: item._count._all,
+      })),
+      topProducts: topProducts.map((item) => ({
+        name: item.productName,
+        quantity: item._sum.quantity ?? 0,
+        revenue: Number(item._sum.lineTotal ?? 0),
+      })),
+      recentOrders: latestOrders.map((order) => ({
+        id: order.id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        customer: order.User.fullName,
+        total: Number(order.grandTotal),
+        createdAt: order.createdAt,
+        itemCount: order.OrderItem.reduce((sum, item) => sum + item.quantity, 0),
+      })),
     });
   } catch {
     return serverError();
