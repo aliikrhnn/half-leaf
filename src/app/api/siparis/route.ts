@@ -38,7 +38,9 @@ const bodySchema = z.object({
   items: z.array(z.object({
     productId: z.string().min(1).max(40),
     quantity: z.number().int().min(1).max(99),
-    variantId: z.string().min(1).max(40).optional(),
+    // Sepet store'u varyantsız ürünleri null ile saklayabilir; checkout
+    // payload'ı da bunu aynen gönderdiğinden null geçerli kabul edilmelidir.
+    variantId: z.string().min(1).max(40).nullable().optional(),
   })).min(1).max(50),
   couponCode: z.string().trim().max(40).optional(),
   customerNote: z.string().trim().max(1000).optional(),
