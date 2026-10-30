@@ -25,6 +25,13 @@ export default function AdminStokPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState("");
   const [search, setSearch]   = useState("");
+  const [lowStockOnly, setLowStockOnly] = useState(false);
+
+  useEffect(() => {
+    const enabled = new URLSearchParams(window.location.search).get("lowStock") === "true";
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initialize from dashboard deep link
+    if (enabled) setLowStockOnly(true);
+  }, []);
 
   const fetchStock = useCallback(async () => {
     setLoading(true); setError("");
@@ -42,25 +49,45 @@ export default function AdminStokPage() {
   useEffect(() => { fetchStock(); }, [fetchStock]);
 
   const lowCount = items.filter(i => i.isLowStock).length;
+  const visibleItems = lowStockOnly ? items.filter(i => i.isLowStock) : items;
+
+  const toggleLowStock = () => {
+    const next = !lowStockOnly;
+    setLowStockOnly(next);
+    const url = new URL(window.location.href);
+    if (next) url.searchParams.set("lowStock", "true");
+    else url.searchParams.delete("lowStock");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}`);
+  };
 
   return (
     <div className="flex flex-col h-full">
       <AdminHeader
         title="Stok Yönetimi"
-        subtitle={!loading ? `${items.length} kayıt${lowCount > 0 ? ` · ${lowCount} düşük stok` : ""}` : undefined}
+        subtitle={!loading ? `${visibleItems.length} kayıt${lowCount > 0 ? ` · ${lowCount} düşük stok` : ""}` : undefined}
       />
 
       <div className="p-3 sm:p-6 space-y-5 flex-1 overflow-auto">
-        <form onSubmit={(e) => { e.preventDefault(); fetchStock(); }} className="relative max-w-sm">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-dim pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Ürün adı veya SKU ara…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm bg-bg-surface border border-border-default rounded-lg text-ink placeholder-ink-dim focus:outline-none focus:border-accent"
-          />
-        </form>
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+          <form onSubmit={(e) => { e.preventDefault(); fetchStock(); }} className="relative max-w-sm flex-1">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-dim pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Ürün adı veya SKU ara…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 text-sm bg-bg-surface border border-border-default rounded-lg text-ink placeholder-ink-dim focus:outline-none focus:border-accent"
+            />
+          </form>
+          <button
+            type="button"
+            onClick={toggleLowStock}
+            aria-pressed={lowStockOnly}
+            className={`px-3 py-2 rounded-lg border text-sm transition-colors ${lowStockOnly ? "border-amber-400/50 bg-amber-400/10 text-amber-300" : "border-border-default text-ink-muted hover:text-ink"}`}
+          >
+            {lowStockOnly ? "Tüm stokları göster" : `Düşük stokları göster (${lowCount})`}
+          </button>
+        </div>
 
         {error && (
           <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
@@ -87,10 +114,10 @@ export default function AdminStokPage() {
                   Array.from({ length: 6 }).map((_, i) => (
                     <tr key={i}><td className="px-4 py-3" colSpan={7}><div className="h-10 bg-bg-elevated rounded animate-pulse" /></td></tr>
                   ))
-                ) : items.length === 0 ? (
-                  <tr><td colSpan={7} className="px-4 py-12 text-center text-ink-muted">Stok kaydı bulunamadı.</td></tr>
+                ) : visibleItems.length === 0 ? (
+                  <tr><td colSpan={7} className="px-4 py-12 text-center text-ink-muted">{lowStockOnly ? "Düşük stok kaydı bulunamadı." : "Stok kaydı bulunamadı."}</td></tr>
                 ) : (
-                  items.map(item => {
+                  visibleItems.map(item => {
                     const name = item.variant
                       ? `${item.product?.name ?? "—"} · ${item.variant.name}`
                       : (item.product?.name ?? "—");

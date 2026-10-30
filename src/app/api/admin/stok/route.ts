@@ -22,22 +22,36 @@ export async function GET(req: NextRequest) {
       } : undefined,
       include: {
         Product:        { select: { id: true, name: true, sku: true, isActive: true } },
-        ProductVariant: { select: { id: true, name: true, sku: true, productId: true } },
+        ProductVariant: {
+          select: {
+            id: true,
+            name: true,
+            sku: true,
+            productId: true,
+            isActive: true,
+            Product: { select: { isActive: true } },
+          },
+        },
       },
       orderBy: { updatedAt: "desc" },
     });
 
     return ok(
-      inventories.map(inv => ({
+      inventories.map(inv => {
+        const itemActive = inv.Product
+          ? inv.Product.isActive
+          : Boolean(inv.ProductVariant?.isActive && inv.ProductVariant.Product.isActive);
+        return {
         id:                inv.id,
         quantity:          inv.quantity,
         reservedQuantity:  inv.reservedQuantity,
         lowStockThreshold: inv.lowStockThreshold,
         updatedAt:         inv.updatedAt,
-        isLowStock:        inv.quantity - inv.reservedQuantity <= inv.lowStockThreshold,
+        isLowStock:        itemActive && inv.quantity - inv.reservedQuantity <= inv.lowStockThreshold,
         product:           inv.Product     ? { id: inv.Product.id,     name: inv.Product.name,     sku: inv.Product.sku, isActive: inv.Product.isActive } : null,
         variant:           inv.ProductVariant ? { id: inv.ProductVariant.id, name: inv.ProductVariant.name, sku: inv.ProductVariant.sku, productId: inv.ProductVariant.productId } : null,
-      }))
+      };
+      })
     );
   } catch {
     return serverError();

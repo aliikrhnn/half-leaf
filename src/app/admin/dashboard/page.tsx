@@ -11,7 +11,69 @@ interface Stats {
   totalCustomers: number;
   pendingOrders: number;
   totalRevenue: number;
-  lowStockProducts: number;
+  lowStockItems: number;
+  dailyStats: {
+    date: string;
+    label: string;
+    orderCount: number;
+    deliveredRevenue: number;
+  }[];
+}
+
+function DashboardChart({ days }: { days: Stats["dailyStats"] }) {
+  const maxOrders = Math.max(0, ...days.map((day) => day.orderCount));
+  const maxRevenue = Math.max(0, ...days.map((day) => day.deliveredRevenue));
+
+  return (
+    <section className="rounded-xl bg-bg-card border border-border-default p-5 sm:p-6 space-y-5">
+      <div>
+        <h2 className="text-sm font-semibold text-ink">Son 7 gün</h2>
+        <p className="text-xs text-ink-muted mt-1">Sipariş sayısı ve teslim edilmiş sipariş geliri</p>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <div>
+          <div className="flex items-center gap-2 text-xs text-ink-muted mb-3">
+            <span className="w-2.5 h-2.5 rounded-sm bg-accent-light" /> Sipariş
+          </div>
+          <div className="grid grid-cols-7 gap-2 h-36 items-end" role="img" aria-label="Son 7 gündeki günlük sipariş sayısı">
+            {days.map((day) => {
+              const height = maxOrders === 0 ? 0 : (day.orderCount / maxOrders) * 100;
+              return (
+                <div key={day.date} className="h-full flex flex-col justify-end items-center gap-1" title={`${day.label}: ${day.orderCount} sipariş`}>
+                  <span className="text-[10px] text-ink-muted">{day.orderCount}</span>
+                  <div className="w-full flex-1 flex items-end">
+                    <div className="w-full rounded-t bg-accent-light/80 min-h-0.5" style={{ height: `${height}%` }} />
+                  </div>
+                  <span className="text-[10px] text-ink-dim capitalize">{day.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <div className="flex items-center gap-2 text-xs text-ink-muted mb-3">
+            <span className="w-2.5 h-2.5 rounded-sm bg-green-400" /> Teslim edilen gelir
+          </div>
+          <div className="grid grid-cols-7 gap-2 h-36 items-end" role="img" aria-label="Son 7 gündeki günlük teslim edilmiş sipariş geliri">
+            {days.map((day) => {
+              const height = maxRevenue === 0 ? 0 : (day.deliveredRevenue / maxRevenue) * 100;
+              return (
+                <div key={day.date} className="h-full flex flex-col justify-end items-center gap-1" title={`${day.label}: ${formatPrice(day.deliveredRevenue)}`}>
+                  <span className="text-[10px] text-ink-muted">{day.deliveredRevenue > 0 ? formatPrice(day.deliveredRevenue) : "—"}</span>
+                  <div className="w-full flex-1 flex items-end">
+                    <div className="w-full rounded-t bg-green-400/80 min-h-0.5" style={{ height: `${height}%` }} />
+                  </div>
+                  <span className="text-[10px] text-ink-dim capitalize">{day.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 export default function AdminDashboardPage() {
@@ -71,11 +133,11 @@ export default function AdminDashboardPage() {
           color: stats.pendingOrders > 0 ? "text-yellow-400" : "text-ink-muted",
         },
         {
-          label: "Düşük Stok",
-          value: stats.lowStockProducts,
+          label: "Düşük Stok Kalemi",
+          value: stats.lowStockItems,
           icon: AlertTriangle,
-          href: "/admin/urunler?lowStock=true",
-          color: stats.lowStockProducts > 0 ? "text-red-400" : "text-ink-muted",
+          href: "/admin/stok?lowStock=true",
+          color: stats.lowStockItems > 0 ? "text-red-400" : "text-ink-muted",
         },
       ]
     : [];
@@ -138,12 +200,7 @@ export default function AdminDashboardPage() {
           </>
         )}
 
-        {/* Phase 2 placeholder */}
-        <div className="rounded-xl bg-bg-card border border-border-default p-6 text-center">
-          <p className="text-ink-muted text-sm">
-            Grafik ve detaylı raporlar — Phase 5&apos;te eklenecek.
-          </p>
-        </div>
+        {stats && <DashboardChart days={stats.dailyStats} />}
       </div>
     </>
   );
